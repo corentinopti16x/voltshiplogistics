@@ -115,3 +115,59 @@ export async function signUpAction(
 
   return { ok: true, clientId: clientId ?? undefined };
 }
+
+export async function signUpAdminAction(
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, error: "Enter a valid email." };
+  }
+  if (password.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
+  if (password !== confirm) {
+    return { ok: false, error: "Passwords do not match." };
+  }
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (existing) {
+    return { ok: false, error: "An account with this email already exists. Sign in instead." };
+  }
+
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    app_metadata: { role: "voltship_admin", client_id: null },
+  });
+
+  if (createError || !created.user) {
+    return { ok: false, error: createError?.message ?? "Could not create account." };
+  }
+
+  const { error: profileError } = await admin.from("profiles").upsert({
+    id: created.user.id,
+    email,
+    role: "voltship_admin",
+    client_id: null,
+  });
+
+  if (profileError) {
+    return { ok: false, error: profileError.message };
+  }
+
+  return { ok: true };
+}

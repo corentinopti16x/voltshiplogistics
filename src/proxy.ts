@@ -26,6 +26,8 @@ function isPublicPath(pathname: string) {
   return (
     path.endsWith("/login") ||
     path.endsWith("/signup") ||
+    path.endsWith("/forgot-password") ||
+    path.endsWith("/reset-password") ||
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/api/")
   );

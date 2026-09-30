@@ -19,4 +19,16 @@ test("staff login is a separate portal", async ({ page }) => {
   await page.goto("/staff/login");
   await expect(page.getByRole("heading", { name: /staff sign in/i })).toBeVisible();
   await expect(page.getByLabel(/email/i)).toBeVisible();
+  await expect(page.getByRole("link", { name: /forgot password/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /create admin account/i })).toBeVisible();
+});
+
+test("admin can open a new sign-in and password reset", async ({ page }) => {
+  await page.goto("/staff/signup");
+  await expect(page.getByRole("heading", { name: /new admin sign-in/i })).toBeVisible();
+  await expect(page.getByLabel(/^email$/i)).toBeVisible();
+
+  await page.goto("/staff/forgot-password");
+  await expect(page.getByRole("heading", { name: /reset admin password/i })).toBeVisible();
+  await expect(page.getByLabel(/^email$/i)).toBeVisible();
 });

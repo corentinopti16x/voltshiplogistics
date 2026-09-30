@@ -96,9 +96,19 @@ export function LoginForm({
           className="rounded-md border border-[var(--line)] bg-white px-3 py-2 outline-none focus:border-[var(--accent)]"
         />
       </label>
-      <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-[var(--muted)]">{t("password")}</span>
+      <div className="flex flex-col gap-1.5 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <label htmlFor={`${portal}-password`} className="text-[var(--muted)]">
+            {t("password")}
+          </label>
+          {portal === "staff" ? (
+            <Link href="/staff/forgot-password" className="text-xs font-medium text-[var(--ink)] underline">
+              {t("forgotPassword")}
+            </Link>
+          ) : null}
+        </div>
         <input
+          id={`${portal}-password`}
           type="password"
           required
           autoComplete="current-password"
@@ -106,7 +116,7 @@ export function LoginForm({
           onChange={(e) => setPassword(e.target.value)}
           className="rounded-md border border-[var(--line)] bg-white px-3 py-2 outline-none focus:border-[var(--accent)]"
         />
-      </label>
+      </div>
       {error ? (
         <p className="text-sm text-red-700" role="alert">
           {error}
@@ -135,12 +145,20 @@ export function LoginForm({
           </p>
         </>
       ) : (
-        <p className="text-center text-xs text-[var(--muted)]">
-          {t("clientEntry")}{" "}
-          <Link href="/login" className="font-medium text-[var(--ink)] underline">
-            {t("clientSignIn")}
-          </Link>
-        </p>
+        <>
+          <p className="text-center text-xs text-[var(--muted)]">
+            {t("staffNoAccount")}{" "}
+            <Link href="/staff/signup" className="font-medium text-[var(--ink)] underline">
+              {t("staffCreateAccount")}
+            </Link>
+          </p>
+          <p className="text-center text-xs text-[var(--muted)]">
+            {t("clientEntry")}{" "}
+            <Link href="/login" className="font-medium text-[var(--ink)] underline">
+              {t("clientSignIn")}
+            </Link>
+          </p>
+        </>
       )}
     </form>
   );
