@@ -1,0 +1,3 @@
+# Airtable push + reconcile. Shopify sync is nightly; order webhooks cover the gap.
+*/10 * * * * . /etc/cron.env && /usr/local/bin/run-sync-jobs.sh airtable >> /proc/1/fd/1 2>&1
+15 2 * * * . /etc/cron.env && /usr/local/bin/run-sync-jobs.sh shopify >> /proc/1/fd/1 2>&1

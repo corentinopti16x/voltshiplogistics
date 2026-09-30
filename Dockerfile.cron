@@ -1,0 +1,8 @@
+FROM alpine:3.21
+RUN apk add --no-cache curl
+COPY deploy/run-sync-jobs.sh /usr/local/bin/run-sync-jobs.sh
+COPY deploy/cron-entrypoint.sh /usr/local/bin/cron-entrypoint.sh
+COPY deploy/crontab /etc/crontabs/root
+RUN chmod 755 /usr/local/bin/run-sync-jobs.sh /usr/local/bin/cron-entrypoint.sh \
+  && chmod 600 /etc/crontabs/root
+ENTRYPOINT ["/usr/local/bin/cron-entrypoint.sh"]

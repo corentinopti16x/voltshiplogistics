@@ -1,0 +1,528 @@
+{
+  "app": {
+    "name": "Voltship",
+    "tagline": "Your products, quotes, stock and research — in one place."
+  },
+  "nav": {
+    "signIn": "Sign in",
+    "createAccount": "Create account",
+    "openDashboard": "Open dashboard",
+    "backHome": "Back to home",
+    "staffSignIn": "Staff sign in"
+  },
+  "landing": {
+    "kicker": "Client portal · Voltship Logistics",
+    "headline": "Your catalog,\nclassified.",
+    "sub": "Winning products, live quotes, days of stock left, inbound QC, and research — one login. No Airtable. No guesswork.",
+    "cta": "Sign in to your space",
+    "ctaSignedIn": "Go to dashboard",
+    "invite": "Invite-only. Voltship creates your account.",
+    "previewTitle": "Products",
+    "filterAll": "All",
+    "salesDay": "sales/day",
+    "daysLeft": "days left",
+    "statuses": {
+      "title": "Classified every night from your Shopify sales",
+      "winning": "Winning",
+      "testing": "Testing",
+      "declining": "Declining",
+      "dead": "Dead"
+    },
+    "products": {
+      "bottle": "Travel bottle 350ml",
+      "ceramic": "Ceramic pour-over",
+      "lamp": "Desk lamp kit",
+      "serum": "Vitamin C serum"
+    },
+    "stats": {
+      "title": "Built for scale",
+      "sub": "Trusted by e-commerce founders managing high-volume operations across Europe and beyond.",
+      "products": "Products managed",
+      "quotes": "Quotes processed",
+      "countries": "Destination countries",
+      "uptime": "Uptime"
+    },
+    "featuresTitle": "Everything you need after the factory.",
+    "featuresSub": "From sourcing to stock alerts — manage your entire product lifecycle without spreadsheets.",
+    "features": {
+      "library": {
+        "title": "Product library",
+        "body": "Photo-first cards auto-classified nightly. Filter by lifecycle, search by name — your catalog at a glance."
+      },
+      "quote": {
+        "title": "Quote & COGS",
+        "body": "Unit price, real carrier name, shipping to your markets. Accept a quote in one click — no back and forth."
+      },
+      "stock": {
+        "title": "Stock & restock",
+        "body": "Days-of-stock-left, safety thresholds, and clear alerts before you stock out. Restock requests in-app."
+      },
+      "research": {
+        "title": "Research packs",
+        "body": "Product briefs, Reddit deep-dives, persona cards. AI-generated — delivered to your dashboard."
+      },
+      "economics": {
+        "title": "Unit economics",
+        "body": "ROAS break-even, multiplier, available profit per sale. Type a selling price — see every number update live."
+      },
+      "notifications": {
+        "title": "Smart notifications",
+        "body": "In-app, email, or WhatsApp. Quote ready, stock alert, lifecycle change — your rules, your channels."
+      }
+    },
+    "quote": {
+      "kicker": "Client-facing quote",
+      "product": "Product",
+      "shipping": "Shipping (FR) via YunExpress · 8–12 days",
+      "handling": "Fulfillment",
+      "total": "COGS / unit",
+      "badge": "Estimated — billed on real packed weight",
+      "sectionTitle": "A quote you can actually read.",
+      "sectionBody": "Four numbers. Real carrier name. No internal margin split. When rates move, you see the new COGS on your next visit.",
+      "benefit1Title": "Transparent pricing",
+      "benefit1Body": "One client price. Real carrier. No hidden tiers.",
+      "benefit2Title": "Rate-change alerts",
+      "benefit2Body": "Grid updates cascade instantly. No surprises.",
+      "benefit3Title": "One-click accept",
+      "benefit3Body": "Accept and move on. We handle the rest."
+    },
+    "workflow": {
+      "title": "From brief to stock in five steps.",
+      "sub": "The entire product lifecycle — tracked, visible, and always up to date.",
+      "steps": {
+        "brief": {
+          "num": "01",
+          "title": "Submit a brief",
+          "body": "Describe the product, upload a photo, set a target price. No external forms."
+        },
+        "source": {
+          "num": "02",
+          "title": "Voltship sources",
+          "body": "Our sourcing team finds factories, negotiates, and sends you a quote."
+        },
+        "accept": {
+          "num": "03",
+          "title": "Accept the quote",
+          "body": "Review COGS, carrier, and delivery time. Accept in one click."
+        },
+        "produce": {
+          "num": "04",
+          "title": "Production & QC",
+          "body": "Track production, receive QC photos, see inbound shipments."
+        },
+        "sell": {
+          "num": "05",
+          "title": "Sell & restock",
+          "body": "Monitor sales velocity, days left, and restock before you run out."
+        }
+      }
+    },
+    "close": {
+      "title": "Your space is ready\nwhen Voltship invites you.",
+      "body": "Sign in with the email we sent. Your catalog, quotes, stock, and research are waiting."
+    },
+    "footer": {
+      "brand": "Voltship Logistics",
+      "copy": "© 2026 Voltship. All rights reserved.",
+      "staff": "Staff sign in",
+      "product": "Product",
+      "productLinks": {
+        "library": "Product Library",
+        "quotes": "Quotes & COGS",
+        "stock": "Stock Alerts",
+        "research": "Research Packs"
+      },
+      "company": "Company",
+      "companyLinks": {
+        "about": "About Voltship",
+        "contact": "Contact"
+      }
+    }
+  },
+  "auth": {
+    "title": "Sign in",
+    "lead": "Sign in with the email Voltship invited. This is your company workspace — not the Voltship admin console.",
+    "email": "Email",
+    "password": "Password",
+    "confirm": "Confirm password",
+    "company": "Company name",
+    "submit": "Continue to client dashboard",
+    "submitting": "Signing in…",
+    "createAccount": "Create account",
+    "creating": "Creating account…",
+    "signupTitle": "Create account",
+    "signupLead": "Create your company workspace, then sign in.",
+    "signupLeadFirst": "This first account is the Voltship admin. You can invite clients after.",
+    "firstAdminHint": "No admin exists yet. This account will be voltship_admin.",
+    "signupAside": "Create your space.\nThen your products.",
+    "noAccount": "No account yet?",
+    "hasAccount": "Already have an account?",
+    "error": "Invalid email or password.",
+    "inviteOnly": "Ask Voltship if you need access.",
+    "missingConfig": "Supabase is not configured. Add keys to .env.local.",
+    "asideKicker": "Client workspace",
+    "asideTitle": "Your catalog.\nYour quotes.",
+    "clientKicker": "Client portal",
+    "staffTitle": "Staff sign in",
+    "staffKicker": "Voltship staff",
+    "staffLead": "Admin and sourcing only. Client companies use the client portal.",
+    "staffSubmit": "Continue to staff console",
+    "staffAsideTitle": "Clients, pricing,\nsourcing.",
+    "staffAsideLead": "Internal Voltship console. Clients never sign in here.",
+    "staffEntry": "Voltship team?",
+    "staffSignIn": "Staff sign in",
+    "clientEntry": "Here as a client?",
+    "clientSignIn": "Client sign in",
+    "wrongPortalStaff": "This login is for client companies. Voltship staff should use the staff sign-in.",
+    "wrongPortalClient": "This login is for Voltship staff. Client companies should use the client sign-in."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "workspace": "Client",
+    "overview": "Your {plan} workspace — priorities, product progress, and sales in one view.",
+    "signOut": "Sign out",
+    "newProduct": "New product",
+    "seeAll": "See all",
+    "inProgress": "Products in progress",
+    "inProgressEmpty": "No sourcing in progress. Submit a new product to start.",
+    "migrationHint": "Product tables are missing. Run supabase/migrations/00002_app_tables.sql in the SQL editor.",
+    "kpi": {
+      "orders": "Orders shipped",
+      "fulfilled": "Fulfilled in Shopify",
+      "placed": "Placed Shopify orders — none are marked fulfilled yet",
+      "today": "Today",
+      "week": "7 days",
+      "month": "30 days",
+      "activeProducts": "Active products",
+      "activeProductsDetail": "{total} products in your library",
+      "quotes": "Quotes to review",
+      "quotesDetail": "Ready for your decision",
+      "stock": "Stock alerts",
+      "stockDetail": "At or below the restock window"
+    },
+    "restock": {
+      "title": "{count} SKUs under the restock threshold",
+      "launch": "Launch restock",
+      "sending": "Sending…",
+      "sent": "Restock requested",
+      "days": "{days} days left",
+      "out": "Out of stock",
+      "stockout": "Out of stock since {date} · about {units} units missed"
+    },
+    "actions": {
+      "title": "Needs your attention",
+      "lead": "The next decisions that keep products moving.",
+      "quotes": "Quotes ready",
+      "quotesEmpty": "No quotes are waiting for review.",
+      "reviewQuote": "Review quote",
+      "stock": "Restock risk",
+      "stockEmpty": "No products are inside the restock window.",
+      "daysLeft": "{days} days left"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "unread": "{count} unread",
+      "empty": "No activity yet. Quote, stock, and lifecycle updates will appear here."
+    },
+    "research": {
+      "title": "Research ready",
+      "lead": "Latest briefs, shopper research, and personas.",
+      "empty": "No research packs are ready yet."
+    },
+    "researchKinds": {
+      "brief": "Product brief",
+      "reddit": "Shopper research",
+      "personas": "Personas"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "products": "Products",
+      "inbound": "Inbound",
+      "notifications": "Notifications",
+      "settings": "Settings",
+      "menu": "Menu",
+      "close": "Close"
+    }
+  },
+  "products": {
+    "title": "Products",
+    "lead": "Your library. Newest first. Click a card for quote, stock and economics.",
+    "new": "New product",
+    "newLead": "This is the entry point. Voltship sourcing picks it up as “brief received”.",
+    "back": "All products",
+    "search": "Search products",
+    "applyFilters": "Apply filters",
+    "allLifecycle": "All lifecycle",
+    "allSourcing": "All sourcing",
+    "pipeline": {
+      "caption": "Sourcing progress — Voltship updates this as work moves forward.",
+      "brief_received": "Brief received",
+      "factories": "Factories",
+      "samples": "Samples",
+      "negotiation": "Negotiation",
+      "validated": "Validated",
+      "in_production": "In production",
+      "in_stock": "In stock"
+    },
+    "empty": "No products yet. Use New product — that replaces the old Airtable form.",
+    "migrationHint": "Run supabase/migrations/00002_app_tables.sql so the product library can save.",
+    "salesDay": "sales/day",
+    "daysLeft": "days left",
+    "form": {
+      "name": "Product name",
+      "photo": "Product photo",
+      "link": "1688 / AliExpress / competitor link",
+      "description": "Description & requirements",
+      "targetPrice": "Target unit price",
+      "launchQty": "Expected launch qty",
+      "destinations": "Destination markets",
+      "notes": "Notes",
+      "submit": "Submit request",
+      "submitting": "Submitting…"
+    },
+    "quote": {
+      "title": "Quote / COGS",
+      "pending": "Pending sourcing data — unit price, weight and channel are filled by Voltship.",
+      "product": "Product",
+      "weight": "Unit weight",
+      "shipping": "Shipping channel",
+      "lead": "Production lead time",
+      "days": "days",
+      "accept": "Accept quote",
+      "accepting": "Accepting…",
+      "accepted": "Quote accepted. Voltship has been notified.",
+      "acceptHint": "Accept becomes available once Voltship fills unit price, weight and channel.",
+      "question": "Send question",
+      "questionLabel": "Question for Voltship",
+      "questionPlaceholder": "Ask about the quote, factory, or timing — this is a note, not a chat.",
+      "questionSent": "Question sent.",
+      "sending": "Sending…"
+    },
+    "stock": {
+      "title": "Stock",
+      "available": "Available",
+      "qty": "Restock qty",
+      "notes": "Note",
+      "notesPlaceholder": "Target date, market, or MOQ note",
+      "restock": "Launch restock",
+      "sending": "Sending…",
+      "sent": "Restock request sent.",
+      "stockout": "Out of stock since {date}. About {units} units missed at the recent sales pace."
+    },
+    "research": {
+      "title": "Research & content",
+      "generatePack": "Generate research pack",
+      "refreshPack": "Refresh research pack",
+      "generate": "Generate",
+      "refresh": "Refresh",
+      "generating": "Generating…",
+      "ready": "Research pack is ready.",
+      "readyOn": "Ready",
+      "locked": "Included from {tier} — contact us",
+      "brief": "Product brief",
+      "reddit": "Reddit research",
+      "personas": "Personas",
+      "status": {
+        "not_generated": "Not generated",
+        "generating": "Generating",
+        "ready": "Ready"
+      }
+    },
+    "lifecycleBanner": {
+      "winning": "This product is winning. Secure the next batch before stock runs out.",
+      "secureRestock": "Secure your restock",
+      "packaging": "Upgrade to branded packaging",
+      "testing": "Generate a research pack while this product is in testing.",
+      "generate": "Generate research pack",
+      "declining": "Stock covers about {days} days at the current pace. Review before restocking.",
+      "decliningUnknown": "Sales have slowed. Review stock before restocking.",
+      "reviewStock": "Review stock",
+      "dead": "Free storage is ending. Ask Voltship about clearance options.",
+      "clearance": "Request clearance options",
+      "sending": "Sending…",
+      "sent": "Request sent to Voltship."
+    }
+  },
+  "economics": {
+    "title": "Unit economics",
+    "disclaimer": "Indicative estimates — not accounting advice.",
+    "sellingPrice": "Selling price",
+    "save": "Save price",
+    "saving": "Saving…",
+    "saved": "Price saved.",
+    "multiplier": "Multiplier",
+    "fees": "Total fees",
+    "profit": "Available profit / sale",
+    "roasBe": "ROAS break-even",
+    "roasTarget": "ROAS target",
+    "roasRange": "ROAS target range",
+    "maxAtc": "Max ATC cost"
+  },
+  "inbound": {
+    "title": "Inbound",
+    "lead": "Announced → arrived → QC → stocked. Read-only in this version.",
+    "empty": "No inbound yet. Phase 2 syncs this from ECCANG, with QC photos."
+  },
+  "notificationsPage": {
+    "title": "Notifications",
+    "lead": "Quote ready, stock alerts, lifecycle changes.",
+    "empty": "Nothing yet. Events will land here, and also go to email or WhatsApp.",
+    "read": "Read",
+    "unread": "Unread",
+    "markAll": "Mark all read"
+  },
+  "settings": {
+    "title": "Settings",
+    "lead": "Set your financial profile once. Every product page uses it for ROAS and profit.",
+    "ownerOnly": "Only the company owner can edit the financial profile.",
+    "disclaimer": "Indicative estimates — not accounting advice.",
+    "stockLead": "Safety buffer is extra days added to the restock window. Coverage target is how many days of stock a reorder should cover.",
+    "save": "Save profile",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "notifications": {
+      "title": "Notifications",
+      "lead": "Choose how each event reaches you. In-app stays in this workspace. Email and WhatsApp send when Voltship delivery is connected.",
+      "event": "Event",
+      "inApp": "In-app",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "save": "Save notifications",
+      "saving": "Saving…",
+      "saved": "Notification preferences saved.",
+      "events": {
+        "quote_ready": "Quote ready",
+        "quote_accepted": "Quote accepted",
+        "quote_question": "Quote question",
+        "research_ready": "Research ready",
+        "research_failed": "Research failed",
+        "lifecycle_changed": "Lifecycle change",
+        "restock_requested": "Restock requested",
+        "ops_request": "Request to Voltship"
+      }
+    },
+    "fields": {
+      "psp_pct": "PSP fees %",
+      "urssaf_pct": "URSSAF / social %",
+      "vat_pct": "VAT %",
+      "other_pct": "Other fees %",
+      "min_margin_pct": "Minimum margin %",
+      "target_margin_pct": "Target margin %",
+      "safety_buffer_days": "Safety buffer (days)",
+      "coverage_target_days": "Coverage target (days)"
+    }
+  },
+  "admin": {
+    "kicker": "Voltship admin",
+    "title": "Clients",
+    "lead": "Create a tenant, invite users, set the plan, or view the app as that client.",
+    "empty": "No clients yet. Create one — then invite an owner so they can sign in to their workspace.",
+    "newClient": "New client",
+    "newLead": "One company = one tenant. Language and plan are set here.",
+    "createClient": "Create client",
+    "creating": "Creating…",
+    "back": "All clients",
+    "planTitle": "Plan tier",
+    "planHelp": "Changes the entitlements default and logistics discount. Displayed COGS will follow once pricing is live.",
+    "savePlan": "Save plan",
+    "saving": "Saving…",
+    "planSaved": "Plan updated.",
+    "usersTitle": "Users",
+    "noUsers": "No users invited yet.",
+    "inviteTitle": "Invite user",
+    "inviteHelp": "They sign in with this email. If you leave the password blank, we generate one — copy it now.",
+    "inviteUser": "Invite",
+    "inviting": "Inviting…",
+    "inviteDone": "User invited. They can sign in with the password you set.",
+    "invitePassword": "Give them this password:",
+    "viewAsClient": "View as client",
+    "impersonating": "Opening…",
+    "impersonateError": "Could not start impersonation.",
+    "fields": {
+      "name": "Company name",
+      "code": "Code",
+      "codeHint": "Optional — generated from the name",
+      "language": "Language",
+      "plan": "Plan tier",
+      "timezone": "Timezone",
+      "users": "Users",
+      "email": "Email",
+      "role": "Role",
+      "passwordOptional": "Password (optional)"
+    },
+    "roles": {
+      "owner": "Owner",
+      "staff": "Staff"
+    },
+    "dashboard": {
+      "kicker": "Voltship operations",
+      "title": "Operations dashboard",
+      "lead": "Clients, sourcing, pricing, and integration health at a glance.",
+      "newClient": "New client",
+      "viewQueue": "View queue",
+      "viewClients": "All clients",
+      "metrics": {
+        "clients": "Client workspaces",
+        "users": "{count} client users",
+        "sourcing": "Open sourcing",
+        "sourcingDetail": "Products moving through the queue",
+        "quotes": "Quotes awaiting clients",
+        "quotesDetail": "Sent and not yet accepted",
+        "shops": "Active shops",
+        "shopsDetail": "Connected Shopify stores"
+      },
+      "recentProducts": {
+        "title": "Latest product requests",
+        "lead": "Newest work entering the sourcing pipeline.",
+        "empty": "No product requests yet."
+      },
+      "attention": {
+        "title": "System attention",
+        "count": "{count} items",
+        "clear": "All clear",
+        "rateGrid": "Active rate grid",
+        "notActive": "Not active",
+        "shopSync": "Shop sync",
+        "webhooks": "Webhooks",
+        "errors": "{count} errors",
+        "failed": "{count} failed",
+        "healthy": "Healthy",
+        "airtable": "Airtable sync",
+        "pending": "{count} waiting to sync",
+        "notSynced": "No sync yet",
+        "lifecycle": "Lifecycle rules",
+        "perClient": "Set per client"
+      },
+      "restock": {
+        "title": "Restock threshold",
+        "lead": "SKUs across clients that are at or below safety stock.",
+        "empty": "No SKUs are under the restock threshold.",
+        "days": "{days} days left",
+        "out": "Out of stock"
+      },
+      "recentClients": {
+        "title": "Recent clients",
+        "lead": "Newest company workspaces.",
+        "empty": "No clients have been created yet."
+      }
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "clients": "Clients",
+      "pricing": "Pricing",
+      "shopify": "Shopify",
+      "sourcing": "Sourcing",
+      "menu": "Menu",
+      "close": "Close",
+      "admin": "Staff"
+    }
+  },
+  "impersonate": {
+    "banner": "Viewing as {client}. Writes are audit-logged as you.",
+    "stop": "Back to admin"
+  },
+  "sourcer": {
+    "title": "Sourcing queue",
+    "soon": "Oldest requests first. Complete the quote fields and send the client-ready COGS."
+  }
+}

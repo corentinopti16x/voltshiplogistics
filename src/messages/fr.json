@@ -1,0 +1,528 @@
+{
+  "app": {
+    "name": "Voltship",
+    "tagline": "Vos produits, devis, stock et recherches — au même endroit."
+  },
+  "nav": {
+    "signIn": "Connexion",
+    "createAccount": "Créer un compte",
+    "openDashboard": "Ouvrir l'espace",
+    "backHome": "Retour à l'accueil",
+    "staffSignIn": "Espace équipe"
+  },
+  "landing": {
+    "kicker": "Espace client · Voltship Logistics",
+    "headline": "Votre catalogue,\nclassé.",
+    "sub": "Produits gagnants, devis, jours de stock, inbound QC et recherches — une connexion. Plus d'Airtable. Plus de flou.",
+    "cta": "Entrer dans mon espace",
+    "ctaSignedIn": "Aller au tableau de bord",
+    "invite": "Sur invitation. Voltship crée votre compte.",
+    "previewTitle": "Produits",
+    "filterAll": "Tous",
+    "salesDay": "ventes/jour",
+    "daysLeft": "jours restants",
+    "statuses": {
+      "title": "Classé chaque nuit à partir des ventes Shopify",
+      "winning": "Winning",
+      "testing": "Testing",
+      "declining": "Declining",
+      "dead": "Dead"
+    },
+    "products": {
+      "bottle": "Gourde 350ml",
+      "ceramic": "Verseuse céramique",
+      "lamp": "Kit lampe de bureau",
+      "serum": "Sérum vitamine C"
+    },
+    "stats": {
+      "title": "Pensé pour l'échelle",
+      "sub": "Utilisé par des fondateurs e-commerce gérant des opérations à haut volume en Europe et au-delà.",
+      "products": "Produits gérés",
+      "quotes": "Devis traités",
+      "countries": "Pays de destination",
+      "uptime": "Disponibilité"
+    },
+    "featuresTitle": "Tout ce qu'il vous faut après l'usine.",
+    "featuresSub": "Du sourcing aux alertes de stock — gérez tout le cycle de vie produit sans tableurs.",
+    "features": {
+      "library": {
+        "title": "Bibliothèque produits",
+        "body": "Cartes photo classées automatiquement chaque nuit. Filtres cycle de vie, recherche par nom — votre catalogue d'un coup d'œil."
+      },
+      "quote": {
+        "title": "Devis & COGS",
+        "body": "Prix unitaire, vrai nom de transporteur, livraison vers vos marchés. Acceptez un devis en un clic — plus de va-et-vient."
+      },
+      "stock": {
+        "title": "Stock & réassort",
+        "body": "Jours de stock restants, seuils de sécurité, alertes claires avant la rupture. Demandes de réassort dans l'app."
+      },
+      "research": {
+        "title": "Dossiers recherche",
+        "body": "Briefs produits, analyses Reddit, cartes personas. Générés par IA — livrés sur votre tableau de bord."
+      },
+      "economics": {
+        "title": "Économie unitaire",
+        "body": "ROAS seuil de rentabilité, multiplicateur, profit disponible par vente. Tapez un prix — chaque chiffre se met à jour en direct."
+      },
+      "notifications": {
+        "title": "Notifications intelligentes",
+        "body": "In-app, e-mail ou WhatsApp. Devis prêt, alerte stock, changement de cycle — vos règles, vos canaux."
+      }
+    },
+    "quote": {
+      "kicker": "Devis client",
+      "product": "Produit",
+      "shipping": "Livraison (FR) via YunExpress · 8–12 jours",
+      "handling": "Fulfillment",
+      "total": "COGS / unité",
+      "badge": "Estimé — facturé au poids réel colisé",
+      "sectionTitle": "Un devis qu'on peut lire.",
+      "sectionBody": "Quatre chiffres. Le vrai nom du transporteur. Pas de marge interne. Si les tarifs bougent, vous voyez le nouveau COGS à votre prochaine visite.",
+      "benefit1Title": "Tarification transparente",
+      "benefit1Body": "Un prix client. Un vrai transporteur. Pas de tiers cachés.",
+      "benefit2Title": "Alertes de tarif",
+      "benefit2Body": "Les mises à jour de grille se propagent instantanément. Pas de surprises.",
+      "benefit3Title": "Accepter en un clic",
+      "benefit3Body": "Acceptez et passez à autre chose. On s'occupe du reste."
+    },
+    "workflow": {
+      "title": "Du brief au stock en cinq étapes.",
+      "sub": "Le cycle de vie produit complet — suivi, visible, et toujours à jour.",
+      "steps": {
+        "brief": {
+          "num": "01",
+          "title": "Soumettre un brief",
+          "body": "Décrivez le produit, uploadez une photo, fixez un prix cible. Pas de formulaires externes."
+        },
+        "source": {
+          "num": "02",
+          "title": "Voltship source",
+          "body": "Notre équipe sourcing trouve les usines, négocie et vous envoie un devis."
+        },
+        "accept": {
+          "num": "03",
+          "title": "Accepter le devis",
+          "body": "Examinez les COGS, le transporteur et le délai. Acceptez en un clic."
+        },
+        "produce": {
+          "num": "04",
+          "title": "Production & QC",
+          "body": "Suivez la production, recevez les photos QC, visualisez les expéditions."
+        },
+        "sell": {
+          "num": "05",
+          "title": "Vendre & réapprovisionner",
+          "body": "Surveillez la vélocité, les jours restants et réapprovisionnez avant la rupture."
+        }
+      }
+    },
+    "close": {
+      "title": "Votre espace est prêt\nlorsque Voltship vous invite.",
+      "body": "Connectez-vous avec l'e-mail reçu. Votre catalogue, devis, stock et recherches vous attendent."
+    },
+    "footer": {
+      "brand": "Voltship Logistics",
+      "copy": "© 2026 Voltship. Tous droits réservés.",
+      "staff": "Connexion équipe",
+      "product": "Produit",
+      "productLinks": {
+        "library": "Bibliothèque produits",
+        "quotes": "Devis & COGS",
+        "stock": "Alertes stock",
+        "research": "Dossiers recherche"
+      },
+      "company": "Entreprise",
+      "companyLinks": {
+        "about": "À propos de Voltship",
+        "contact": "Contact"
+      }
+    }
+  },
+  "auth": {
+    "title": "Connexion",
+    "lead": "Connectez-vous avec l’e-mail invité par Voltship. C’est l’espace de votre société — pas la console admin Voltship.",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "confirm": "Confirmer le mot de passe",
+    "company": "Nom de la société",
+    "submit": "Continuer vers l’espace client",
+    "submitting": "Connexion…",
+    "createAccount": "Créer un compte",
+    "creating": "Création du compte…",
+    "signupTitle": "Créer un compte",
+    "signupLead": "Créez l’espace de votre société, puis connectez-vous.",
+    "signupLeadFirst": "Ce premier compte est l’admin Voltship. Vous inviterez les clients ensuite.",
+    "firstAdminHint": "Aucun admin pour l’instant. Ce compte sera voltship_admin.",
+    "signupAside": "Créez votre espace.\nPuis vos produits.",
+    "noAccount": "Pas encore de compte ?",
+    "hasAccount": "Déjà un compte ?",
+    "error": "E-mail ou mot de passe incorrect.",
+    "inviteOnly": "Écrivez à Voltship si vous avez besoin d’un accès.",
+    "missingConfig": "Supabase n’est pas configuré. Ajoutez les clés dans .env.local.",
+    "asideKicker": "Espace client",
+    "asideTitle": "Votre catalogue.\nVos devis.",
+    "clientKicker": "Portail client",
+    "staffTitle": "Connexion équipe",
+    "staffKicker": "Équipe Voltship",
+    "staffLead": "Admin et sourcing uniquement. Les sociétés clientes utilisent le portail client.",
+    "staffSubmit": "Continuer vers la console",
+    "staffAsideTitle": "Clients, tarifs,\nsourcing.",
+    "staffAsideLead": "Console interne Voltship. Les clients ne se connectent pas ici.",
+    "staffEntry": "Équipe Voltship ?",
+    "staffSignIn": "Connexion équipe",
+    "clientEntry": "Vous êtes client ?",
+    "clientSignIn": "Connexion client",
+    "wrongPortalStaff": "Cette connexion est réservée aux sociétés clientes. L’équipe Voltship utilise la connexion équipe.",
+    "wrongPortalClient": "Cette connexion est réservée à l’équipe Voltship. Les clients utilisent la connexion client."
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "workspace": "Client",
+    "overview": "Votre espace {plan} — priorités, avancement produits et ventes en un coup d’œil.",
+    "signOut": "Se déconnecter",
+    "newProduct": "Nouveau produit",
+    "seeAll": "Tout voir",
+    "inProgress": "Produits en cours",
+    "inProgressEmpty": "Aucun sourcing en cours. Déposez un nouveau produit pour commencer.",
+    "migrationHint": "Tables produits manquantes. Exécutez supabase/migrations/00002_app_tables.sql.",
+    "kpi": {
+      "orders": "Commandes expédiées",
+      "fulfilled": "Expédiées dans Shopify",
+      "placed": "Commandes Shopify passées — aucune n’est marquée expédiée",
+      "today": "Aujourd’hui",
+      "week": "7 jours",
+      "month": "30 jours",
+      "activeProducts": "Produits actifs",
+      "activeProductsDetail": "{total} produits dans votre bibliothèque",
+      "quotes": "Devis à examiner",
+      "quotesDetail": "Prêts pour votre décision",
+      "stock": "Alertes stock",
+      "stockDetail": "Dans la fenêtre de réassort"
+    },
+    "restock": {
+      "title": "{count} SKU sous le seuil de réassort",
+      "launch": "Lancer un restock",
+      "sending": "Envoi…",
+      "sent": "Restock demandé",
+      "days": "{days} jours restants",
+      "out": "Rupture de stock",
+      "stockout": "Rupture depuis le {date} · environ {units} unités manquées"
+    },
+    "actions": {
+      "title": "À traiter",
+      "lead": "Les prochaines décisions pour faire avancer vos produits.",
+      "quotes": "Devis prêts",
+      "quotesEmpty": "Aucun devis en attente d’examen.",
+      "reviewQuote": "Voir le devis",
+      "stock": "Risque de rupture",
+      "stockEmpty": "Aucun produit dans la fenêtre de réassort.",
+      "daysLeft": "{days} jours restants"
+    },
+    "activity": {
+      "title": "Activité récente",
+      "unread": "{count} non lues",
+      "empty": "Aucune activité. Les devis, stocks et changements de cycle apparaîtront ici."
+    },
+    "research": {
+      "title": "Recherches prêtes",
+      "lead": "Derniers briefs, recherches shoppers et personas.",
+      "empty": "Aucun dossier de recherche n’est prêt."
+    },
+    "researchKinds": {
+      "brief": "Brief produit",
+      "reddit": "Recherche shoppers",
+      "personas": "Personas"
+    },
+    "nav": {
+      "dashboard": "Tableau de bord",
+      "products": "Produits",
+      "inbound": "Inbound",
+      "notifications": "Notifications",
+      "settings": "Réglages",
+      "menu": "Menu",
+      "close": "Fermer"
+    }
+  },
+  "products": {
+    "title": "Produits",
+    "lead": "Votre bibliothèque. Plus récent d’abord. Cliquez une carte pour le devis, le stock et l’économique.",
+    "new": "Nouveau produit",
+    "newLead": "Point d’entrée du pipeline. Statut : brief received.",
+    "back": "Tous les produits",
+    "search": "Rechercher",
+    "applyFilters": "Appliquer",
+    "allLifecycle": "Tous les cycles",
+    "allSourcing": "Tous les sourcings",
+    "pipeline": {
+      "caption": "Avancement sourcing — Voltship met à jour cette ligne au fil du travail.",
+      "brief_received": "Brief reçu",
+      "factories": "Usines",
+      "samples": "Échantillons",
+      "negotiation": "Négociation",
+      "validated": "Validé",
+      "in_production": "En production",
+      "in_stock": "En stock"
+    },
+    "empty": "Aucun produit. Utilisez Nouveau produit — à la place du formulaire Airtable.",
+    "migrationHint": "Exécutez supabase/migrations/00002_app_tables.sql pour enregistrer la bibliothèque.",
+    "salesDay": "ventes/jour",
+    "daysLeft": "jours restants",
+    "form": {
+      "name": "Nom du produit",
+      "photo": "Photo du produit",
+      "link": "Lien 1688 / AliExpress / concurrent",
+      "description": "Description et besoins",
+      "targetPrice": "Prix unitaire cible",
+      "launchQty": "Quantité de lancement",
+      "destinations": "Marchés de destination",
+      "notes": "Notes",
+      "submit": "Envoyer la demande",
+      "submitting": "Envoi…"
+    },
+    "quote": {
+      "title": "Devis / COGS",
+      "pending": "Données sourcing en attente — prix, poids et canal sont saisis par Voltship.",
+      "product": "Produit",
+      "weight": "Poids unitaire",
+      "shipping": "Canal d’expédition",
+      "lead": "Délai de production",
+      "days": "jours",
+      "accept": "Accepter le devis",
+      "accepting": "Acceptation…",
+      "accepted": "Devis accepté. Voltship a été notifié.",
+      "acceptHint": "L’acceptation sera possible une fois le prix, le poids et le canal renseignés.",
+      "question": "Envoyer la question",
+      "questionLabel": "Question pour Voltship",
+      "questionPlaceholder": "Devis, usine ou délai — une note, pas un chat.",
+      "questionSent": "Question envoyée.",
+      "sending": "Envoi…"
+    },
+    "stock": {
+      "title": "Stock",
+      "available": "Disponible",
+      "qty": "Qté restock",
+      "notes": "Note",
+      "notesPlaceholder": "Date, marché ou MOQ",
+      "restock": "Lancer un restock",
+      "sending": "Envoi…",
+      "sent": "Demande de restock envoyée.",
+      "stockout": "Rupture depuis le {date}. Environ {units} unités manquées au rythme récent."
+    },
+    "research": {
+      "title": "Recherche & contenu",
+      "generatePack": "Générer le pack recherche",
+      "refreshPack": "Actualiser le pack",
+      "generate": "Générer",
+      "refresh": "Actualiser",
+      "generating": "Génération…",
+      "ready": "Le pack recherche est prêt.",
+      "readyOn": "Prêt le",
+      "locked": "Inclus à partir de {tier} — contactez-nous",
+      "brief": "Brief produit",
+      "reddit": "Recherche Reddit",
+      "personas": "Personas",
+      "status": {
+        "not_generated": "Non généré",
+        "generating": "En cours",
+        "ready": "Prêt"
+      }
+    },
+    "lifecycleBanner": {
+      "winning": "Ce produit gagne. Sécurisez le prochain lot avant la rupture.",
+      "secureRestock": "Sécuriser le restock",
+      "packaging": "Passer à un packaging de marque",
+      "testing": "Générez un pack recherche pendant que ce produit est en test.",
+      "generate": "Générer le pack recherche",
+      "declining": "Le stock couvre environ {days} jours au rythme actuel. Vérifiez avant de réassortir.",
+      "decliningUnknown": "Les ventes ralentissent. Vérifiez le stock avant de réassortir.",
+      "reviewStock": "Voir le stock",
+      "dead": "Le stockage gratuit se termine. Demandez à Voltship les options de déstockage.",
+      "clearance": "Demander les options de déstockage",
+      "sending": "Envoi…",
+      "sent": "Demande envoyée à Voltship."
+    }
+  },
+  "economics": {
+    "title": "Économie unitaire",
+    "disclaimer": "Estimations indicatives — pas un conseil comptable.",
+    "sellingPrice": "Prix de vente",
+    "save": "Enregistrer le prix",
+    "saving": "Enregistrement…",
+    "saved": "Prix enregistré.",
+    "multiplier": "Multiplicateur",
+    "fees": "Frais totaux",
+    "profit": "Profit disponible / vente",
+    "roasBe": "ROAS seuil de rentabilité",
+    "roasTarget": "ROAS cible",
+    "roasRange": "Fourchette ROAS cible",
+    "maxAtc": "Coût ATC max"
+  },
+  "inbound": {
+    "title": "Inbound",
+    "lead": "Annoncé → arrivé → QC → stocké. Lecture seule pour cette version.",
+    "empty": "Pas d’inbound. La phase 2 synchronise ECCANG et les photos QC."
+  },
+  "notificationsPage": {
+    "title": "Notifications",
+    "lead": "Devis prêt, alertes stock, changements de cycle.",
+    "empty": "Rien pour l’instant. Les événements arriveront ici, ainsi que par e-mail ou WhatsApp.",
+    "read": "Lu",
+    "unread": "Non lu",
+    "markAll": "Tout marquer lu"
+  },
+  "settings": {
+    "title": "Réglages",
+    "lead": "Profil financier une seule fois. Chaque fiche produit s’en sert pour le ROAS.",
+    "ownerOnly": "Seul le owner de la société peut modifier le profil financier.",
+    "disclaimer": "Estimations indicatives — pas un conseil comptable.",
+    "stockLead": "Le tampon de sécurité s’ajoute à la fenêtre de réassort. La couverture cible est le nombre de jours de stock qu’une commande doit couvrir.",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saved": "Enregistré.",
+    "notifications": {
+      "title": "Notifications",
+      "lead": "Choisissez comment chaque événement vous parvient. L’app reste dans cet espace. L’e-mail et WhatsApp partent quand la livraison Voltship est connectée.",
+      "event": "Événement",
+      "inApp": "Dans l’app",
+      "email": "E-mail",
+      "whatsapp": "WhatsApp",
+      "save": "Enregistrer les notifications",
+      "saving": "Enregistrement…",
+      "saved": "Préférences enregistrées.",
+      "events": {
+        "quote_ready": "Devis prêt",
+        "quote_accepted": "Devis accepté",
+        "quote_question": "Question sur un devis",
+        "research_ready": "Recherche prête",
+        "research_failed": "Recherche échouée",
+        "lifecycle_changed": "Changement de cycle",
+        "restock_requested": "Réassort demandé",
+        "ops_request": "Demande à Voltship"
+      }
+    },
+    "fields": {
+      "psp_pct": "Frais PSP %",
+      "urssaf_pct": "URSSAF / social %",
+      "vat_pct": "TVA %",
+      "other_pct": "Autres frais %",
+      "min_margin_pct": "Marge mini %",
+      "target_margin_pct": "Marge cible %",
+      "safety_buffer_days": "Tampon de sécurité (jours)",
+      "coverage_target_days": "Couverture cible (jours)"
+    }
+  },
+  "admin": {
+    "kicker": "Admin Voltship",
+    "title": "Clients",
+    "lead": "Créez un tenant, invitez des utilisateurs, définissez l’offre, ou voyez l’app comme ce client.",
+    "empty": "Aucun client. Créez-en un, puis invitez un owner pour qu’il se connecte à son espace.",
+    "newClient": "Nouveau client",
+    "newLead": "Une société = un tenant. Langue et offre se règlent ici.",
+    "createClient": "Créer le client",
+    "creating": "Création…",
+    "back": "Tous les clients",
+    "planTitle": "Offre",
+    "planHelp": "Définit les droits et la remise logistique. Le COGS suivra quand le pricing sera en place.",
+    "savePlan": "Enregistrer",
+    "saving": "Enregistrement…",
+    "planSaved": "Offre mise à jour.",
+    "usersTitle": "Utilisateurs",
+    "noUsers": "Personne n’est encore invité.",
+    "inviteTitle": "Inviter un utilisateur",
+    "inviteHelp": "Connexion avec cet e-mail. Sans mot de passe, nous en générons un — copiez-le tout de suite.",
+    "inviteUser": "Inviter",
+    "inviting": "Invitation…",
+    "inviteDone": "Utilisateur invité. Il se connecte avec le mot de passe que vous avez choisi.",
+    "invitePassword": "Donnez-lui ce mot de passe :",
+    "viewAsClient": "Voir comme le client",
+    "impersonating": "Ouverture…",
+    "impersonateError": "Impossible de lancer l’impersonation.",
+    "fields": {
+      "name": "Nom de la société",
+      "code": "Code",
+      "codeHint": "Optionnel — généré à partir du nom",
+      "language": "Langue",
+      "plan": "Offre",
+      "timezone": "Fuseau horaire",
+      "users": "Utilisateurs",
+      "email": "E-mail",
+      "role": "Rôle",
+      "passwordOptional": "Mot de passe (optionnel)"
+    },
+    "roles": {
+      "owner": "Owner",
+      "staff": "Staff"
+    },
+    "dashboard": {
+      "kicker": "Opérations Voltship",
+      "title": "Tableau de bord opérations",
+      "lead": "Clients, sourcing, tarification et santé des intégrations en un coup d’œil.",
+      "newClient": "Nouveau client",
+      "viewQueue": "Voir la file",
+      "viewClients": "Tous les clients",
+      "metrics": {
+        "clients": "Espaces clients",
+        "users": "{count} utilisateurs clients",
+        "sourcing": "Sourcings ouverts",
+        "sourcingDetail": "Produits en cours dans la file",
+        "quotes": "Devis en attente",
+        "quotesDetail": "Envoyés mais pas encore acceptés",
+        "shops": "Boutiques actives",
+        "shopsDetail": "Boutiques Shopify connectées"
+      },
+      "recentProducts": {
+        "title": "Dernières demandes produit",
+        "lead": "Les nouveaux travaux entrant dans le pipeline sourcing.",
+        "empty": "Aucune demande produit."
+      },
+      "attention": {
+        "title": "Points d’attention",
+        "count": "{count} éléments",
+        "clear": "Tout va bien",
+        "rateGrid": "Grille tarifaire active",
+        "notActive": "Non active",
+        "shopSync": "Synchronisation boutiques",
+        "webhooks": "Webhooks",
+        "errors": "{count} erreurs",
+        "failed": "{count} échecs",
+        "healthy": "Opérationnel",
+        "airtable": "Sync Airtable",
+        "pending": "{count} en attente",
+        "notSynced": "Pas encore synchronisé",
+        "lifecycle": "Règles de cycle",
+        "perClient": "Par client"
+      },
+      "restock": {
+        "title": "Seuil de réassort",
+        "lead": "SKU de tous les clients au niveau ou sous le stock de sécurité.",
+        "empty": "Aucun SKU sous le seuil de réassort.",
+        "days": "{days} jours restants",
+        "out": "Rupture"
+      },
+      "recentClients": {
+        "title": "Clients récents",
+        "lead": "Les derniers espaces société créés.",
+        "empty": "Aucun client n’a encore été créé."
+      }
+    },
+    "nav": {
+      "dashboard": "Tableau de bord",
+      "clients": "Clients",
+      "pricing": "Tarification",
+      "shopify": "Shopify",
+      "sourcing": "Sourcing",
+      "menu": "Menu",
+      "close": "Fermer",
+      "admin": "Équipe"
+    }
+  },
+  "impersonate": {
+    "banner": "Vue {client}. Les écritures sont journalisées à votre nom.",
+    "stop": "Retour admin"
+  },
+  "sourcer": {
+    "title": "File sourcing",
+    "soon": "Les demandes les plus anciennes d’abord. Complétez le devis et envoyez le COGS client."
+  }
+}
