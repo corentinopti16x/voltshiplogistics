@@ -60,6 +60,16 @@ type FulfillmentNode = {
   displayFulfillmentStatus: string;
 };
 
+type FulfillmentPayload = {
+  data?: {
+    orders: {
+      pageInfo: { hasNextPage: boolean; endCursor: string | null };
+      nodes: FulfillmentNode[];
+    };
+  };
+  errors?: Array<{ message?: string; extensions?: { code?: string } }>;
+};
+
 export async function loadShopifyFulfillmentMap(
   shop: string,
   accessToken: string,
@@ -76,15 +86,7 @@ export async function loadShopifyFulfillmentMap(
   }`;
 
   for (;;) {
-    let payload: {
-      data?: {
-        orders: {
-          pageInfo: { hasNextPage: boolean; endCursor: string | null };
-          nodes: FulfillmentNode[];
-        };
-      };
-      errors?: Array<{ message?: string; extensions?: { code?: string } }>;
-    } | null = null;
+    let payload: FulfillmentPayload | null = null;
     for (let attempt = 0; attempt < 4; attempt += 1) {
       const response = await fetch(`https://${shop}/admin/api/${apiVersion}/graphql.json`, {
         method: "POST",
@@ -95,10 +97,10 @@ export async function loadShopifyFulfillmentMap(
         body: JSON.stringify({ query, variables: { cursor, search } }),
         cache: "no-store",
       });
-      payload = (await response.json()) as NonNullable<typeof payload>;
+      payload = (await response.json()) as FulfillmentPayload;
       const throttled =
         response.status === 429 ||
-        payload.errors?.some((error) => error.extensions?.code === "THROTTLED");
+        Boolean(payload.errors?.some((error) => error.extensions?.code === "THROTTLED"));
       if (throttled) {
         await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
         continue;
