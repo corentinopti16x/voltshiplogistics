@@ -1,6 +1,9 @@
 import { redirect } from "@/i18n/routing";
 import { getAuthContext } from "@/lib/auth/context";
 
+// Home router checks auth context at runtime to direct users to their dashboard/admin/sourcer
+export const dynamic = "force-dynamic";
+
 export default async function HomeRouter({
   params,
 }: {

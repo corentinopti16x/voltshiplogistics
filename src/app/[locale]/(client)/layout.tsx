@@ -4,6 +4,9 @@ import { getAuthContext } from "@/lib/auth/context";
 import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { ClientShell } from "@/components/client/client-shell";
 
+// Client pages always need live session/DB data — never pre-render at build time.
+export const dynamic = "force-dynamic";
+
 export default async function ClientLayout({
   children,
   params,
