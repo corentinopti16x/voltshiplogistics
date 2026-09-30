@@ -17,5 +17,6 @@ export function ProductPhoto({
     );
   }
 
+  // eslint-disable-next-line @next/next/no-img-element
   return <img src={src} alt={alt} className={`object-cover ${className ?? ""}`} />;
 }
