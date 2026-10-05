@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
   // Use standalone output for self-hosted/Railway, but default serverless on Vercel
   output: process.env.VERCEL ? undefined : "standalone",
   allowedDevOrigins: ["127.0.0.1"],
+  // Rate-grid uploads (gram-by-gram carrier matrices) exceed the 1 MB default.
+  experimental: {
+    serverActions: { bodySizeLimit: "10mb" },
+  },
   images: {
     remotePatterns: [
       {
