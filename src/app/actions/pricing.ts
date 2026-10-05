@@ -407,7 +407,19 @@ export async function startRateImportAction(
       const matrix = parseVoltshipMatrix(Buffer.from(matrixFile.base64, "base64"));
       result = {
         parsed: matrix.parsed,
-        modelOutput: { source: "voltship_matrix", sheets: matrix.sheets, columns: matrix.columns },
+        // Keep the stored trace compact: the raw gram-by-gram brackets of every column weigh
+        // ~14 MB of JSON for the full matrix and blow the database statement timeout.
+        modelOutput: {
+          source: "voltship_matrix",
+          sheets: matrix.sheets,
+          columns: matrix.columns.map((c) => ({
+            sheet: c.sheet,
+            column: c.column,
+            header: c.header,
+            lineIndex: c.lineIndex,
+            rawBrackets: c.rawBrackets.length,
+          })),
+        },
         model: "voltship-matrix",
         inputs: { text: false, files: [{ name: matrixFile.name, mime: matrixFile.mime }] },
       };
