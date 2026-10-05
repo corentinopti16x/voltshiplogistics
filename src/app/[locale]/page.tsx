@@ -2,7 +2,6 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { AppPreview } from "@/components/landing/app-preview";
 import { QuotePreview } from "@/components/landing/quote-preview";
-import { StatsBar } from "@/components/landing/stats-bar";
 import { FeatureGrid } from "@/components/landing/feature-grid";
 import { WorkflowTimeline } from "@/components/landing/workflow-timeline";
 import { SiteHeader } from "@/components/site-header";
@@ -78,13 +77,6 @@ export default async function LandingPage() {
       sales: "0",
       days: "—",
     },
-  ];
-
-  const stats = [
-    { value: "2,400", suffix: "+", label: t("stats.products") },
-    { value: "12k", suffix: "+", label: t("stats.quotes") },
-    { value: "35", suffix: "+", label: t("stats.countries") },
-    { value: "99.9", suffix: "%", label: t("stats.uptime") },
   ];
 
   const features = featureKeys.map((key) => ({
@@ -168,20 +160,6 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* Stats section */}
-        <div className="relative border-t border-white/10">
-          <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
-            <div className="mb-12 text-center">
-              <h2 className="font-display gradient-text text-3xl tracking-tight sm:text-4xl">
-                {t("stats.title")}
-              </h2>
-              <p className="mx-auto mt-3 max-w-lg text-sm text-[#b7b0a2]">
-                {t("stats.sub")}
-              </p>
-            </div>
-            <StatsBar stats={stats} />
-          </div>
-        </div>
       </div>
 
       {/* ── Features ── */}
@@ -246,13 +224,13 @@ export default async function LandingPage() {
               kicker={t("quote.kicker")}
               productName={t("products.bottle")}
               productLabel={t("quote.product")}
-              productPrice="$4.20"
+              productPrice="4,20 €"
               shippingLabel={t("quote.shipping")}
-              shippingPrice="$3.90"
+              shippingPrice="3,90 €"
               handlingLabel={t("quote.handling")}
-              handlingPrice="$1.70"
+              handlingPrice="1,70 €"
               totalLabel={t("quote.total")}
-              totalPrice="$9.80"
+              totalPrice="9,80 €"
               badge={t("quote.badge")}
               carrier="YunExpress · FR"
             />

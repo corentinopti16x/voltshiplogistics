@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Geist } from "next/font/google";
+import { Inter, Inter_Tight } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
@@ -7,14 +7,16 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
-const geist = Geist({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-geist-sans",
+  variable: "--font-sans",
+  display: "swap",
 });
 
-const fraunces = Fraunces({
+const interTight = Inter_Tight({
   subsets: ["latin"],
   variable: "--font-display",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -43,7 +45,7 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className={`${geist.variable} ${fraunces.variable}`}>
+    <html lang={locale} className={`${inter.variable} ${interTight.variable}`}>
       <body className="min-h-screen antialiased">
         <NextIntlClientProvider messages={messages}>
           {children}
