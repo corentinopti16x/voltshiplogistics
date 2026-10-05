@@ -7,6 +7,7 @@ import {
   type OAuthLocale,
 } from "@/lib/shopify/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { shopifyAppCredentialsFor } from "@/lib/shopify/app-credentials";
 
 export const MAX_SHOPS_PER_CLIENT = 10;
 
@@ -77,9 +78,11 @@ export async function GET(request: Request) {
   }
 
   try {
+    const { apiKey } = await shopifyAppCredentialsFor(shop);
     const authorizeUrl = buildShopifyAuthorizeUrl({
       shop,
       appUrl,
+      apiKey,
       state: { clientId, returnTo: from, locale },
     });
     return Response.redirect(authorizeUrl, 302);
