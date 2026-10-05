@@ -21,7 +21,7 @@ export function SignOutButton() {
     <button
       type="button"
       onClick={signOut}
-      className="cursor-pointer rounded-md border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--muted)] hover:bg-white"
+      className="cursor-pointer rounded-[9px] border border-white/25 px-3 py-1.5 text-[12px] font-semibold text-white/85 transition hover:bg-white/10 hover:text-white"
     >
       {t("signOut")}
     </button>
