@@ -5,42 +5,56 @@ import { BrandMark } from "@/components/brand-mark";
 import { ClientNavLinks } from "@/components/client/nav-links";
 import { SignOutButton } from "@/app/[locale]/(client)/dashboard/sign-out-button";
 import { getAuthContext } from "@/lib/auth/context";
+import { Bolt } from "@/components/ui";
 
 export async function ClientShell({ children }: { children: ReactNode }) {
   const t = await getTranslations("dashboard");
   const ctx = await getAuthContext();
+  const initials = (ctx?.email ?? "").slice(0, 2).toUpperCase() || "CL";
 
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
-      <header className="relative border-b border-[var(--line)] bg-[var(--card)]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
-          <BrandMark href="/dashboard" />
+    <div className="relative isolate min-h-screen bg-[var(--bg)]">
+      <header className="border-b border-white/10 bg-[var(--navy)]">
+        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3.5 sm:px-6">
+          <BrandMark href="/dashboard" inverted compact />
           <ClientNavLinks showSettings={ctx?.role !== "staff"} />
-          <div className="flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <Link
               href="/products/new"
-              className="hidden cursor-pointer rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white sm:inline-flex"
+              className="inline-flex items-center gap-2 rounded-[10px] bg-[var(--gold-bright)] px-3 py-2 text-[13px] font-bold text-[var(--navy)] transition hover:bg-[#f0bb5a] sm:px-4"
             >
-              {t("newProduct")}
+              <Bolt fill="#10284A" />
+              <span className="hidden sm:inline">{t("newProduct")}</span>
+              <span className="sm:hidden">{t("newProductShort")}</span>
             </Link>
             {ctx?.role === "voltship_admin" ? (
-              <Link href="/admin" className="text-xs text-[var(--muted)] hover:text-[var(--ink)]">
+              <Link
+                href="/admin"
+                className="hidden text-[12px] font-semibold text-white/75 hover:text-white md:inline"
+              >
                 Admin
               </Link>
             ) : null}
-            {ctx?.email ? (
-              <span className="hidden max-w-[160px] truncate text-xs text-[var(--muted)] lg:block">
-                {ctx.email}
-              </span>
-            ) : null}
-            <span className="rounded-full bg-[#ead9a3] px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
-              {t("workspace")}
+            <span
+              title={ctx?.email ?? undefined}
+              aria-label={ctx?.email ?? t("workspace")}
+              className="grid h-9 w-9 place-items-center rounded-full border border-white/25 bg-white/12 text-[12px] font-bold text-white"
+            >
+              {initials}
+            </span>
+            <span className="hidden max-w-[180px] truncate text-[12px] text-white/75 xl:block">
+              {ctx?.email}
             </span>
             <SignOutButton />
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
+
+      <main className="mx-auto max-w-[1240px] px-4 pt-7 pb-20 sm:px-6">{children}</main>
+
+      <footer className="border-t border-[var(--line)] px-6 py-5 text-center text-[13px] text-[var(--faint)]">
+        {t("footer")}
+      </footer>
     </div>
   );
 }

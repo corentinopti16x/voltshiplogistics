@@ -31,12 +31,12 @@ export function NotificationPreferencesForm({
   const saved = new Map(preferences.map((row) => [row.event_type, row]));
 
   return (
-    <form action={action} className="mt-8">
-      <h2 className="text-sm font-semibold">{t("title")}</h2>
-      <p className="mt-1 mb-4 text-sm text-[var(--muted)]">{t("lead")}</p>
-      <div className="overflow-x-auto rounded-2xl border border-[var(--line)] bg-[var(--card)]">
+    <form action={action}>
+      <h2 className="font-display text-[19px] font-bold">{t("title")}</h2>
+      <p className="mt-0.5 mb-4 text-[13px] text-[var(--muted)]">{t("lead")}</p>
+      <div className="vs-card overflow-x-auto">
         <table className="w-full min-w-[520px] text-left text-sm">
-          <thead className="border-b border-[var(--line)] text-xs text-[var(--muted)] uppercase">
+          <thead className="border-b border-[var(--line-soft)] text-[11px] font-semibold text-[var(--muted)] uppercase">
             <tr>
               <th className="px-4 py-3">{t("event")}</th>
               <th className="px-4 py-3">{t("inApp")}</th>
@@ -48,7 +48,7 @@ export function NotificationPreferencesForm({
             {NOTIFICATION_EVENTS.map((eventType) => {
               const row = saved.get(eventType);
               return (
-                <tr key={eventType} className="border-t border-[var(--line)]">
+                <tr key={eventType} className="border-t border-[var(--line-soft)]">
                   <td className="px-4 py-3">{t(`events.${eventType}`)}</td>
                   {(["in_app", "email", "whatsapp"] as const).map((channel) => (
                     <td key={channel} className="px-4 py-3">
@@ -66,12 +66,12 @@ export function NotificationPreferencesForm({
           </tbody>
         </table>
       </div>
-      {state.error ? <p className="mt-3 text-sm text-red-700">{state.error}</p> : null}
-      {state.ok ? <p className="mt-3 text-sm text-[var(--accent)]">{t("saved")}</p> : null}
+      {state.error ? <p className="mt-3 text-sm text-[var(--rust-ink)]">{state.error}</p> : null}
+      {state.ok ? <p className="mt-3 text-sm text-[var(--green-ink)]">{t("saved")}</p> : null}
       <button
         type="submit"
         disabled={pending}
-        className="mt-4 rounded-md bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+        className="mt-4 inline-flex cursor-pointer items-center justify-center rounded-[10px] bg-[var(--navy)] px-4 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending ? t("saving") : t("save")}
       </button>

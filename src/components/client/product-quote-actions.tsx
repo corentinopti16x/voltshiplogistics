@@ -27,14 +27,14 @@ export function ProductQuoteActions({
     <div className="mt-5 space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         {accepted ? (
-          <p className="text-sm text-emerald-800">{t("accepted")}</p>
+          <p className="text-sm text-[var(--green-ink)]">{t("accepted")}</p>
         ) : (
           <form action={acceptAction}>
             <input type="hidden" name="product_id" value={productId} />
             <button
               type="submit"
               disabled={!ready || accepting}
-              className="cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex cursor-pointer items-center justify-center rounded-[10px] bg-[var(--navy)] px-4 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {accepting ? t("accepting") : t("accept")}
             </button>
@@ -45,7 +45,7 @@ export function ProductQuoteActions({
         ) : null}
       </div>
       {acceptState.error ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-[var(--rust-ink)]" role="alert">
           {acceptState.error}
         </p>
       ) : null}
@@ -53,26 +53,26 @@ export function ProductQuoteActions({
       <form action={questionAction} className="space-y-2">
         <input type="hidden" name="product_id" value={productId} />
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="text-[var(--muted)]">{t("questionLabel")}</span>
+          <span className="text-[12px] font-semibold text-[var(--muted)]">{t("questionLabel")}</span>
           <textarea
             name="question"
             rows={3}
             required
             minLength={2}
             placeholder={t("questionPlaceholder")}
-            className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
+            className="vs-input"
           />
         </label>
         {questionState.error ? (
-          <p className="text-sm text-red-700" role="alert">
+          <p className="text-sm text-[var(--rust-ink)]" role="alert">
             {questionState.error}
           </p>
         ) : null}
-        {questionState.ok ? <p className="text-sm text-emerald-800">{t("questionSent")}</p> : null}
+        {questionState.ok ? <p className="text-sm text-[var(--green-ink)]">{t("questionSent")}</p> : null}
         <button
           type="submit"
           disabled={asking}
-          className="cursor-pointer rounded-md border border-[var(--line)] px-4 py-2 text-sm hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex cursor-pointer items-center justify-center rounded-[10px] border border-[#d4dde9] bg-[var(--card)] px-4 py-2.5 text-[14px] font-semibold text-[var(--ink)] transition hover:border-[var(--navy)] hover:bg-[var(--card-soft)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {asking ? t("sending") : t("question")}
         </button>
@@ -81,7 +81,7 @@ export function ProductQuoteActions({
       {questions.length > 0 ? (
         <ul className="space-y-2 text-sm">
           {questions.map((item) => (
-            <li key={`${item.at}-${item.text}`} className="rounded-md bg-[var(--bg)] px-3 py-2">
+            <li key={`${item.at}-${item.text}`} className="rounded-[10px] bg-[var(--card-soft)] px-3 py-2">
               <p>{item.text}</p>
               <p className="mt-1 text-xs text-[var(--muted)]">
                 {new Date(item.at).toLocaleString()}
