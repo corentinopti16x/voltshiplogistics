@@ -25,18 +25,6 @@ export async function SiteHeader({
         <BrandMark inverted={dark} />
         <div className="flex items-center gap-5">
           <LanguageSwitcher tone={tone} />
-          {!signedIn ? (
-            <Link
-              href="/signup"
-              className={
-                dark
-                  ? "text-sm text-white/80 hover:text-white"
-                  : "text-sm text-[var(--muted)] hover:text-[var(--ink)]"
-              }
-            >
-              {t("createAccount")}
-            </Link>
-          ) : null}
           <Link
             href={signedIn ? "/home" : "/login"}
             className={
