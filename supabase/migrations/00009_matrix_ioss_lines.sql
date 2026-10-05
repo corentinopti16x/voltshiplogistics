@@ -20,8 +20,22 @@ alter table public.rate_grid_cells
   alter column line_name set default '',
   alter column line_name set not null;
 
-alter table public.rate_grid_cells
-  drop constraint if exists rate_grid_cells_grid_version_carrier_destination_channel_wei_key;
+-- Postgres truncates auto-generated constraint names to 63 chars; the original
+-- (grid_version, carrier, destination, channel, weight_min_g, weight_max_g) key was named
+-- "..._channel_we_key" in production. Drop every unique constraint on the table that does
+-- not include line_name, whatever its name.
+do $$
+declare c record;
+begin
+  for c in
+    select conname from pg_constraint
+    where conrelid = 'public.rate_grid_cells'::regclass
+      and contype = 'u'
+      and conname <> 'rate_grid_cells_line_key'
+  loop
+    execute format('alter table public.rate_grid_cells drop constraint %I', c.conname);
+  end loop;
+end $$;
 
 alter table public.rate_grid_cells
   drop constraint if exists rate_grid_cells_line_key;

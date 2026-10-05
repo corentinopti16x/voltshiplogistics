@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { verifyShopifyWebhookHmac } from "@/lib/shopify/auth";
+import { shopifyAppCredentialsFor } from "@/lib/shopify/app-credentials";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { finishWebhookEvent, persistWebhookEvent } from "@/lib/integrations/webhook-events";
 
@@ -11,7 +12,14 @@ import { finishWebhookEvent, persistWebhookEvent } from "@/lib/integrations/webh
  */
 export async function POST(request: Request) {
   const raw = await request.text();
-  if (!verifyShopifyWebhookHmac(raw, request.headers.get("x-shopify-hmac-sha256"))) {
+  const claimedShop = request.headers.get("x-shopify-shop-domain")?.toLowerCase() ?? "";
+  let appSecret: string | undefined;
+  try {
+    appSecret = claimedShop ? (await shopifyAppCredentialsFor(claimedShop)).apiSecret : undefined;
+  } catch {
+    appSecret = undefined;
+  }
+  if (!verifyShopifyWebhookHmac(raw, request.headers.get("x-shopify-hmac-sha256"), appSecret)) {
     return Response.json({ error: "Invalid signature." }, { status: 401 });
   }
   const topic = request.headers.get("x-shopify-topic") ?? "";

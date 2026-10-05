@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { syncShopAction } from "@/app/actions/shopify";
+import { saveShopifyAppCredentialsAction, syncShopAction } from "@/app/actions/shopify";
 import { ShopifyImportForm } from "@/components/admin/shopify-import-form";
 import { DisconnectShopButton } from "@/components/admin/disconnect-shop-button";
 
@@ -10,7 +10,7 @@ export default async function AdminShopsPage({
 }) {
   const query = await searchParams;
   const admin = createAdminClient();
-  const [{ data: clients }, { data: shops }, { data: products }] = await Promise.all([
+  const [{ data: clients }, { data: shops }, { data: products }, { data: apps }] = await Promise.all([
     admin.from("clients").select("id, name").order("name"),
     admin
       .from("shops")
@@ -23,6 +23,10 @@ export default async function AdminShopsPage({
       )
       .order("units_90d", { ascending: false })
       .limit(500),
+    admin
+      .from("shopify_app_credentials")
+      .select("shopify_domain, api_key, label, updated_at")
+      .order("shopify_domain"),
   ]);
 
   const importRows = (products ?? []).map((product) => ({
@@ -57,6 +61,74 @@ export default async function AdminShopsPage({
       ) : null}
 
       <section className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
+        <h2 className="text-sm font-semibold">Apps Shopify par boutique</h2>
+        <p className="mt-1 text-xs text-[var(--muted)]">
+          Une app « Custom distribution » par boutique client (Dev Dashboard de l’orga Partner
+          Voltship). Colle ici son ID client et son secret : le bouton « Connecter ma boutique »
+          utilisera automatiquement cette app pour ce domaine.
+        </p>
+        <form
+          action={saveShopifyAppCredentialsAction}
+          className="mt-4 grid gap-3 sm:grid-cols-4"
+          autoComplete="off"
+        >
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-[var(--muted)]">Domaine boutique</span>
+            <input
+              name="shop"
+              required
+              placeholder="boutique.myshopify.com"
+              className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-[var(--muted)]">ID client (app)</span>
+            <input
+              name="api_key"
+              required
+              className="rounded-md border border-[var(--line)] bg-white px-3 py-2 font-mono text-xs"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-[var(--muted)]">Secret client (app)</span>
+            <input
+              name="api_secret"
+              type="password"
+              required
+              autoComplete="new-password"
+              className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-[var(--muted)]">Nom (optionnel)</span>
+            <div className="flex gap-2">
+              <input
+                name="label"
+                placeholder="LIORA"
+                className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-3 py-2"
+              />
+              <button className="cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm text-white">
+                Enregistrer
+              </button>
+            </div>
+          </label>
+        </form>
+        {(apps ?? []).length > 0 ? (
+          <ul className="mt-4 space-y-1 text-sm">
+            {(apps ?? []).map((app) => (
+              <li key={app.shopify_domain} className="flex flex-wrap gap-x-3 text-[var(--muted)]">
+                <span className="font-medium text-[var(--ink,inherit)]">
+                  {app.label ? `${app.label} · ` : ""}
+                  {app.shopify_domain}
+                </span>
+                <span className="font-mono text-xs">{app.api_key}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
         <h2 className="text-sm font-semibold">Connect shop</h2>
         <form action="/api/shopify/connect" method="get" className="mt-4 grid gap-3 sm:grid-cols-3">
           <input type="hidden" name="from" value="admin" />
