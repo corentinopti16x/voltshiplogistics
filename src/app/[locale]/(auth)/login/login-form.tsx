@@ -132,12 +132,6 @@ export function LoginForm({
       {portal === "client" ? (
         <>
           <p className="text-center text-xs text-[var(--muted)]">
-            {t("noAccount")}{" "}
-            <Link href="/signup" className="font-medium text-[var(--ink)] underline">
-              {t("createAccount")}
-            </Link>
-          </p>
-          <p className="text-center text-xs text-[var(--muted)]">
             {t("staffEntry")}{" "}
             <Link href="/staff/login" className="font-medium text-[var(--ink)] underline">
               {t("staffSignIn")}
@@ -146,12 +140,6 @@ export function LoginForm({
         </>
       ) : (
         <>
-          <p className="text-center text-xs text-[var(--muted)]">
-            {t("staffNoAccount")}{" "}
-            <Link href="/staff/signup" className="font-medium text-[var(--ink)] underline">
-              {t("staffCreateAccount")}
-            </Link>
-          </p>
           <p className="text-center text-xs text-[var(--muted)]">
             {t("clientEntry")}{" "}
             <Link href="/login" className="font-medium text-[var(--ink)] underline">
