@@ -25,12 +25,12 @@ export function LaunchRestockButton({
       <button
         type="submit"
         disabled={pending || state.ok}
-        className="cursor-pointer rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex cursor-pointer items-center justify-center rounded-[10px] bg-[var(--navy)] px-3 py-1.5 text-[13px] font-semibold text-white transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending ? t("sending") : state.ok ? t("sent") : t("launch")}
       </button>
       {state.error ? (
-        <p className="max-w-48 text-right text-xs text-red-700" role="alert">
+        <p className="max-w-48 text-right text-xs text-[var(--rust-ink)]" role="alert">
           {state.error}
         </p>
       ) : null}

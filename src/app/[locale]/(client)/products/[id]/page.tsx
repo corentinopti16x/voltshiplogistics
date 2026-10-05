@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, isTenantUser } from "@/lib/auth/context";
 import { getProductStockSnapshot, getTenantProduct } from "@/lib/products/queries";
+import { isClientEccangEnabled } from "@/lib/eccang/queries";
 import {
   getProductQuestions,
   getProductRequest,
@@ -10,8 +11,19 @@ import {
   getRestockRequests,
   isQuoteAccepted,
 } from "@/lib/products/types";
-import { parseAcceptedQuoteSnapshot } from "@/lib/domain/pricing";
-import { calculateLiveProductQuote } from "@/lib/pricing/server";
+import {
+  formatWeightTier,
+  gridVersionDate,
+  parseAcceptedQuoteSnapshot,
+  ratesChangedSinceQuote,
+} from "@/lib/domain/pricing";
+import { calculateProductCogsMatrix, liveQuoteFromMatrix } from "@/lib/pricing/server";
+import { calculateProductEstimate } from "@/lib/products/overview";
+import { loadShopifyImagesForProducts } from "@/lib/shopify/images";
+import { loadClientRecurrence } from "@/lib/shopify/recurrence";
+import { CogsMatrix, type CogsMatrixMarketView } from "@/components/client/cogs-matrix";
+import { CarrierSelector, type CarrierSelectorMarket } from "@/components/client/carrier-selector";
+import { ProductImageCarousel } from "@/components/client/product-image-carousel";
 import { LifecycleBadge } from "@/components/client/lifecycle-badge";
 import { SourcingPipeline } from "@/components/client/sourcing-pipeline";
 import { EconomicsCalculator } from "@/components/client/economics-calculator";
@@ -25,6 +37,8 @@ import {
   parseFinancialProfile,
 } from "@/lib/domain/economics";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { Badge, Card, PageBand, SectionTitle } from "@/components/ui";
+import { formatAmount, formatDate, formatDays, formatNumber, formatPercent, formatRatio } from "@/lib/format";
 
 export default async function ProductDetailPage({
   params,
@@ -32,7 +46,7 @@ export default async function ProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const t = await getTranslations("products");
+  const [t, locale] = await Promise.all([getTranslations("products"), getLocale()]);
   const ctx = await getAuthContext();
   if (!ctx?.clientId) notFound();
 
@@ -45,10 +59,45 @@ export default async function ProductDetailPage({
   if (!product) notFound();
 
   const request = getProductRequest(product);
-  const liveQuote = await calculateLiveProductQuote(product);
-  const stock = await getProductStockSnapshot(product);
+  const [matrix, stock, shopifyImages, recurrence, warehouseLive] = await Promise.all([
+    calculateProductCogsMatrix(product),
+    getProductStockSnapshot(product),
+    loadShopifyImagesForProducts(ctx.clientId, [product]).catch(() => new Map<string, string[]>()),
+    loadClientRecurrence(ctx.clientId, product.sku ? [product.sku] : []).catch(() => null),
+    isClientEccangEnabled(ctx.clientId),
+  ]);
+  const liveQuote = liveQuoteFromMatrix(matrix);
   const acceptedSnapshot = parseAcceptedQuoteSnapshot(product.accepted_quote_snapshot_json);
   const readyForQuote = liveQuote.breakdown != null;
+  const images = shopifyImages.get(product.id) ?? [];
+  const productRecurrence = product.sku ? recurrence?.products.get(product.sku) ?? null : null;
+  const matrixMarkets: CogsMatrixMarketView[] = matrix.markets.map((market) => ({
+    destination: market.destination,
+    cells: market.cells.map((cell) => ({
+      quantity: cell.quantity,
+      cogs: cell.breakdown?.cogs ?? null,
+      cogsPerUnit: cell.breakdown?.cogsPerUnit ?? null,
+      weightG: cell.breakdown?.weightG ?? null,
+      billedWeightG: cell.breakdown?.billedWeightG ?? null,
+      iossRequired: cell.breakdown?.iossRequired === true,
+      carrier: cell.breakdown?.carrier ?? null,
+      lineName: cell.breakdown?.lineName ?? null,
+      weightMinG: cell.breakdown?.weightMinG ?? null,
+      weightMaxG: cell.breakdown?.weightMaxG ?? null,
+      shipping: cell.breakdown?.shipping ?? null,
+      deliveryRange: cell.breakdown?.deliveryRange ?? null,
+    })),
+  }));
+
+  // Carrier line per market: options at the single-unit billed weight, blocked lines removed.
+  const carrierMarkets: CarrierSelectorMarket[] = matrix.markets.map((market) => ({
+    destination: market.destination,
+    options: market.options,
+    preference: market.preference,
+    forced: market.forced,
+    selectionReason: market.cells.find((cell) => cell.quantity === 1)?.breakdown?.selectionReason ?? null,
+  }));
+  const canChooseCarrier = isTenantUser(ctx);
 
   let profile = DEFAULT_FINANCIAL_PROFILE;
   try {
@@ -64,26 +113,101 @@ export default async function ProductDetailPage({
   }
 
   const step = product.sourcing_status ?? "brief_received";
+  const breakdown = liveQuote.breakdown;
+  // Early estimate from the brief (approx weight × suggested channel × current cost),
+  // shown only while there is neither a live nor an accepted quote.
+  const estimate =
+    breakdown == null && acceptedSnapshot == null
+      ? await calculateProductEstimate(product, { profile })
+      : null;
+  const lowStock = stock.status !== "ok";
+  const costLines = breakdown
+    ? [
+        {
+          key: "product",
+          label: t("quote.product"),
+          note: t("quote.productNote"),
+          detail: null as string | null,
+          badge: null as string | null,
+          hint: null as string | null,
+          value: Number(product.client_price),
+        },
+        {
+          key: "shipping",
+          label: t("quote.shippingLine"),
+          note: `${liveQuote.destination} · ${breakdown.carrier} · ${breakdown.weightG} g${
+            breakdown.billedWeightG !== breakdown.weightG
+              ? ` · ${t("quote.billedWeight", { weight: breakdown.billedWeightG })}`
+              : ""
+          }`,
+          // Carrier + line, weight tier, parcel price and delivery range always come from the grid cell.
+          detail: t("quote.shippingDetail", {
+            carrier: breakdown.carrier,
+            line: breakdown.lineName ? ` ${breakdown.lineName}` : "",
+            tier: formatWeightTier(breakdown.weightMinG, breakdown.weightMaxG),
+            price: formatAmount(breakdown.shippingBase, locale),
+            delivery: breakdown.deliveryRange ? ` · ${breakdown.deliveryRange}` : "",
+          }),
+          badge: breakdown.iossRequired ? t("quote.iossRequired") : null,
+          hint:
+            breakdown.selectionReason === "fallback_preferred_unavailable"
+              ? t("carrier.fallbackHint")
+              : breakdown.selectionReason === "preferred"
+                ? t("carrier.preferredHint")
+                : null,
+          value: breakdown.shipping,
+        },
+        {
+          key: "handling",
+          label: t("quote.handling"),
+          note: t("quote.handlingNote"),
+          detail: null,
+          badge: null,
+          hint: null,
+          value: breakdown.handling + breakdown.commission,
+        },
+      ]
+    : [];
+  const maxLine = Math.max(1, ...costLines.map((line) => line.value));
 
   return (
-    <div>
-      <Link href="/products" className="text-sm text-[var(--muted)] hover:text-[var(--ink)]">
-        ← {t("back")}
-      </Link>
-      <div className="mt-4 flex flex-wrap items-start gap-6">
-        <ProductPhoto
-          src={product.photo_url}
-          alt={product.title}
-          className="h-48 w-full rounded-2xl sm:w-48"
-        />
-        <div>
-          <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-5">
+      <PageBand className="h-[340px] sm:h-[300px]" />
+      <div className="flex flex-wrap items-center gap-5 text-white">
+        {images.length > 0 ? (
+          <ProductImageCarousel
+            images={images}
+            alt={product.title}
+            compact
+            className="h-24 w-24 shrink-0 rounded-[16px] ring-1 ring-white/20 sm:h-28 sm:w-28"
+          />
+        ) : (
+          <ProductPhoto
+            src={product.photo_url}
+            alt={product.title}
+            className="h-24 w-24 shrink-0 rounded-[16px] ring-1 ring-white/20 sm:h-28 sm:w-28"
+          />
+        )}
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <Link
+            href="/products"
+            className="self-start text-[13px] font-semibold text-white/75 hover:text-white"
+          >
+            ← {t("back")}
+          </Link>
+          <div className="flex flex-wrap items-center gap-2">
             <LifecycleBadge status={product.lifecycle_status} />
-            {product.sku ? (
-              <span className="text-xs text-[var(--muted)]">{product.sku}</span>
-            ) : null}
+            <Badge tone="outline" className="!border-white/25 !bg-white/12 !text-white">
+              {t(`sourcing.${step}`)}
+            </Badge>
+            {product.sku ? <span className="text-[12px] text-white/70">{product.sku}</span> : null}
           </div>
-          <h1 className="font-display mt-2 text-3xl">{product.title}</h1>
+          <h1 className="font-display text-[clamp(26px,3.6vw,40px)] leading-[1.1] font-extrabold tracking-[-0.02em]">
+            {product.title}
+          </h1>
+          {request.description ? (
+            <p className="line-clamp-2 max-w-2xl text-[14px] text-white/80">{request.description}</p>
+          ) : null}
         </div>
       </div>
 
@@ -93,147 +217,307 @@ export default async function ProductDetailPage({
         daysLeft={stock.daysLeft}
       />
 
-      <SourcingPipeline step={step} />
+      <Card as="section" padding="md">
+        <SourcingPipeline step={step} />
+      </Card>
 
-      <section className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">{t("quote.title")}</h2>
-        {liveQuote.breakdown ? (
-          <dl className="mt-4 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-[var(--muted)]">{t("quote.product")}</dt>
-              <dd>${Number(product.client_price).toFixed(2)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-[var(--muted)]">{t("quote.weight")}</dt>
-              <dd>{product.weight_g} g</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-[var(--muted)]">Shipping ({liveQuote.destination})</dt>
-              <dd>
-                ${liveQuote.breakdown.shipping.toFixed(2)} · {liveQuote.breakdown.carrier}
-                {liveQuote.breakdown.deliveryRange
-                  ? ` · ${liveQuote.breakdown.deliveryRange}`
-                  : ""}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-[var(--muted)]">Handling & commission</dt>
-              <dd>
-                $
-                {(
-                  liveQuote.breakdown.handling + liveQuote.breakdown.commission
-                ).toFixed(2)}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-[var(--muted)]">{t("quote.lead")}</dt>
-              <dd>
-                {product.production_lead_days ?? "—"} {t("quote.days")}
-              </dd>
-            </div>
-            <div className="flex justify-between border-t border-[var(--line)] pt-2 font-semibold">
-              <dt>COGS / unit</dt>
-              <dd>${liveQuote.breakdown.cogs.toFixed(2)}</dd>
-            </div>
-          </dl>
-        ) : (
-          <p className="mt-3 text-sm text-[var(--muted)]">
-            {liveQuote.missingReason === "grid"
-              ? "Pricing grid is not active yet."
-              : liveQuote.missingReason === "rate"
-                ? `No ${liveQuote.destination} rate matches this weight and channel yet.`
-                : t("quote.pending")}
-          </p>
-        )}
-        {acceptedSnapshot ? (
-          <div className="mt-4 rounded-xl bg-[var(--bg)] p-4 text-sm">
-            <p className="font-medium">
-              Accepted COGS: ${acceptedSnapshot.cogs.toFixed(2)}
-            </p>
-            <p className="mt-1 text-xs text-[var(--muted)]">
-              Frozen on {new Date(acceptedSnapshot.acceptedAt).toLocaleDateString()} · grid{" "}
-              {acceptedSnapshot.gridVersion}
-              {liveQuote.activeGridVersion &&
-              liveQuote.activeGridVersion !== acceptedSnapshot.gridVersion
-                ? " · Rates have changed since acceptance"
-                : ""}
-            </p>
-          </div>
-        ) : null}
-        {request.description ? (
-          <p className="mt-4 text-sm text-[var(--muted)]">{request.description}</p>
-        ) : null}
-        <ProductQuoteActions
-          productId={product.id}
-          ready={readyForQuote}
-          accepted={isQuoteAccepted(product)}
-          questions={getProductQuestions(product)}
-        />
-      </section>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+        <div className="flex min-w-0 flex-col gap-5">
+          {/* Quote / COGS — calculateLiveProductQuote (rate grid) + accepted snapshot */}
+          <Card as="section" padding="md">
+            <SectionTitle
+              aside={
+                acceptedSnapshot ? (
+                  <Badge tone="gold">{t("quote.acceptedBadge")}</Badge>
+                ) : breakdown ? (
+                  <Badge tone="grey">{t("quote.estimateBadge")}</Badge>
+                ) : (
+                  <Badge tone="grey">{t("quote.pendingBadge")}</Badge>
+                )
+              }
+            >
+              {t("quote.title")}
+            </SectionTitle>
+            {breakdown ? (
+              <div className="mt-4 flex flex-col gap-3">
+                {costLines.map((line) => (
+                  <div key={line.key} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="flex w-[150px] shrink-0 flex-col">
+                      <span className="text-[14px] font-semibold">{line.label}</span>
+                      <span className="truncate text-[12px] text-[var(--faint)]">{line.note}</span>
+                    </span>
+                    <span className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--line-soft)]" aria-hidden>
+                      <span
+                        className={`block h-full rounded-full ${
+                          line.key === "product"
+                            ? "bg-[#1B4677]"
+                            : line.key === "shipping"
+                              ? "bg-[#5C8BC7]"
+                              : "bg-[var(--gold)]"
+                        }`}
+                        style={{ width: `${Math.round((line.value / maxLine) * 100)}%` }}
+                      />
+                    </span>
+                    <span className="tabular w-[84px] shrink-0 text-right text-[14px] font-bold">
+                      {formatAmount(line.value, locale)}
+                    </span>
+                    {line.detail ? (
+                      <span className="basis-full text-[12px] text-[var(--muted)]">
+                        {line.detail}
+                        {line.badge ? (
+                          <Badge tone="blue" className="ml-2 align-middle">
+                            {line.badge}
+                          </Badge>
+                        ) : null}
+                        {line.hint ? <span className="ml-2 text-[var(--faint)]">{line.hint}</span> : null}
+                      </span>
+                    ) : null}
+                  </div>
+                ))}
+                <div className="flex items-baseline justify-between border-t border-[var(--line-soft)] pt-3">
+                  <span className="text-[14px] font-bold">
+                    {t("quote.cogsUnit")}
+                    <span className="ml-2 text-[12px] font-semibold text-[var(--faint)]">
+                      {t("quote.lead")}: {product.production_lead_days ?? "—"} {t("quote.days")}
+                    </span>
+                  </span>
+                  <span className="font-display tabular text-[24px] font-extrabold">
+                    {formatAmount(breakdown.cogs, locale)}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-[var(--muted)]">
+                {liveQuote.missingReason === "grid"
+                  ? t("quote.missingGrid")
+                  : liveQuote.missingReason === "rate"
+                    ? t("quote.missingRate", { destination: liveQuote.destination })
+                    : t("quote.pending")}
+              </p>
+            )}
+            {estimate ? (
+              <div className="mt-4 rounded-[12px] border border-dashed border-[var(--line)] bg-[var(--card-soft)] px-4 py-3 text-sm text-[var(--muted)]">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="font-semibold">
+                    {t("quote.earlyTitle")}
+                    <Badge tone="outline" className="ml-2 align-middle">
+                      {t("quote.earlyBadge")}
+                    </Badge>
+                  </span>
+                  {estimate.cogs != null ? (
+                    <span className="font-display tabular text-[22px] font-extrabold italic">
+                      ≈ {formatAmount(estimate.cogs, locale)}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-[12px]">
+                  {estimate.missingReason === "grid"
+                    ? t("quote.earlyMissingGrid")
+                    : estimate.missingReason === "rate"
+                      ? t("quote.earlyMissingRate")
+                      : t("quote.earlyLead", {
+                          channel: t(`quote.channels.${estimate.basis.channel}`),
+                          weight: estimate.basis.weightG,
+                          cost: formatAmount(estimate.basis.unitCost, locale),
+                          source:
+                            estimate.basis.unitCostSource === "current_unit_cost"
+                              ? t("quote.earlySourceCurrent")
+                              : t("quote.earlySourceTarget"),
+                        })}
+                </p>
+                {estimate.cogs != null ? (
+                  <p className="mt-1 text-[12px] italic">
+                    {product.selling_price
+                      ? t("quote.earlyRoas", {
+                          be: formatRatio(estimate.economics.roasBe, locale),
+                          target: formatRatio(estimate.economics.roasTarget, locale),
+                        })
+                      : t("quote.earlyNoPrice")}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {acceptedSnapshot ? (
+              <div className="mt-4 rounded-[12px] bg-[var(--gold-soft)] px-4 py-3 text-sm text-[var(--gold-ink)]">
+                <p className="font-semibold">
+                  {t("quote.acceptedCogs", { cogs: formatAmount(acceptedSnapshot.cogs, locale) })}
+                </p>
+                <p className="mt-0.5 text-[12px]">
+                  {t("quote.frozenOn", {
+                    date: formatDate(acceptedSnapshot.acceptedAt, locale),
+                    grid: acceptedSnapshot.gridVersion,
+                  })}
+                  {ratesChangedSinceQuote(acceptedSnapshot, breakdown, liveQuote.activeGridVersion)
+                    ? ` · ${t("quote.ratesChanged")}`
+                    : ""}
+                </p>
+                <p className="mt-0.5 text-[12px]">
+                  {t("quote.shippingDetail", {
+                    carrier: acceptedSnapshot.carrier,
+                    line: acceptedSnapshot.lineName ? ` ${acceptedSnapshot.lineName}` : "",
+                    tier: formatWeightTier(acceptedSnapshot.weightMinG, acceptedSnapshot.weightMaxG),
+                    price: formatAmount(acceptedSnapshot.shippingBase, locale),
+                    delivery: acceptedSnapshot.deliveryRange ? ` · ${acceptedSnapshot.deliveryRange}` : "",
+                  })}
+                  {acceptedSnapshot.iossRequired ? (
+                    <Badge tone="blue" className="ml-2 align-middle">
+                      {t("quote.iossRequired")}
+                    </Badge>
+                  ) : null}
+                </p>
+              </div>
+            ) : null}
+            <ProductQuoteActions
+              productId={product.id}
+              ready={readyForQuote}
+              accepted={isQuoteAccepted(product)}
+              questions={getProductQuestions(product)}
+            />
+          </Card>
 
-      <div className="mt-6">
-        <EconomicsCalculator
-          productId={product.id}
-          initialPrice={product.selling_price}
-          cogs={liveQuote.breakdown?.cogs ?? null}
-          profile={profile}
-        />
+          {/* Carrier line per market — quote_json._carrier_pref + clients.carrier_rules_json */}
+          {matrix.missingReason == null ? (
+            <Card as="section" padding="md" id="carrier">
+              <SectionTitle>{t("carrier.title")}</SectionTitle>
+              <p className="mt-1 text-[13px] text-[var(--muted)]">{t("carrier.lead")}</p>
+              <CarrierSelector productId={product.id} markets={carrierMarkets} canEdit={canChooseCarrier} />
+            </Card>
+          ) : null}
+
+          <CogsMatrix
+            markets={matrixMarkets}
+            quantities={matrix.quantities}
+            sellingPrice={product.selling_price}
+            profile={profile}
+            gridVersion={matrix.activeGridVersion}
+            gridDate={matrix.gridEffectiveDate ?? gridVersionDate(matrix.activeGridVersion)}
+            ratesChanged={ratesChangedSinceQuote(
+              acceptedSnapshot,
+              breakdown,
+              liveQuote.activeGridVersion,
+            )}
+            missingReason={matrix.missingReason}
+          />
+
+          <EconomicsCalculator
+            productId={product.id}
+            initialPrice={product.selling_price}
+            cogs={breakdown?.cogs ?? null}
+            profile={profile}
+          />
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-5">
+          {/* Stock — getProductStockSnapshot (stock_cache + sales_cache + safety stock) */}
+          <Card as="section" padding="md" id="stock">
+            <SectionTitle
+              aside={
+                <span
+                  className={`font-display text-[20px] font-extrabold ${
+                    lowStock ? "text-[var(--rust-ink)]" : "text-[var(--ink)]"
+                  }`}
+                >
+                  {stock.daysLeft == null
+                    ? "—"
+                    : t("stock.daysValue", { days: formatDays(stock.daysLeft, locale) })}
+                </span>
+              }
+            >
+              {warehouseLive ? t("stock.warehouseTitle") : t("stock.declaredTitle")}
+            </SectionTitle>
+            {/* ECCANG: stock_cache is written by pullInventory when the client is enabled */}
+            <div className="mt-2">
+              {warehouseLive ? (
+                <Badge tone="green" dot>
+                  {t("stock.liveBadge")}
+                </Badge>
+              ) : (
+                <Badge tone="outline">{t("stock.declaredBadge")}</Badge>
+              )}
+            </div>
+            <div className="mt-3 flex gap-[3px]" aria-hidden>
+              {Array.from({ length: 20 }, (_, index) => {
+                const filled =
+                  stock.daysLeft == null ? 20 : Math.min(20, Math.round(stock.daysLeft / 3));
+                return (
+                  <span
+                    key={index}
+                    className={`h-[14px] flex-1 rounded-[3px] ${
+                      index < filled
+                        ? lowStock
+                          ? "bg-[#E07B45]"
+                          : "bg-[var(--gold)]"
+                        : index === 6
+                          ? "bg-[#C9D6E8]"
+                          : "bg-[var(--line-soft)]"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+            <dl className="mt-3 grid grid-cols-3 gap-2">
+              <StockCell label={t("stock.available")} value={formatNumber(stock.qtyAvailable, locale)} />
+              <StockCell label={t("stock.reserved")} value={formatNumber(stock.qtyReserved, locale)} />
+              <StockCell label={t("stock.inbound")} value={formatNumber(stock.inboundQty, locale)} />
+              <StockCell label={t("stock.salesDay")} value={formatNumber(stock.salesPerDay, locale, 1)} />
+              <StockCell label={t("stock.status")} value={t(`stock.statuses.${stock.status}`)} />
+              <StockCell label={t("stock.suggested")} value={formatNumber(stock.suggestedQty, locale)} />
+            </dl>
+            {/* Réachat — loadClientRecurrence (shopify_orders_cache.customer_key) */}
+            <p className="mt-3 text-[13px] text-[var(--muted)]">
+              <span className="font-semibold text-[var(--ink)]">{t("recurrence.label")}</span>{" "}
+              {!recurrence || !recurrence.shopConnected ? (
+                <Link href="/settings" className="font-semibold text-[var(--blue-ink)] hover:underline">
+                  {t("recurrence.connect")}
+                </Link>
+              ) : !product.sku ? (
+                t("recurrence.noSku")
+              ) : !productRecurrence || productRecurrence.buyers === 0 ? (
+                t("recurrence.noBuyers")
+              ) : (
+                t("recurrence.value", {
+                  rate: formatPercent(productRecurrence.reorderRate, locale),
+                  buyers: formatNumber(productRecurrence.buyers, locale),
+                  days: productRecurrence.withinDays,
+                })
+              )}
+            </p>
+            {stock.status === "out_of_stock" && stock.stockoutSince ? (
+              <p className="mt-3 text-sm text-[var(--rust-ink)]">
+                {t("stock.stockout", {
+                  date: formatDate(`${stock.stockoutSince}T00:00:00`, locale),
+                  units: stock.lostUnits ?? 0,
+                })}
+              </p>
+            ) : null}
+            <ProductStockActions
+              productId={product.id}
+              requests={getRestockRequests(product)}
+              suggestedQty={stock.suggestedQty}
+            />
+          </Card>
+
+          {/* Research — quote_json._research */}
+          <Card as="section" padding="md" id="research">
+            <SectionTitle>{t("research.title")}</SectionTitle>
+            <ProductResearchActions
+              productId={product.id}
+              research={getResearchState(product)}
+              showPack={product.lifecycle_status === "testing"}
+              planTier={ctx.client?.plan_tier ?? "bronze"}
+            />
+          </Card>
+        </div>
       </div>
+    </div>
+  );
+}
 
-      <section id="stock" className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">{t("stock.title")}</h2>
-        <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
-          <div>
-            <dt className="text-[var(--muted)]">{t("stock.available")}</dt>
-            <dd className="font-medium">{stock.qtyAvailable}</dd>
-          </div>
-          <div>
-            <dt className="text-[var(--muted)]">Sales / day</dt>
-            <dd className="font-medium">{stock.salesPerDay.toFixed(1)}</dd>
-          </div>
-          <div>
-            <dt className="text-[var(--muted)]">Days left</dt>
-            <dd className="font-medium">
-              {stock.daysLeft == null ? "—" : stock.daysLeft.toFixed(0)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[var(--muted)]">Inbound</dt>
-            <dd className="font-medium">{stock.inboundQty}</dd>
-          </div>
-          <div>
-            <dt className="text-[var(--muted)]">Status</dt>
-            <dd className="font-medium capitalize">{stock.status.replaceAll("_", " ")}</dd>
-          </div>
-          <div>
-            <dt className="text-[var(--muted)]">Suggested reorder</dt>
-            <dd className="font-medium">{stock.suggestedQty}</dd>
-          </div>
-        </dl>
-        {stock.status === "out_of_stock" && stock.stockoutSince ? (
-          <p className="mt-3 text-sm text-amber-900">
-            {t("stock.stockout", {
-              date: new Date(`${stock.stockoutSince}T00:00:00`).toLocaleDateString(),
-              units: stock.lostUnits ?? 0,
-            })}
-          </p>
-        ) : null}
-        <ProductStockActions
-          productId={product.id}
-          requests={getRestockRequests(product)}
-          suggestedQty={stock.suggestedQty}
-        />
-      </section>
-
-      <section id="research" className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">{t("research.title")}</h2>
-        <ProductResearchActions
-          productId={product.id}
-          research={getResearchState(product)}
-          showPack={product.lifecycle_status === "testing"}
-          planTier={ctx.client?.plan_tier ?? "bronze"}
-        />
-      </section>
+function StockCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[12px] bg-[var(--card-soft)] px-3 py-2">
+      <dt className="text-[11px] font-semibold text-[var(--muted)]">{label}</dt>
+      <dd className="font-display tabular text-[18px] font-extrabold">{value}</dd>
     </div>
   );
 }

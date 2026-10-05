@@ -58,6 +58,19 @@ export async function syncShopAction(shopId: string): Promise<void> {
   revalidatePath("/admin/shops");
 }
 
+export async function disconnectShopAdminAction(shopId: string): Promise<void> {
+  const { ctx } = await requireAdmin();
+  if (!ctx) throw new Error("Admin access required.");
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("shops")
+    .update({ status: "disconnected", access_token_encrypted: null, sync_error: null })
+    .eq("id", shopId);
+  if (error) throw error;
+  revalidatePath("/admin");
+  revalidatePath("/admin/shops");
+}
+
 export async function importShopifyProductsAction(
   _prev: ActionResult | undefined,
   formData: FormData,

@@ -18,6 +18,9 @@ export async function accessTokenForConnectedShop(shop: {
   shopify_domain: string;
   access_token_encrypted: string | null;
 }) {
+  // OAuth-connected shops hold a long-lived offline token: use it as-is. The
+  // client_credentials grant is only a fallback for the legacy "installed custom app" path.
+  if (shop.access_token_encrypted) return decryptShopifyToken(shop.access_token_encrypted);
   const admin = createAdminClient();
   try {
     const issued = await issueShopifyAccessToken(shop.shopify_domain);
@@ -31,8 +34,7 @@ export async function accessTokenForConnectedShop(shop: {
       .eq("id", shop.id);
     return issued.accessToken;
   } catch (error) {
-    if (!shop.access_token_encrypted) throw error;
-    return decryptShopifyToken(shop.access_token_encrypted);
+    throw error instanceof Error ? error : new Error("No Shopify access token for this shop.");
   }
 }
 

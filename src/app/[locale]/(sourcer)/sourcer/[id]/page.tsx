@@ -71,6 +71,8 @@ export default async function SourcerProductPage({
         <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
           <Item label="Description" value={request.description} />
           <Item label="Target unit price" value={request.target_unit_price} />
+          <Item label="Approx. unit weight (g, client)" value={request.approx_weight_g} />
+          <Item label="Current unit cost at agent (client)" value={request.current_unit_cost} />
           <Item label="Launch quantity" value={request.expected_launch_qty} />
           <Item label="Destination markets" value={request.destination_markets} />
           <Item label="Notes" value={request.notes} />

@@ -1,3 +1,6 @@
+import type { ShippingChannel } from "@/lib/domain/pricing";
+import type { ProductAttributes } from "@/lib/products/attributes";
+
 export type LifecycleStatus =
   | "testing"
   | "winning"
@@ -23,6 +26,14 @@ export type ProductRequest = {
   expected_launch_qty?: number | null;
   destination_markets?: string;
   notes?: string;
+  /** Raw answers of the product-nature questions (see lib/products/attributes). */
+  attributes?: Partial<ProductAttributes>;
+  /** Channel derived from `attributes` at creation; the sourcer's `shipping_channel` wins. */
+  suggested_channel?: ShippingChannel;
+  /** Client-declared approximate unit weight (g), used only for the early estimate. */
+  approx_weight_g?: number | null;
+  /** What the client pays today per unit at their agent, used only for the early estimate. */
+  current_unit_cost?: number | null;
 };
 
 export type ProductRow = {

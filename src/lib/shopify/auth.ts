@@ -1,12 +1,22 @@
 import "server-only";
 
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 
-type OAuthState = {
+export type OAuthReturnTo = "client" | "admin";
+export type OAuthLocale = "fr" | "en";
+
+export type OAuthState = {
   clientId: string;
   nonce: string;
   exp: number;
+  /** Where to send the user after the callback. Defaults to "admin" for legacy states. */
+  returnTo?: OAuthReturnTo;
+  /** UI locale to use for the post-callback redirect. */
+  locale?: OAuthLocale;
 };
+
+/** OAuth states are only valid for 10 minutes. */
+export const SHOPIFY_STATE_TTL_MS = 10 * 60 * 1000;
 
 function secret() {
   const value = process.env.SHOPIFY_API_SECRET;
@@ -65,7 +75,50 @@ export function verifyShopifyWebhookHmac(rawBody: string, supplied: string | nul
   return actual.length === wanted.length && timingSafeEqual(actual, wanted);
 }
 
+/**
+ * Accepts "mystore", "mystore.myshopify.com", "https://mystore.myshopify.com/"
+ * and returns the canonical "mystore.myshopify.com" (or null when invalid).
+ */
 export function normalizeShopDomain(value: string) {
-  const domain = value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  let domain = value
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/\/.*$/, "")
+    .replace(/[?#].*$/, "");
+  if (domain && !domain.includes(".")) domain = `${domain}.myshopify.com`;
   return /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(domain) ? domain : null;
+}
+
+/** Path prefix for a locale under next-intl's "as-needed" strategy (default locale "en" has none). */
+export function localePathPrefix(locale: OAuthLocale | undefined) {
+  return locale === "fr" ? "/fr" : "";
+}
+
+/** Builds the Shopify authorization URL (step 1 of the OAuth grant). */
+export function buildShopifyAuthorizeUrl(input: {
+  shop: string;
+  appUrl: string;
+  state: Omit<OAuthState, "nonce" | "exp">;
+}) {
+  const apiKey = process.env.SHOPIFY_API_KEY;
+  if (!apiKey) throw new Error("SHOPIFY_API_KEY is not configured.");
+  const scopes = (process.env.SHOPIFY_SCOPES ?? "")
+    .split(",")
+    .map((scope) => scope.trim())
+    .filter(Boolean)
+    .join(",");
+  if (!scopes) throw new Error("SHOPIFY_SCOPES is not configured.");
+  const state = createShopifyState({
+    ...input.state,
+    nonce: randomBytes(16).toString("hex"),
+    exp: Date.now() + SHOPIFY_STATE_TTL_MS,
+  });
+  const params = new URLSearchParams({
+    client_id: apiKey,
+    scope: scopes,
+    redirect_uri: `${input.appUrl.replace(/\/$/, "")}/api/shopify/callback`,
+    state,
+  });
+  return `https://${input.shop}/admin/oauth/authorize?${params.toString()}`;
 }

@@ -1,16 +1,10 @@
 import { getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/routing";
 import { getAuthContext } from "@/lib/auth/context";
-import { getTenantProductMetrics, listTenantProducts } from "@/lib/products/queries";
+import { listRestockAlerts } from "@/lib/products/queries";
+import { loadProductInsights, type ProductInsight } from "@/lib/products/overview";
 import { ProductCard } from "@/components/client/product-card";
 import { ProductFilters } from "@/components/client/product-filters";
-import {
-  computeEconomics,
-  formatMetric,
-  parseFinancialProfile,
-} from "@/lib/domain/economics";
-import { calculateLiveProductQuote } from "@/lib/pricing/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { Bolt, ButtonLink, EmptyState, PageTitle } from "@/components/ui";
 
 export default async function ProductsPage({
   searchParams,
@@ -24,90 +18,67 @@ export default async function ProductsPage({
   const lifecycle = filters.lifecycle ?? "";
   const sourcing = filters.sourcing ?? "";
 
-  let products: Awaited<ReturnType<typeof listTenantProducts>> = [];
-  let metrics = new Map<
-    string,
-    { salesDay: number; units30: number; daysLeft: number | null }
-  >();
-  const roasByProduct = new Map<string, string | null>();
+  let insights: ProductInsight[] = [];
+  let alertIds = new Set<string>();
   let loadError = false;
   if (ctx?.clientId) {
     try {
-      products = await listTenantProducts(ctx.clientId);
-      const admin = createAdminClient();
-      const [{ data: client }, productMetrics, liveQuotes] = await Promise.all([
-        admin
-          .from("clients")
-          .select("financial_profile_json")
-          .eq("id", ctx.clientId)
-          .maybeSingle(),
-        getTenantProductMetrics(ctx.clientId, products),
-        Promise.all(products.map((product) => calculateLiveProductQuote(product))),
-      ]);
-      metrics = productMetrics;
-      const profile = parseFinancialProfile(client?.financial_profile_json);
-      products.forEach((product, index) => {
-        const result = computeEconomics(
-          product.selling_price ?? 0,
-          liveQuotes[index]?.breakdown?.cogs ?? null,
-          profile,
-        );
-        roasByProduct.set(
-          product.id,
-          result.roasBe == null ? null : formatMetric(result.roasBe),
-        );
-      });
+      const overview = await loadProductInsights(ctx.clientId);
+      insights = overview.insights;
+      const alerts = await listRestockAlerts(ctx.clientId, overview.products);
+      alertIds = new Set(alerts.map((alert) => alert.product.id));
     } catch {
       loadError = true;
     }
   }
 
-  const visible = products.filter((product) => {
+  const visible = insights.filter(({ product, sourcingOpen }) => {
     if (q && !product.title.toLowerCase().includes(q)) return false;
     if (lifecycle && product.lifecycle_status !== lifecycle) return false;
+    if (sourcing === "open") return sourcingOpen;
     if (sourcing && product.sourcing_status !== sourcing) return false;
     return true;
   });
 
-  return (
-    <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl">{t("title")}</h1>
-          <p className="mt-2 text-sm text-[var(--muted)]">{t("lead")}</p>
-        </div>
-        <Link
-          href="/products/new"
-          className="cursor-pointer rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white"
-        >
-          {t("new")}
-        </Link>
-      </div>
+  const counts = {
+    all: insights.length,
+    testing: insights.filter((row) => row.product.lifecycle_status === "testing").length,
+    winning: insights.filter((row) => row.product.lifecycle_status === "winning").length,
+    declining: insights.filter((row) => row.product.lifecycle_status === "declining").length,
+    dead: insights.filter((row) => row.product.lifecycle_status === "dead").length,
+  };
 
-      <ProductFilters q={q} lifecycle={lifecycle} sourcing={sourcing} />
+  return (
+    <div className="flex flex-col gap-5">
+      <PageTitle
+        bandClass="h-[400px] sm:h-[360px]"
+        title={t("title")}
+        lead={t("lead")}
+        actions={
+          <ButtonLink href="/products/new" variant="gold">
+            <Bolt fill="#10284A" />
+            {t("new")}
+          </ButtonLink>
+        }
+      />
+
+      <ProductFilters q={q} lifecycle={lifecycle} sourcing={sourcing} counts={counts} />
 
       {loadError ? (
-        <p className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <p className="rounded-xl border border-[#f0d9b5] bg-[var(--gold-soft)] px-4 py-3 text-sm text-[var(--gold-ink)]">
           {t("migrationHint")}
         </p>
       ) : visible.length === 0 ? (
-        <p className="mt-8 rounded-2xl border border-dashed border-[var(--line)] bg-[var(--card)] p-8 text-sm text-[var(--muted)]">
-          {t("empty")}
-        </p>
+        <EmptyState>{insights.length === 0 ? t("empty") : t("noMatch")}</EmptyState>
       ) : (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((product) => {
-            const metric = metrics.get(product.id);
-            return (
-              <ProductCard
-                key={product.id}
-                product={product}
-                salesDay={`${formatMetric(metric?.salesDay ?? null, 1)} ${t("salesDay")}`}
-                daysLeft={`${formatMetric(metric?.daysLeft ?? null, 0)} ${t("daysLeft")}`}
-                roasBe={roasByProduct.get(product.id) ?? null}
-              />
-            );
-          })}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {visible.map((insight) => (
+            <ProductCard
+              key={insight.product.id}
+              insight={insight}
+              stockAlert={alertIds.has(insight.product.id)}
+            />
+          ))}
         </div>
       )}
     </div>

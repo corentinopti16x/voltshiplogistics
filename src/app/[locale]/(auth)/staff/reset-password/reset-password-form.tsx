@@ -14,14 +14,11 @@ export function ResetPasswordForm({ configured }: { configured: boolean }) {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [checking, setChecking] = useState(configured);
   const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
-    if (!configured) {
-      setChecking(false);
-      return;
-    }
+    if (!configured) return;
 
     let cancelled = false;
     const supabase = createClient();

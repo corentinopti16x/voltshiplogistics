@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncShopAction } from "@/app/actions/shopify";
 import { ShopifyImportForm } from "@/components/admin/shopify-import-form";
+import { DisconnectShopButton } from "@/components/admin/disconnect-shop-button";
 
 export default async function AdminShopsPage({
   searchParams,
@@ -42,8 +43,9 @@ export default async function AdminShopsPage({
       </p>
       <h1 className="font-display mt-2 text-3xl">Shopify migration</h1>
       <p className="mt-2 text-sm text-[var(--muted)]">
-        The custom app is already installed on the store. Connect saves the shop and imports
-        products. You do not need Shopify’s install screen.
+        Connect sends you to Shopify’s install screen for the chosen store (OAuth). Once the
+        merchant approves, the shop is saved and 90 days of orders plus the catalogue are imported.
+        Clients can also connect their own store from Settings.
       </p>
       {query.connected ? (
         <p className="mt-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -57,6 +59,7 @@ export default async function AdminShopsPage({
       <section className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
         <h2 className="text-sm font-semibold">Connect shop</h2>
         <form action="/api/shopify/connect" method="get" className="mt-4 grid gap-3 sm:grid-cols-3">
+          <input type="hidden" name="from" value="admin" />
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-[var(--muted)]">Client</span>
             <select
@@ -76,7 +79,6 @@ export default async function AdminShopsPage({
             <input
               name="shop"
               required
-              defaultValue={process.env.SHOPIFY_SHOP_DOMAIN ?? ""}
               placeholder="store.myshopify.com"
               className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
             />
@@ -112,11 +114,16 @@ export default async function AdminShopsPage({
                     <p className="mt-1 text-xs text-red-700">{shop.sync_error}</p>
                   ) : null}
                 </div>
-                <form action={syncShopAction.bind(null, shop.id)}>
-                  <button className="cursor-pointer rounded-md border border-[var(--line)] px-3 py-1.5 hover:bg-white">
-                    Sync now
-                  </button>
-                </form>
+                <div className="flex items-center gap-2">
+                  {shop.status === "active" ? (
+                    <form action={syncShopAction.bind(null, shop.id)}>
+                      <button className="cursor-pointer rounded-md border border-[var(--line)] px-3 py-1.5 hover:bg-white">
+                        Sync now
+                      </button>
+                    </form>
+                  ) : null}
+                  {shop.status !== "disconnected" ? <DisconnectShopButton shopId={shop.id} /> : null}
+                </div>
               </li>
             ))}
           </ul>

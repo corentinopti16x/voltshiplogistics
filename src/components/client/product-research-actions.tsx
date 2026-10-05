@@ -54,7 +54,7 @@ export function ProductResearchActions({
           <button
             type="submit"
             disabled={pending}
-            className="cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex cursor-pointer items-center justify-center rounded-[10px] bg-[var(--navy)] px-4 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending ? t("generating") : allReady ? t("refreshPack") : t("generatePack")}
           </button>
@@ -78,16 +78,17 @@ export function ProductResearchActions({
             readyOn={t("readyOn")}
             locked={!canGenerateResearch(planTier, kind)}
             lockedLabel={t("locked", { tier: researchMinimumTier(kind) })}
+            openLabel={t("open")}
           />
         ))}
       </ul>
 
       {state.error ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-[var(--rust-ink)]" role="alert">
           {state.error}
         </p>
       ) : null}
-      {state.ok ? <p className="text-sm text-emerald-800">{t("ready")}</p> : null}
+      {state.ok ? <p className="text-sm text-[var(--green-ink)]">{t("ready")}</p> : null}
     </div>
   );
 }
@@ -106,6 +107,7 @@ function ResearchRow({
   readyOn,
   locked,
   lockedLabel,
+  openLabel,
 }: {
   productId: string;
   kind: ResearchKind;
@@ -120,11 +122,12 @@ function ResearchRow({
   readyOn: string;
   locked: boolean;
   lockedLabel: string;
+  openLabel: string;
 }) {
   const ready = block.status === "ready";
 
   return (
-    <li className="rounded-xl border border-[var(--line)] px-4 py-3">
+    <li className="rounded-[14px] border border-[var(--line-soft)] bg-[var(--card-soft)] px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium">{label}</p>
@@ -142,7 +145,7 @@ function ResearchRow({
           <button
             type="submit"
             disabled={pending || locked}
-            className="cursor-pointer rounded-md border border-[var(--line)] px-3 py-1.5 text-sm hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex cursor-pointer items-center justify-center rounded-[10px] border border-[#d4dde9] bg-[var(--card)] px-3 py-1.5 text-[13px] font-semibold text-[var(--ink)] transition hover:border-[var(--navy)] hover:bg-[var(--card-soft)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending ? generating : ready ? refresh : generate}
           </button>
@@ -167,7 +170,7 @@ function ResearchRow({
               {block.cards.map((card) => (
                 <article
                   key={card.name}
-                  className="rounded-lg bg-[var(--bg)] px-3 py-2"
+                  className="rounded-[10px] bg-[var(--card-soft)] px-3 py-2"
                 >
                   <p className="font-medium">{card.name}</p>
                   <p className="text-xs text-[var(--muted)]">{card.role}</p>
@@ -182,14 +185,14 @@ function ResearchRow({
               href={block.url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex text-sm font-medium underline"
+              className="inline-flex text-sm font-semibold text-[var(--blue-ink)] underline"
             >
-              Open full research
+              {openLabel}
             </a>
           ) : null}
         </div>
       ) : null}
-      {block.error ? <p className="mt-3 text-sm text-red-700">{block.error}</p> : null}
+      {block.error ? <p className="mt-3 text-sm text-[var(--rust-ink)]">{block.error}</p> : null}
     </li>
   );
 }
