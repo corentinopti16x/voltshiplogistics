@@ -215,43 +215,68 @@ export async function listStaffRestockAlerts() {
   );
 }
 
+export type ProductMetrics = {
+  salesDay: number;
+  units30: number;
+  /** Units sold over the last 90 days (Shopify sales cache); null when the SKU has no sales rows. */
+  units90: number | null;
+  daysLeft: number | null;
+  qtyAvailable: number;
+  inboundQty: number;
+};
+
 export async function getTenantProductMetrics(
   clientId: string,
   products: ProductRow[],
 ) {
   const skus = products.map((product) => product.sku).filter((sku): sku is string => Boolean(sku));
-  const metrics = new Map<string, { salesDay: number; units30: number; daysLeft: number | null }>();
+  const metrics = new Map<string, ProductMetrics>();
   if (skus.length === 0) return metrics;
 
   const admin = createAdminClient();
-  const since = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const since30 = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const since90 = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
   const [{ data: sales }, { data: stock }] = await Promise.all([
     admin
       .from("sales_cache")
-      .select("sku, units_sold")
+      .select("sku, units_sold, date")
       .eq("client_id", clientId)
       .in("sku", skus)
-      .gte("date", since),
+      .gte("date", since90),
     admin
       .from("stock_cache")
-      .select("sku, qty_available")
+      .select("sku, qty_available, inbound_qty")
       .eq("client_id", clientId)
       .in("sku", skus),
   ]);
-  const units = new Map<string, number>();
+  const units30BySku = new Map<string, number>();
+  const units90BySku = new Map<string, number>();
   for (const row of sales ?? []) {
-    units.set(row.sku, (units.get(row.sku) ?? 0) + Number(row.units_sold));
+    const sold = Number(row.units_sold);
+    units90BySku.set(row.sku, (units90BySku.get(row.sku) ?? 0) + sold);
+    if (row.date >= since30) {
+      units30BySku.set(row.sku, (units30BySku.get(row.sku) ?? 0) + sold);
+    }
   }
-  const stockBySku = new Map((stock ?? []).map((row) => [row.sku, Number(row.qty_available)]));
+  const stockBySku = new Map(
+    (stock ?? []).map((row) => [
+      row.sku,
+      { available: Number(row.qty_available), inbound: Number(row.inbound_qty ?? 0) },
+    ]),
+  );
   for (const product of products) {
     if (!product.sku) continue;
-    const units30 = units.get(product.sku) ?? 0;
+    const units30 = units30BySku.get(product.sku) ?? 0;
     const salesDay = units30 / 30;
-    const available = stockBySku.get(product.sku) ?? product.stock_manual ?? 0;
+    const cached = stockBySku.get(product.sku);
+    const available = cached?.available ?? product.stock_manual ?? 0;
     metrics.set(product.id, {
       units30,
+      units90: units90BySku.has(product.sku) ? (units90BySku.get(product.sku) ?? 0) : null,
       salesDay,
       daysLeft: salesDay > 0 ? available / salesDay : null,
+      qtyAvailable: available,
+      inboundQty: cached?.inbound ?? 0,
     });
   }
   return metrics;
