@@ -2,6 +2,9 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listStaffRestockAlerts } from "@/lib/products/queries";
+import { listStuckEccangOrders } from "@/lib/eccang/queries";
+import { loadWeeklyFinance } from "@/lib/finance/weekly";
+import { formatAmount, formatNumber } from "@/lib/format";
 
 type RecentProduct = {
   id: string;
@@ -45,6 +48,9 @@ export default async function AdminDashboardPage() {
     recentProductsResult,
     recentClientsResult,
     restockAlerts,
+    eccangErrorsResult,
+    stuckOrders,
+    finance,
   ] = await Promise.all([
     admin.from("clients").select("id", { count: "exact", head: true }),
     admin.from("profiles").select("id", { count: "exact", head: true }),
@@ -106,7 +112,17 @@ export default async function AdminDashboardPage() {
       .limit(5)
       .returns<RecentClient[]>(),
     listStaffRestockAlerts(),
+    admin
+      .from("clients")
+      .select("id, name, eccang_sync_error")
+      .eq("eccang_enabled", true)
+      .not("eccang_sync_error", "is", null)
+      .limit(5),
+    listStuckEccangOrders(48, 10).catch(() => []),
+    // Confidential tile (voltship_admin only — the layout already enforces it); never blocks the page.
+    loadWeeklyFinance({ count: 1 }).catch(() => null),
   ]);
+  const currentWeek = finance?.weeks[finance.weeks.length - 1] ?? null;
 
   const date = new Intl.DateTimeFormat(locale, {
     day: "numeric",
@@ -122,8 +138,14 @@ export default async function AdminDashboardPage() {
   const pendingAirtable = pendingAirtableResult.count ?? 0;
   const latestAirtableSync = latestAirtableResult.data?.last_synced_at ?? null;
   const deadEvents = deadEventsResult.count ?? 0;
+  const eccangErrors = eccangErrorsResult.data ?? [];
   const attentionCount =
-    syncErrors + deadEvents + pendingAirtable + (activeGrid ? 0 : 1);
+    syncErrors +
+    deadEvents +
+    pendingAirtable +
+    (activeGrid ? 0 : 1) +
+    eccangErrors.length +
+    stuckOrders.length;
 
   return (
     <div>
@@ -143,7 +165,28 @@ export default async function AdminDashboardPage() {
         </Link>
       </div>
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <Link
+          href="/admin/finance"
+          className={`rounded-2xl border p-5 transition hover:-translate-y-0.5 ${
+            currentWeek && currentWeek.result < 0 ? "border-[var(--rust-ink)]/30 bg-[var(--rust-soft)]" : "border-[#d8bf76] bg-[#fbf5df]"
+          }`}
+        >
+          <p className="text-xs text-[var(--muted)]">{t("metrics.finance")}</p>
+          <p className="font-display tabular mt-2 text-3xl">
+            {currentWeek ? formatAmount(currentWeek.result, locale) : "—"}
+          </p>
+          <p className="mt-2 text-xs text-[var(--muted)]">
+            {currentWeek
+              ? currentWeek.breakEven.perDay != null
+                ? t("metrics.financeDetail", {
+                    perDay: formatNumber(currentWeek.breakEven.perDay, locale, 1),
+                    parcels: currentWeek.parcels,
+                  })
+                : t("metrics.financeNoBreakEven", { parcels: currentWeek.parcels })
+              : t("metrics.financeUnavailable")}
+          </p>
+        </Link>
         <MetricCard
           label={t("metrics.clients")}
           value={clientsResult.count ?? 0}
@@ -299,6 +342,26 @@ export default async function AdminDashboardPage() {
               value={t("attention.perClient")}
               href="/admin/clients"
               healthy
+            />
+            <HealthRow
+              label={t("attention.eccangSync")}
+              value={
+                eccangErrors.length > 0
+                  ? eccangErrors.map((client) => client.name).join(", ")
+                  : t("attention.healthy")
+              }
+              href={eccangErrors[0] ? `/admin/clients/${eccangErrors[0].id}#eccang` : "/admin/clients"}
+              healthy={eccangErrors.length === 0}
+            />
+            <HealthRow
+              label={t("attention.eccangStuck")}
+              value={
+                stuckOrders.length > 0
+                  ? t("attention.stuckOrders", { count: stuckOrders.length })
+                  : t("attention.healthy")
+              }
+              href={stuckOrders[0] ? `/admin/clients/${stuckOrders[0].client_id}#eccang` : "/admin/clients"}
+              healthy={stuckOrders.length === 0}
             />
             <HealthRow
               label={t("attention.webhooks")}
