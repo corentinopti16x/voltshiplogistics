@@ -162,3 +162,34 @@ export async function importShopifyProductsAction(
   revalidatePath("/sourcer");
   return { ok: true, clientId: String(imported) };
 }
+
+/**
+ * Saves the Shopify custom app (client ID + secret) dedicated to one merchant store.
+ * Used by the OAuth connect/callback and webhooks for that store instead of the global app.
+ */
+export async function saveShopifyAppCredentialsAction(formData: FormData): Promise<void> {
+  const { ctx } = await requireAdmin();
+  if (!ctx) throw new Error("Admin access required.");
+  const { normalizeShopDomain } = await import("@/lib/shopify/auth");
+  const { encryptShopifyToken } = await import("@/lib/shopify/crypto");
+  const shop = normalizeShopDomain(String(formData.get("shop") ?? ""));
+  const apiKey = String(formData.get("api_key") ?? "").trim();
+  const apiSecret = String(formData.get("api_secret") ?? "").trim();
+  const label = String(formData.get("label") ?? "").trim() || null;
+  if (!shop) throw new Error("Domaine myshopify.com invalide.");
+  if (!/^[a-f0-9]{32}$/i.test(apiKey)) throw new Error("ID client Shopify invalide.");
+  if (apiSecret.length < 16) throw new Error("Secret client Shopify invalide.");
+  const admin = createAdminClient();
+  const { error } = await admin.from("shopify_app_credentials").upsert(
+    {
+      shopify_domain: shop,
+      api_key: apiKey,
+      api_secret_encrypted: encryptShopifyToken(apiSecret),
+      label,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "shopify_domain" },
+  );
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/shops");
+}
