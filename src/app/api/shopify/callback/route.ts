@@ -13,6 +13,7 @@ import {
 } from "@/lib/shopify/admin-api";
 import { encryptShopifyToken } from "@/lib/shopify/crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { shopifyAppCredentialsFor } from "@/lib/shopify/app-credentials";
 
 function returnPath(state: Pick<OAuthState, "returnTo" | "locale"> | null) {
   if (state?.returnTo === "client") return `${localePathPrefix(state.locale)}/settings`;
@@ -30,10 +31,18 @@ export async function GET(request: Request) {
   const fail = (message: string) =>
     Response.redirect(`${base}?error=${encodeURIComponent(message)}`);
 
-  if (!verifyShopifyQueryHmac(url.searchParams)) {
+  const shop = normalizeShopDomain(url.searchParams.get("shop") ?? "");
+  // The HMAC is signed with the secret of the app that was installed (the store's own
+  // custom app when it has one), so look it up from the claimed shop before verifying.
+  let appSecret: string | undefined;
+  try {
+    appSecret = shop ? (await shopifyAppCredentialsFor(shop)).apiSecret : undefined;
+  } catch {
+    appSecret = undefined;
+  }
+  if (!verifyShopifyQueryHmac(url.searchParams, appSecret)) {
     return fail("Invalid Shopify signature.");
   }
-  const shop = normalizeShopDomain(url.searchParams.get("shop") ?? "");
   const code = url.searchParams.get("code");
   if (!shop || !code || !state) {
     return fail("Invalid or expired Shopify callback. Please start the connection again.");
