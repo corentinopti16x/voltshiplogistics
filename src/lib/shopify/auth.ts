@@ -53,7 +53,7 @@ export function parseShopifyState(value: string): OAuthState | null {
   }
 }
 
-export function verifyShopifyQueryHmac(params: URLSearchParams) {
+export function verifyShopifyQueryHmac(params: URLSearchParams, appSecret?: string) {
   const supplied = params.get("hmac");
   if (!supplied) return false;
   const message = [...params.entries()]
@@ -61,15 +61,19 @@ export function verifyShopifyQueryHmac(params: URLSearchParams) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => `${key}=${value}`)
     .join("&");
-  const expected = createHmac("sha256", secret()).update(message).digest("hex");
+  const expected = createHmac("sha256", appSecret ?? secret()).update(message).digest("hex");
   const actual = Buffer.from(supplied, "hex");
   const wanted = Buffer.from(expected, "hex");
   return actual.length === wanted.length && timingSafeEqual(actual, wanted);
 }
 
-export function verifyShopifyWebhookHmac(rawBody: string, supplied: string | null) {
+export function verifyShopifyWebhookHmac(
+  rawBody: string,
+  supplied: string | null,
+  appSecret?: string,
+) {
   if (!supplied) return false;
-  const expected = createHmac("sha256", secret()).update(rawBody).digest("base64");
+  const expected = createHmac("sha256", appSecret ?? secret()).update(rawBody).digest("base64");
   const actual = Buffer.from(supplied);
   const wanted = Buffer.from(expected);
   return actual.length === wanted.length && timingSafeEqual(actual, wanted);
@@ -100,8 +104,10 @@ export function buildShopifyAuthorizeUrl(input: {
   shop: string;
   appUrl: string;
   state: Omit<OAuthState, "nonce" | "exp">;
+  /** Client ID of the store's dedicated custom app; defaults to SHOPIFY_API_KEY. */
+  apiKey?: string;
 }) {
-  const apiKey = process.env.SHOPIFY_API_KEY;
+  const apiKey = input.apiKey ?? process.env.SHOPIFY_API_KEY;
   if (!apiKey) throw new Error("SHOPIFY_API_KEY is not configured.");
   const scopes = (process.env.SHOPIFY_SCOPES ?? "")
     .split(",")

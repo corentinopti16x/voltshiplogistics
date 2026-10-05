@@ -1,5 +1,7 @@
 import "server-only";
 
+import { shopifyAppCredentialsFor } from "./app-credentials";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptShopifyToken } from "@/lib/shopify/crypto";
 import {
@@ -279,11 +281,7 @@ function shopifyTokenError(status: number, text: string) {
 }
 
 export async function issueShopifyAccessToken(shop: string) {
-  const clientId = process.env.SHOPIFY_API_KEY;
-  const clientSecret = process.env.SHOPIFY_API_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error("Shopify app credentials are not configured.");
-  }
+  const { apiKey: clientId, apiSecret: clientSecret } = await shopifyAppCredentialsFor(shop);
   const response = await fetch(`https://${shop}/admin/oauth/access_token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -365,11 +363,7 @@ export async function connectInstalledShopifyShop(input: {
 
 /** Step 2 of the OAuth grant: exchanges the authorization code for an offline access token. */
 export async function exchangeShopifyCode(shop: string, code: string) {
-  const clientId = process.env.SHOPIFY_API_KEY;
-  const clientSecret = process.env.SHOPIFY_API_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error("Shopify app credentials are not configured.");
-  }
+  const { apiKey: clientId, apiSecret: clientSecret } = await shopifyAppCredentialsFor(shop);
   const response = await fetch(`https://${shop}/admin/oauth/access_token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
