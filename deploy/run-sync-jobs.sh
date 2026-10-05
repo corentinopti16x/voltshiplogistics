@@ -13,8 +13,10 @@ fi
 case "$job" in
   airtable) path="/api/cron/airtable-reconcile" ;;
   shopify) path="/api/cron/shopify-sync" ;;
+  eccang) path="/api/cron/eccang-sync" ;;
+  support) path="/api/cron/support-sync" ;;
   *)
-    echo "Usage: run-sync-jobs.sh airtable|shopify" >&2
+    echo "Usage: run-sync-jobs.sh airtable|shopify|eccang|support" >&2
     exit 1
     ;;
 esac

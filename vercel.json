@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/airtable-reconcile",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/shopify-sync",
+      "schedule": "15 2 * * *"
+    },
+    {
+      "path": "/api/cron/eccang-sync",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/support-sync",
+      "schedule": "*/10 * * * *"
+    }
+  ]
+}
