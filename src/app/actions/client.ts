@@ -15,11 +15,13 @@ import {
   canGenerateResearch,
   researchMonthlyQuota,
 } from "@/lib/domain/entitlements";
-import { freezeQuote } from "@/lib/domain/pricing";
-import { calculateLiveProductQuote } from "@/lib/pricing/server";
+import { freezeQuote, lineKey, normalizeDestination, type CarrierLineRef } from "@/lib/domain/pricing";
+import { CARRIER_PREF_KEY, parseCarrierPreferences } from "@/lib/domain/carrier-rules";
+import { calculateLiveProductQuote, loadCarrierRules } from "@/lib/pricing/server";
 import { createNotification } from "@/lib/notifications/server";
-import { buildResearchBlock } from "@/lib/products/research";
+import { createAsnIfEnabled, pushProductIfEnabled } from "@/lib/eccang/sync";
 import type { ProductRequest, ProductRow, ResearchKind } from "@/lib/products/types";
+import { deriveSuggestedChannel, type ProductAttributes } from "@/lib/products/attributes";
 import type { ActionResult } from "@/app/actions/admin";
 import { NOTIFICATION_EVENTS } from "@/lib/notifications/events";
 
@@ -48,6 +50,21 @@ export async function createProductAction(
   const targetPrice = targetPriceRaw ? Number(targetPriceRaw) : null;
   const launchQty = launchQtyRaw ? Number(launchQtyRaw) : null;
   const photo = formData.get("photo");
+  const optionalNumber = (name: string) => {
+    const raw = String(formData.get(name) ?? "").trim();
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  };
+  // Product-nature questions (checkboxes) → raw booleans + suggested shipping channel.
+  const liquid = formData.get("attr_liquid") === "on";
+  const attributes: ProductAttributes = {
+    electronics: formData.get("attr_electronics") === "on",
+    liquid,
+    alcohol: liquid && formData.get("attr_alcohol") === "on",
+    ingestible: formData.get("attr_ingestible") === "on",
+    magnetic: formData.get("attr_magnetic") === "on",
+  };
 
   if (title.length < 2) return { ok: false, error: "Product name is required." };
 
@@ -61,6 +78,10 @@ export async function createProductAction(
     expected_launch_qty: launchQty != null && Number.isFinite(launchQty) ? launchQty : null,
     destination_markets: destinations,
     notes,
+    attributes,
+    suggested_channel: deriveSuggestedChannel(attributes),
+    approx_weight_g: optionalNumber("approx_weight_g"),
+    current_unit_cost: optionalNumber("current_unit_cost"),
   };
 
   let photoUrl: string | null = null;
@@ -254,6 +275,10 @@ export async function acceptQuoteAction(
   const { admin, product } = await loadTenantProduct(ctx.clientId, productId);
   if (!product) return { ok: false, error: "Product not found." };
 
+  if (product.sourcing_status !== "quote_sent") {
+    return { ok: false, error: "Voltship has not sent this quote yet." };
+  }
+
   const liveQuote = await calculateLiveProductQuote(product);
   if (!liveQuote.breakdown) {
     return {
@@ -305,6 +330,13 @@ export async function acceptQuoteAction(
     productTitle: product.title,
     message: `Quote accepted for ${product.title}.`,
   }, ["in_app", "email", "whatsapp"]);
+
+  // ECCANG: a validated product is created in the warehouse catalogue (flag-gated, best-effort).
+  await pushProductIfEnabled(ctx.clientId, {
+    ...product,
+    sourcing_status: "validated",
+    accepted_quote_snapshot_json: snapshot as unknown as Record<string, unknown>,
+  });
 
   revalidateProduct(productId);
   return { ok: true };
@@ -417,27 +449,16 @@ export async function requestResearchAction(
     quote._research && typeof quote._research === "object"
       ? { ...(quote._research as Record<string, unknown>) }
       : {};
-  const request =
-    quote._request && typeof quote._request === "object"
-      ? (quote._request as ProductRequest)
-      : {};
-  const numOrNull = (value: unknown) => {
-    if (value == null || value === "") return null;
-    const n = Number(value);
-    return Number.isFinite(n) ? n : null;
-  };
-  const input = {
-    title: String(product.title ?? "Product"),
-    request,
-    sellingPrice: numOrNull(product.selling_price),
-    clientPrice: numOrNull(product.client_price),
-  };
   const webhookUrl = process.env.N8N_RESEARCH_WEBHOOK_URL;
+  if (!webhookUrl) {
+    return {
+      ok: false,
+      error: "Research generation is not available yet. Please contact Voltship.",
+    };
+  }
   const now = new Date().toISOString();
   for (const kind of kinds) {
-    research[kind] = webhookUrl
-      ? { status: "generating", requested_at: now }
-      : buildResearchBlock(kind, input);
+    research[kind] = { status: "generating", requested_at: now };
   }
 
   if (
@@ -472,7 +493,10 @@ export async function requestResearchAction(
     user_id: ctx.userId,
     deliverable_type: kind,
   }));
-  await admin.from("generation_usage").insert(usageRows);
+  const { data: usageInserted } = await admin
+    .from("generation_usage")
+    .insert(usageRows)
+    .select("id");
 
   if (webhookUrl) {
     try {
@@ -500,6 +524,11 @@ export async function requestResearchAction(
         kinds,
       });
     } catch (dispatchError) {
+      // Refund the quota: nothing was delivered.
+      const usageIds = (usageInserted ?? []).map((row) => row.id);
+      if (usageIds.length) {
+        await admin.from("generation_usage").delete().in("id", usageIds);
+      }
       for (const kind of kinds) {
         research[kind] = {
           status: "not_generated",
@@ -599,6 +628,13 @@ export async function requestRestockAction(
     .eq("client_id", ctx.clientId);
 
   if (updateError) return { ok: false, error: updateError.message };
+
+  // ECCANG: "Lancer un restock" also announces a real inbound notice (createAsn) when enabled.
+  const asn = await createAsnIfEnabled(ctx.clientId, productId, qty);
+  if (asn) {
+    revalidatePath("/inbound");
+    revalidatePath("/[locale]/inbound", "page");
+  }
 
   await notifyTenant(admin, ctx.clientId, ctx.userId, "restock_requested", {
     productId,
@@ -770,5 +806,92 @@ export async function updateNotificationPreferencesAction(
   if (upsertError) return { ok: false, error: upsertError.message };
 
   revalidatePath("/settings");
+  return { ok: true };
+}
+
+/** Owner-only: disconnects one of the client's Shopify stores (keeps the row for history). */
+export async function disconnectShopAction(
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { ctx, error } = await requireTenant();
+  if (!ctx?.clientId) return { ok: false, error: error ?? "Not signed in to a workspace." };
+  if (ctx.role === "staff") {
+    return { ok: false, error: "Only the company owner can disconnect a Shopify store." };
+  }
+  const shopId = String(formData.get("shop_id") ?? "").trim();
+  if (!shopId) return { ok: false, error: "Shop is required." };
+
+  const admin = createAdminClient();
+  const { data: shop } = await admin
+    .from("shops")
+    .select("id, client_id")
+    .eq("id", shopId)
+    .maybeSingle();
+  if (!shop || shop.client_id !== ctx.clientId) return { ok: false, error: "Shop not found." };
+
+  const { error: updateError } = await admin
+    .from("shops")
+    .update({ status: "disconnected", access_token_encrypted: null, sync_error: null })
+    .eq("id", shop.id)
+    .eq("client_id", ctx.clientId);
+  if (updateError) return { ok: false, error: updateError.message };
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Client choice of the carrier line for one product × market. `selection` null = back to
+ * "cheapest (auto)". Stored in products_cache.quote_json._carrier_pref[market]; the live
+ * COGS, the matrix and the ECCANG order push read it (accepted quotes stay frozen).
+ * Owner or staff of the tenant; a line blocked or forced by Voltship cannot be chosen.
+ */
+export async function setCarrierPreferenceAction(
+  productId: string,
+  market: string,
+  selection: CarrierLineRef | null,
+): Promise<ActionResult> {
+  const { ctx, error } = await requireTenant();
+  if (!ctx?.clientId) return { ok: false, error: error ?? "Not signed in to a workspace." };
+  if (!productId) return { ok: false, error: "Missing product." };
+  const code = normalizeDestination(String(market ?? ""), "");
+  if (!code) return { ok: false, error: "Unknown market." };
+
+  let next: CarrierLineRef | null = null;
+  if (selection != null) {
+    const carrier = typeof selection.carrier === "string" ? selection.carrier.trim() : "";
+    if (!carrier) return { ok: false, error: "Choose a carrier line." };
+    const lineName = typeof selection.lineName === "string" ? selection.lineName.trim() : "";
+    next = { carrier, lineName: lineName || null };
+  }
+
+  const { admin, product } = await loadTenantProduct(ctx.clientId, productId);
+  if (!product) return { ok: false, error: "Product not found." };
+
+  const rules = await loadCarrierRules(ctx.clientId);
+  if (rules.forced[code]) return { ok: false, error: "This line is set by Voltship for this market." };
+  if (next && rules.blocked.includes(lineKey(next.carrier, next.lineName))) {
+    return { ok: false, error: "This line is not available for your account." };
+  }
+
+  const quote = quoteRecord(product);
+  const preferences = { ...parseCarrierPreferences(quote) };
+  if (next) preferences[code] = next;
+  else delete preferences[code];
+  const { error: updateError } = await admin
+    .from("products_cache")
+    .update({
+      quote_json: {
+        ...quote,
+        [CARRIER_PREF_KEY]: Object.keys(preferences).length > 0 ? preferences : null,
+      },
+    })
+    .eq("id", productId)
+    .eq("client_id", ctx.clientId);
+  if (updateError) return { ok: false, error: updateError.message };
+
+  revalidateProduct(productId);
   return { ok: true };
 }

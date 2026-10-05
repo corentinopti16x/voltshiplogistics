@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { writeAudit } from "@/lib/auth/audit";
 import { getAuthContext } from "@/lib/auth/context";
 import { generateInvitePassword, slugifyCode } from "@/lib/auth/passwords";
+import { parseLineKey, type CarrierRules } from "@/lib/domain/carrier-rules";
+import { normalizeDestination } from "@/lib/domain/pricing";
 import {
   CLIENT_ROLES,
   IMPERSONATE_COOKIE,
@@ -190,6 +192,62 @@ export async function updateLifecycleThresholdsAction(
   });
   revalidatePath(`/admin/clients/${clientId}`);
   revalidatePath("/admin");
+  return { ok: true, clientId };
+}
+
+/**
+ * Admin carrier rules of a client (clients.carrier_rules_json). Form: one `allowed:<Carrier|Line>`
+ * checkbox per line of the active grid (unchecked = blocked) plus an optional
+ * `forced:<ISO2>` select per market ("" = client choice). `lines` lists every line key shown,
+ * so a line absent from the form (new grid) is never blocked by accident.
+ */
+export async function updateCarrierRulesAction(
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { ctx, error } = await requireAdmin();
+  if (!ctx) return { ok: false, error };
+
+  const clientId = String(formData.get("client_id") ?? "");
+  if (!clientId) return { ok: false, error: "Missing client." };
+
+  const lines = formData
+    .getAll("lines")
+    .map((value) => String(value))
+    .filter((key) => key.includes("|"));
+  const allowed = new Set(formData.getAll("allowed").map((value) => String(value)));
+  const blocked = lines.filter((key) => !allowed.has(key));
+  const forced: CarrierRules["forced"] = {};
+  for (const [field, value] of formData.entries()) {
+    if (!field.startsWith("forced:")) continue;
+    const market = normalizeDestination(field.slice("forced:".length), "");
+    const ref = parseLineKey(String(value));
+    if (!market || !ref) continue;
+    if (blocked.includes(String(value))) {
+      return { ok: false, error: `The forced line for ${market} must be allowed.` };
+    }
+    forced[market] = ref;
+  }
+  const rules: CarrierRules = { blocked, forced };
+
+  const admin = createAdminClient();
+  const { error: updateError } = await admin
+    .from("clients")
+    .update({ carrier_rules_json: rules })
+    .eq("id", clientId);
+  if (updateError) return { ok: false, error: updateError.message };
+
+  await writeAudit({
+    actorUserId: ctx.userId,
+    clientId,
+    action: "client.carrier_rules",
+    entity: "clients",
+    diff: rules,
+  });
+  revalidatePath(`/admin/clients/${clientId}`);
+  revalidatePath("/[locale]/products", "page");
+  revalidatePath("/[locale]/products/[id]", "page");
+  revalidatePath("/[locale]/dashboard", "page");
   return { ok: true, clientId };
 }
 
