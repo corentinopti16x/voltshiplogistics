@@ -200,7 +200,7 @@
   "dashboard": {
     "title": "Dashboard",
     "workspace": "Client",
-    "overview": "Your {plan} workspace — priorities, product progress, and sales in one view.",
+    "overview": "Your {plan} workspace — priorities, product progress and sales at a glance.",
     "signOut": "Sign out",
     "newProduct": "New product",
     "seeAll": "See all",
@@ -209,17 +209,33 @@
     "migrationHint": "Product tables are missing. Run supabase/migrations/00002_app_tables.sql in the SQL editor.",
     "kpi": {
       "orders": "Orders shipped",
-      "fulfilled": "Fulfilled in Shopify",
-      "placed": "Placed Shopify orders — none are marked fulfilled yet",
+      "fulfilled": "fulfilled in Shopify",
+      "placed": "orders placed — none marked fulfilled",
       "today": "Today",
       "week": "7 days",
       "month": "30 days",
       "activeProducts": "Active products",
       "activeProductsDetail": "{total} products in your library",
-      "quotes": "Quotes to review",
+      "quotes": "Quotes pending",
       "quotesDetail": "Ready for your decision",
       "stock": "Stock alerts",
-      "stockDetail": "At or below the restock window"
+      "stockDetail": "At or below the restock window",
+      "sectionLabel": "Key metrics",
+      "lifecycleMix": "{winning} winning · {testing} testing",
+      "toReview": "To review",
+      "sourcing": "Sourcings in progress",
+      "sourcingDetail": "From brief received to quote sent",
+      "stockAlerts": "{count, plural, =1 {1 stock alert} other {# stock alerts}}",
+      "recurrence": "Repeat purchases",
+      "recurrenceConnect": "Connect your Shopify store",
+      "recurrenceNoOrders": "No cached Shopify orders yet",
+      "recurrenceNoCustomer": "{orders} orders without a customer identifier — re-sync the store",
+      "recurrenceRepeat": "{repeat} of {customers} customers ordered again",
+      "recurrenceReturning": "{share} of orders from returning customers",
+      "recurrencePerCustomer": "Orders / customer",
+      "recurrenceSecond": "2nd order (median)",
+      "recurrenceDays": "{days} d",
+      "recurrenceWindow": "Over the last {days} days of Shopify orders"
     },
     "restock": {
       "title": "{count} SKUs under the restock threshold",
@@ -228,7 +244,9 @@
       "sent": "Restock requested",
       "days": "{days} days left",
       "out": "Out of stock",
-      "stockout": "Out of stock since {date} · about {units} units missed"
+      "stockout": "Out of stock since {date} · about {units} units missed",
+      "lead": "Below the restock threshold at the last 30 days' pace.",
+      "suggested": "suggested restock {qty} units"
     },
     "actions": {
       "title": "Needs your attention",
@@ -238,12 +256,17 @@
       "reviewQuote": "Review quote",
       "stock": "Restock risk",
       "stockEmpty": "No products are inside the restock window.",
-      "daysLeft": "{days} days left"
+      "daysLeft": "{days} days left",
+      "quoteTag": "Quote ready",
+      "stockTag": "Low stock",
+      "researchTag": "Research ready",
+      "empty": "Nothing to handle. Quotes, stock alerts and ready research will show up here."
     },
     "activity": {
       "title": "Recent activity",
       "unread": "{count} unread",
-      "empty": "No activity yet. Quote, stock, and lifecycle updates will appear here."
+      "empty": "No activity yet. Quote, stock, and lifecycle updates will appear here.",
+      "unreadOne": "Unread"
     },
     "research": {
       "title": "Research ready",
@@ -262,19 +285,63 @@
       "notifications": "Notifications",
       "settings": "Settings",
       "menu": "Menu",
-      "close": "Close"
+      "close": "Close",
+      "label": "Main navigation",
+      "support": "Support"
+    },
+    "greeting": "Hello {name}",
+    "summary": "{decisions, plural, =0 {No decisions waiting} =1 {1 decision waiting for you} other {# decisions waiting for you}} · {shipped} orders shipped today",
+    "newProductShort": "New",
+    "footer": "Voltship Logistics · Dongguan",
+    "products": {
+      "title": "Your products",
+      "lead": "90-day sales, gross margin, days of stock, COGS and ROAS per product.",
+      "empty": "No products yet. Drop a new product to start sourcing."
+    },
+    "pipeline": {
+      "title": "Sourcing pipeline",
+      "lead": "Products your sourcer is working on."
+    },
+    "pipelineSteps": {
+      "brief_received": "Brief received",
+      "factories": "Factories",
+      "samples": "Samples",
+      "negotiation": "Negotiation",
+      "quote_sent": "Quote sent",
+      "validated": "Validated",
+      "in_production": "In production",
+      "in_stock": "In stock",
+      "flagged": "Needs clarification"
+    },
+    "warehouse": {
+      "title": "Warehouse orders",
+      "lead": "Latest orders pushed to the ECCANG warehouse: status, carrier, tracking and billed weight.",
+      "live": "Live · ECCANG",
+      "empty": "No order pushed to the warehouse yet.",
+      "noTracking": "Awaiting tracking",
+      "billedWeight": "billed weight {grams} g",
+      "status": {
+        "pending": "Not sent",
+        "C": "Awaiting review",
+        "W": "Being prepared",
+        "D": "Shipped",
+        "H": "On hold",
+        "N": "Abnormal",
+        "P": "Problem",
+        "X": "Cancelled"
+      }
     }
   },
   "products": {
     "title": "Products",
-    "lead": "Your library. Newest first. Click a card for quote, stock and economics.",
+    "lead": "Your library, ranked from your Shopify sales. Open a card for the quote, stock and unit economics.",
     "new": "New product",
-    "newLead": "This is the entry point. Voltship sourcing picks it up as “brief received”.",
+    "newLead": "A link or a photo is enough. We visit the factories, negotiate, and you get a clear quote.",
     "back": "All products",
     "search": "Search products",
     "applyFilters": "Apply filters",
-    "allLifecycle": "All lifecycle",
-    "allSourcing": "All sourcing",
+    "allLifecycle": "All",
+    "allSourcing": "Sourcing",
     "pipeline": {
       "caption": "Sourcing progress — Voltship updates this as work moves forward.",
       "brief_received": "Brief received",
@@ -299,10 +366,26 @@
       "destinations": "Destination markets",
       "notes": "Notes",
       "submit": "Submit request",
-      "submitting": "Submitting…"
+      "submitting": "Submitting…",
+      "nature": "Your product is mostly…",
+      "natureHint": "Tick what applies — it helps us pick the right shipping line.",
+      "attrElectronics": "Battery or electronics",
+      "attrElectronicsEx": "earbuds, smartwatch, LED lamp, vape",
+      "attrLiquid": "Liquid, cream or perfume",
+      "attrLiquidEx": "serum, oil, scented candle, perfume",
+      "attrAlcohol": "Is it a perfume or does it contain alcohol?",
+      "attrAlcoholEx": "perfume, eau de toilette, alcohol-based lotion",
+      "attrIngestible": "It is eaten or swallowed",
+      "attrIngestibleEx": "gummies, protein, tea, snacks",
+      "attrMagnetic": "There is a magnet inside",
+      "attrMagneticEx": "phone holder, magnetic closure",
+      "approxWeight": "Approximate unit weight, if you know it",
+      "approxWeightEx": "in grams, packaging included",
+      "currentUnitCost": "What you pay today per unit at your agent, if you want an estimate",
+      "currentUnitCostEx": "we show an estimated COGS before sourcing even starts"
     },
     "quote": {
-      "title": "Quote / COGS",
+      "title": "Landed cost",
       "pending": "Pending sourcing data — unit price, weight and channel are filled by Voltship.",
       "product": "Product",
       "weight": "Unit weight",
@@ -317,7 +400,44 @@
       "questionLabel": "Question for Voltship",
       "questionPlaceholder": "Ask about the quote, factory, or timing — this is a note, not a chat.",
       "questionSent": "Question sent.",
-      "sending": "Sending…"
+      "sending": "Sending…",
+      "productNote": "negotiated factory price",
+      "shippingLine": "Shipping",
+      "handling": "Fulfillment",
+      "handlingNote": "picking + packing + commission",
+      "cogsUnit": "COGS / unit",
+      "acceptedBadge": "Quote accepted",
+      "estimateBadge": "Grid estimate",
+      "pendingBadge": "Pending",
+      "missingGrid": "The pricing grid is not active yet.",
+      "missingRate": "No {destination} rate matches this weight and channel yet.",
+      "acceptedCogs": "Accepted COGS: {cogs}",
+      "frozenOn": "Frozen on {date} · grid {grid}",
+      "ratesChanged": "rates have changed since acceptance",
+      "shippingDetail": "{carrier}{line} · {tier} · parcel {price}{delivery}",
+      "tier": "Weight tier",
+      "parcelPrice": "Parcel shipping",
+      "line": "Carrier line",
+      "delivery": "Delivery",
+      "iossRequired": "IOSS required",
+      "billedWeight": "billed weight {weight} g",
+      "earlyTitle": "Estimated COGS · to be confirmed by sourcing",
+      "earlyBadge": "Estimate",
+      "earlyLead": "Computed on the active grid from your answers: {channel} channel, {weight} g, {cost} per unit ({source}). No Voltship sourcing commission applied. This is not a quote.",
+      "earlySourceCurrent": "your current cost",
+      "earlySourceTarget": "your target price",
+      "earlyRoas": "Estimated ROAS — break-even {be} · target {target}",
+      "earlyNoPrice": "Set a Shopify selling price to see the estimated ROAS.",
+      "earlyMissingGrid": "Rate grid not active yet — estimate unavailable.",
+      "earlyMissingRate": "No rate matches this weight and channel — estimate unavailable.",
+      "channels": {
+        "standard": "standard",
+        "electronics_battery": "electronics / battery",
+        "cosmetics": "cosmetics",
+        "liquid_perfume": "liquid / perfume",
+        "magnetic": "magnetic",
+        "sensitive_other": "sensitive (ingestible)"
+      }
     },
     "stock": {
       "title": "Stock",
@@ -328,7 +448,23 @@
       "restock": "Launch restock",
       "sending": "Sending…",
       "sent": "Restock request sent.",
-      "stockout": "Out of stock since {date}. About {units} units missed at the recent sales pace."
+      "stockout": "Out of stock since {date}. About {units} units missed at the recent sales pace.",
+      "daysValue": "{days} d",
+      "reserved": "Reserved",
+      "inbound": "Inbound",
+      "salesDay": "Sales / day",
+      "status": "Status",
+      "suggested": "Suggested restock",
+      "statuses": {
+        "ok": "OK",
+        "reorder": "Reorder",
+        "critical": "Critical",
+        "out_of_stock": "Out of stock"
+      },
+      "warehouseTitle": "Warehouse stock",
+      "declaredTitle": "Declared stock",
+      "liveBadge": "Live · ECCANG",
+      "declaredBadge": "Manually declared"
     },
     "research": {
       "title": "Research & content",
@@ -347,7 +483,8 @@
         "not_generated": "Not generated",
         "generating": "Generating",
         "ready": "Ready"
-      }
+      },
+      "open": "Open full research"
     },
     "lifecycleBanner": {
       "winning": "This product is winning. Secure the next batch before stock runs out.",
@@ -362,6 +499,122 @@
       "clearance": "Request clearance options",
       "sending": "Sending…",
       "sent": "Request sent to Voltship."
+    },
+    "noMatch": "No product matches these filters.",
+    "sourcingAny": "All",
+    "sourcingOpen": "In progress",
+    "sourcing": {
+      "brief_received": "Brief received",
+      "factories": "Factories",
+      "samples": "Samples",
+      "negotiation": "Negotiation",
+      "quote_sent": "Quote sent",
+      "validated": "Validated",
+      "in_production": "In production",
+      "in_stock": "In stock",
+      "flagged": "Needs clarification"
+    },
+    "card": {
+      "sales90": "Sales 90 d",
+      "price": "Selling price",
+      "grossMargin": "Gross margin",
+      "stockDays": "Stock",
+      "days": "{days} d",
+      "cogsReal": "Real COGS",
+      "cogsEstimate": "Est. COGS",
+      "roas": "ROAS BE · target",
+      "quoteReady": "Quote ready",
+      "lowStock": "Low stock",
+      "inbound": "{units} units inbound",
+      "stage": {
+        "none": "Not sourced yet",
+        "brief_received": "Brief received",
+        "factories": "Factories",
+        "samples": "Samples",
+        "negotiation": "Negotiation",
+        "quote_sent": "Quote sent — to validate",
+        "validated": "Validated",
+        "in_production": "In production",
+        "in_stock": "In stock",
+        "flagged": "Needs clarification"
+      },
+      "cogsLadder": "COGS 1·2·3·4·5 · {market}",
+      "noRate": "No rate for this weight",
+      "via": "via {line}",
+      "cogsEarly": "Est. COGS",
+      "cogsEarlyNote": "to be confirmed by sourcing",
+      "roasEarly": "Est. ROAS BE · target"
+    },
+    "howItWorks": {
+      "title": "How it works",
+      "drop": {
+        "title": "You drop the product",
+        "body": "A link or a photo, two minutes."
+      },
+      "visit": {
+        "title": "We visit and compare factories",
+        "body": "On site, not on Alibaba."
+      },
+      "validate": {
+        "title": "You validate the quote, we launch",
+        "body": "Product + shipping by weight + fulfillment."
+      }
+    },
+    "cogsMatrix": {
+      "title": "COGS 1–5 × market",
+      "lead": "Cost of goods for an order of 1 to 5 units, per market — live grid, one parcel per order.",
+      "modeLabel": "Display",
+      "mode": {
+        "cogs": "COGS",
+        "roas": "ROAS"
+      },
+      "market": "Market",
+      "units": "{count, plural, =1 {1 unit} other {# units}}",
+      "perUnit": "{value} / unit",
+      "roasTarget": "target {value} ({margin}% margin)",
+      "aov": "AOV {value}",
+      "noRate": "No rate for this weight",
+      "gridDate": "Grid of {date}",
+      "gridVersion": "Grid {version}",
+      "ratesChanged": "Rates updated since your quote",
+      "missingGrid": "The rate grid is not active yet.",
+      "missingProduct": "Price, weight and channel are filled in by Voltship — the matrix shows up after that.",
+      "formulaNote": "COGS(n) = n × product price (+ commission) + shipping for one parcel of n × unit weight + handling once per order. The accepted quote stays the contractual figure for 1 unit.",
+      "roasNote": "Break-even ROAS, then target ROAS at {margin}% margin, computed on the AOV (selling price × n) and the order COGS.",
+      "cellDetail": "{carrier}{line} · {tier} · parcel {price}{delivery}",
+      "iossRequired": "IOSS required",
+      "billedWeight": "billed weight {weight} g"
+    },
+    "carousel": {
+      "label": "Shopify photos of {title}",
+      "slideAlt": "{title} — photo {index} of {count}",
+      "prev": "Previous photo",
+      "next": "Next photo",
+      "dots": "Choose a photo",
+      "goTo": "Photo {index} of {count}"
+    },
+    "recurrence": {
+      "label": "Re-purchase:",
+      "connect": "Connect your Shopify store",
+      "noSku": "no SKU linked to Shopify orders.",
+      "noBuyers": "no identified buyer in the cached Shopify orders.",
+      "value": "{rate} of {buyers} buyers re-ordered (any product) within {days} days."
+    },
+    "carrier": {
+      "title": "Carrier",
+      "lead": "Pick the line that ships this product on each market — price and delay for 1 unit, live grid. The cheapest line is applied by default.",
+      "auto": "Cheapest (auto) — {label}",
+      "autoEmpty": "Cheapest (auto)",
+      "ioss": "IOSS required",
+      "forced": "Set by Voltship",
+      "noOption": "No line covers this weight on this market.",
+      "unavailableOption": "{label} — unavailable at this weight",
+      "fallbackHint": "Chosen line unavailable at this weight → cheapest applied",
+      "preferredHint": "Chosen line applied",
+      "saved": "Line saved — COGS updated.",
+      "error": "Could not save the line.",
+      "note": "The chosen line drives the COGS, the matrix and the warehouse shipment. The accepted quote stays frozen.",
+      "readOnly": "Only members of your workspace can change the line."
     }
   },
   "economics": {
@@ -377,20 +630,37 @@
     "roasBe": "ROAS break-even",
     "roasTarget": "ROAS target",
     "roasRange": "ROAS target range",
-    "maxAtc": "Max ATC cost"
+    "maxAtc": "Max ATC cost",
+    "note": "Fees {fees}% (your profile) · target ROAS = {target}% margin · indicative estimate."
   },
   "inbound": {
     "title": "Inbound",
-    "lead": "Announced → arrived → QC → stocked. Read-only in this version.",
-    "empty": "No inbound yet. Phase 2 syncs this from ECCANG, with QC photos."
+    "lead": "Your goods on their way to the warehouse: announced, arrived, checked, stocked.",
+    "empty": "No inbound yet — warehouse receipts will appear here as soon as we open.",
+    "steps": {
+      "announced": "Announced",
+      "arrived": "Arrived",
+      "qc": "Quality check",
+      "stocked": "In stock"
+    },
+    "live": "Live · ECCANG",
+    "emptyLive": "No inbound shipment yet. Launch a restock from a product page: the receiving notice will show up here as soon as the warehouse creates it.",
+    "cancelled": "Cancelled",
+    "asn": "ASN",
+    "tracking": "Tracking",
+    "openProduct": "Open product",
+    "qty": "{announced} announced · {received} received"
   },
   "notificationsPage": {
     "title": "Notifications",
-    "lead": "Quote ready, stock alerts, lifecycle changes.",
+    "lead": "Quotes, stock, research and lifecycle changes.",
     "empty": "Nothing yet. Events will land here, and also go to email or WhatsApp.",
     "read": "Read",
     "unread": "Unread",
-    "markAll": "Mark all read"
+    "markAll": "Mark all read",
+    "unreadCount": "{count, plural, =1 {1 unread notification} other {# unread notifications}}",
+    "saving": "Saving…",
+    "markRead": "Mark read"
   },
   "settings": {
     "title": "Settings",
@@ -419,7 +689,8 @@
         "research_failed": "Research failed",
         "lifecycle_changed": "Lifecycle change",
         "restock_requested": "Restock requested",
-        "ops_request": "Request to Voltship"
+        "ops_request": "Request to Voltship",
+        "carrier_line_unavailable": "Carrier line unavailable"
       }
     },
     "fields": {
@@ -431,6 +702,76 @@
       "target_margin_pct": "Target margin %",
       "safety_buffer_days": "Safety buffer (days)",
       "coverage_target_days": "Coverage target (days)"
+    },
+    "financialTitle": "Financial & stock profile",
+    "financialLead": "Fees, target margins and safety buffer used for ROAS and restock alerts.",
+    "shopify": {
+      "title": "Shopify store",
+      "lead": "Connect your store so Voltship tracks your sales and stock automatically.",
+      "access": "Products, orders, shipments and inventory — Voltship never edits your orders.",
+      "domainLabel": "Your store address",
+      "connect": "Connect my store",
+      "connectedBanner": "Store connected. The last 90 days of orders and your catalogue are being imported.",
+      "empty": "No store connected yet.",
+      "lastSync": "Last sync:",
+      "never": "never",
+      "disconnect": "Disconnect",
+      "confirmDisconnect": "Confirm disconnect",
+      "disconnecting": "Disconnecting…",
+      "cancel": "Cancel",
+      "ownerOnly": "Only the company owner can connect or disconnect a store.",
+      "status": {
+        "active": "Connected",
+        "pending": "Pending",
+        "disconnected": "Disconnected"
+      }
+    },
+    "apiKeys": {
+      "title": "API & support integrations",
+      "lead": "Give your support tool (Repline, Gorgias, Zendesk…) read access to your order tracking.",
+      "endpoint": "Endpoint",
+      "docs": "Example call",
+      "nameLabel": "Key name",
+      "namePlaceholder": "Gorgias production",
+      "create": "Create a key",
+      "creating": "Creating…",
+      "newKeyTitle": "Copy this key now",
+      "newKeyLead": "It will never be shown again. Store it in your support tool.",
+      "copy": "Copy",
+      "copied": "Copied.",
+      "empty": "No key yet.",
+      "created": "Created",
+      "lastUsed": "Last call",
+      "never": "never",
+      "revoked": "Revoked",
+      "active": "Active",
+      "revoke": "Revoke",
+      "confirmRevoke": "Confirm",
+      "cancel": "Cancel",
+      "revoking": "Revoking…",
+      "ownerOnly": "Only the company owner can manage API keys.",
+      "limit": "60 requests / minute per key. Statuses: received, preparing, shipped, delivered, cancelled, unknown."
+    },
+    "gmail": {
+      "title": "Support · Gmail inbox",
+      "lead": "Connect your support Gmail inbox: customer e-mails show up in the Support tab with the matched order and a suggested reply.",
+      "connect": "Connect Gmail",
+      "connectedBanner": "Gmail inbox connected. The first sync (last 7 days) runs within 10 minutes.",
+      "notConfigured": "Gmail is not configured on the Voltship side (GOOGLE_CLIENT_ID).",
+      "empty": "No inbox connected.",
+      "status": {
+        "connected": "Connected",
+        "error": "Sync error",
+        "disconnected": "Disconnected"
+      },
+      "lastSync": "Last sync:",
+      "never": "never",
+      "disconnect": "Disconnect",
+      "confirmDisconnect": "Confirm disconnect",
+      "disconnecting": "Disconnecting…",
+      "cancel": "Cancel",
+      "ownerOnly": "Only the company owner can connect or disconnect the inbox.",
+      "scopes": "Requested access: read e-mails and send replies (gmail.modify). Customer addresses are never stored in clear text."
     }
   },
   "admin": {
@@ -490,7 +831,11 @@
         "quotes": "Quotes awaiting clients",
         "quotesDetail": "Sent and not yet accepted",
         "shops": "Active shops",
-        "shopsDetail": "Connected Shopify stores"
+        "shopsDetail": "Connected Shopify stores",
+        "finance": "Current week",
+        "financeDetail": "Result · {perDay} parcels/day needed · {parcels} parcels",
+        "financeNoBreakEven": "Result · {parcels} parcels · break-even not computable",
+        "financeUnavailable": "Finances unavailable"
       },
       "recentProducts": {
         "title": "Latest product requests",
@@ -512,7 +857,10 @@
         "pending": "{count} waiting to sync",
         "notSynced": "No sync yet",
         "lifecycle": "Lifecycle rules",
-        "perClient": "Set per client"
+        "perClient": "Set per client",
+        "eccangSync": "ECCANG sync",
+        "eccangStuck": "Stuck ECCANG orders",
+        "stuckOrders": "{count} without tracking for 48 h+"
       },
       "restock": {
         "title": "Restock threshold",
@@ -535,7 +883,346 @@
       "sourcing": "Sourcing",
       "menu": "Menu",
       "close": "Close",
-      "admin": "Staff"
+      "admin": "Staff",
+      "margin": "Margin",
+      "finance": "Finances"
+    },
+    "rateImport": {
+      "kicker": "Voltship admin",
+      "title": "Update rates with the assistant",
+      "lead": "Drop a carrier price list in any form — Claude turns it into a versioned grid, applies the Voltship margin rule, and you activate it after review.",
+      "backToPricing": "Back to pricing",
+      "linkFromPricing": "Update rates with the assistant",
+      "notConfigured": "The rate assistant is not configured (ANTHROPIC_API_KEY).",
+      "step1": {
+        "title": "1 · Price list",
+        "lead": "PDF, screenshot (JPEG/PNG), Excel matrix (.xlsx — one sheet per country × category, carriers as columns, weight in g as rows), CSV or pasted text — up to 3 files of 8 MB. RMB price lists per kg + fee or per weight bracket.",
+        "carrier": "Carrier",
+        "carrierAuto": "Detect automatically",
+        "hint": "Note",
+        "hintPlaceholder": "VIP grid of 24/09, Europe lines only…",
+        "files": "Files",
+        "text": "Or paste the price list",
+        "textPlaceholder": "法国 普货 0-2kg 60元/kg + 18元/票 …",
+        "submit": "Analyse with Claude",
+        "submitting": "Analysing… (30–90 s for a PDF)",
+        "recent": "Recent imports",
+        "none": "No import yet.",
+        "open": "Open",
+        "status": {
+          "draft": "Draft",
+          "reviewed": "Reviewed",
+          "activated": "Activated",
+          "discarded": "Discarded"
+        },
+        "paths": {
+          "assistantTitle": "Assistant (Claude):",
+          "assistant": "PDF, screenshot, pasted text or a carrier's own price list — the assistant reads and structures it, with a confidence score.",
+          "matrixTitle": "Voltship matrix (direct import):",
+          "matrix": "your China_Carriers_Matrix file (.xlsx, one sheet per COUNTRY-CATEGORY, gram-by-gram weights) is read without AI: every carrier at once, 50 g brackets priced at the max gram. Auto-detected from the sheet names."
+        },
+        "matrix": "Voltship matrix (direct import)",
+        "matrixHelp": "Forces the direct .xlsx read (no Claude). Otherwise the matrix is detected automatically when a sheet is named FRANCE-STANDARD, USA-ELECTRONICS…",
+        "submitMatrix": "Import the matrix",
+        "submittingMatrix": "Reading the matrix…"
+      },
+      "step2": {
+        "title": "2 · Review",
+        "lead": "Check every line, toggle the tax flag or exclude a line, adjust the margin rule, then activate.",
+        "carrier": "Carrier",
+        "gridDate": "Price list date",
+        "model": "Model",
+        "activeGrid": "Active grid",
+        "noActiveGrid": "none",
+        "statusActivated": "Activated as grid {version}.",
+        "statusDiscarded": "This import was discarded.",
+        "warnings": "Assistant warnings",
+        "lines": "Parsed lines",
+        "columns": {
+          "include": "Include",
+          "destination": "Dest.",
+          "channel": "Channel",
+          "line": "Line",
+          "pricing": "Formula / brackets",
+          "tax": "Tax incl.",
+          "vat": "VAT extra",
+          "delivery": "Delivery",
+          "confidence": "Confidence",
+          "sample": "At 500 g",
+          "notes": "Notes",
+          "ioss": "IOSS"
+        },
+        "perKg": "{fee} + {perKg} RMB/kg",
+        "tiers": "{count} tiers",
+        "table": "{count} brackets",
+        "taxYes": "yes",
+        "taxNo": "no — +{tax} added",
+        "vatExtra": "VAT on declared value billed extra — excluded by default",
+        "lowConfidence": "Low confidence",
+        "settings": {
+          "title": "Margin rule",
+          "lead": "price = cost € + max(cost € × margin %, min margin) + EU tax when not tax-inclusive, rounded to 0.05.",
+          "fx": "RMB per EUR",
+          "margin": "Margin %",
+          "minMargin": "Min margin € / parcel",
+          "euTax": "Manual per-parcel supplement (normally 0)",
+          "apply": "Recompute",
+          "applying": "Recomputing…",
+          "saveDefault": "Save as default",
+          "savedDefault": "Default rule saved.",
+          "handlingCost": "Real handling cost € / order (internal)",
+          "fxMarket": "Market FX rate RMB / EUR (internal)"
+        },
+        "summary": {
+          "cells": "Cells",
+          "lines": "Lines included",
+          "notTax": "Non-inclusive lines",
+          "lowConfidence": "Low-confidence lines",
+          "destinations": "Destinations",
+          "carried": "Carried forward"
+        },
+        "comparison": {
+          "title": "Before / after — cheapest carrier",
+          "lead": "Reference weights per destination and channel. Other carriers from the active grid stay in place; the imported carrier is replaced.",
+          "destination": "Dest.",
+          "channel": "Channel",
+          "weight": "Weight",
+          "old": "Active grid",
+          "new": "Proposed",
+          "delta": "Δ",
+          "none": "no rate",
+          "empty": "No comparison yet — include at least one line."
+        },
+        "activate": {
+          "title": "Activate the grid",
+          "lead": "Creates a new grid version containing these cells plus every other carrier of the active grid, activates it for every live quote, and logs the change. Accepted quotes stay frozen.",
+          "version": "Grid version (optional)",
+          "versionPlaceholder": "V13-2026-10-04-tongyou",
+          "confirmLow": "I checked the low-confidence lines and want to activate anyway.",
+          "button": "Activate the grid",
+          "activating": "Activating…",
+          "confirm": "Activate this grid now? Every live quote will use it.",
+          "done": "Grid {version} activated — {cells} cells from {lines} lines.",
+          "discard": "Discard this import",
+          "discarded": "Import discarded."
+        },
+        "carriers": "Carriers",
+        "perCarrier": "Lines included per carrier:",
+        "iossRequired": "IOSS required",
+        "allInclusive": "All-inclusive matrix: every price is the final carrier cost per parcel — no tax or supplement is added and every line competes for the cheapest pick. IOSS mentions are informational."
+      }
+    },
+    "pricingCells": {
+      "carrierCost": "Carrier cost (RMB → €)",
+      "transportMargin": "Transport margin",
+      "taxNote": "EU tax {tax} passed on, deducted"
+    },
+    "margin": {
+      "confidential": "Confidential · Voltship internal",
+      "kicker": "Voltship margin",
+      "title": "Voltship margin",
+      "lead": "What clients pay vs what it costs Voltship, over the last {days} days (parcels shipped through ECCANG).",
+      "formula": "Margin = (product + commission − factory price) + (client shipping − carrier cost − EU tax passed on) + (handling fee − real cost). FX at {fx} RMB/€; estimated FX gain vs {fxMarket}.",
+      "kpi": {
+        "revenue": "Client revenue {days} d",
+        "cost": "Voltship costs",
+        "margin": "Margin €",
+        "pct": "Margin %",
+        "perParcel": "Margin / parcel",
+        "fx": "FX margin (estimated)",
+        "orders": "{count} parcels shipped",
+        "partial": "{count} incomplete parcels"
+      },
+      "split": {
+        "title": "Split",
+        "sourcing": "Sourcing",
+        "transport": "Transport",
+        "handling": "Handling"
+      },
+      "byClient": {
+        "title": "By client",
+        "lead": "ECCANG parcels shipped over the window, priced with the active grid and the sourcing factory prices.",
+        "client": "Client",
+        "orders": "Parcels",
+        "revenue": "Client revenue",
+        "cost": "Costs",
+        "margin": "Margin",
+        "pct": "%",
+        "source": "Carrier cost",
+        "unpriced": "{count} not priced",
+        "empty": "No parcel shipped through ECCANG over the window. Per-product margins stay visible on each client page."
+      },
+      "source": {
+        "real": "real",
+        "estimated": "estimated",
+        "mixed": "{real} real · {estimated} estimated",
+        "unknown": "unknown"
+      },
+      "flags": {
+        "factory_price_missing": "factory price missing",
+        "carrier_cost_unknown": "carrier cost unknown, grid imported before the assistant",
+        "carrier_cost_real": "real carrier cost (ECCANG)",
+        "carrier_cost_estimated": "carrier cost estimated (grid)",
+        "no_rate": "no rate for this weight",
+        "partial": "partial"
+      },
+      "clientCard": {
+        "title": "Voltship margin",
+        "lead": "Per product, 1 unit on the primary market, active grid. Factory prices come from sourcing (never visible to the client).",
+        "product": "Product",
+        "market": "Market",
+        "clientCogs": "Client COGS ×1",
+        "cost": "Voltship cost ×1",
+        "margin": "Margin ×1",
+        "units": "Sales {days} d",
+        "flags": "Flags",
+        "total": "Total",
+        "weightedBySales": "Total weighted by the last {days} days of sales.",
+        "perUnit": "No sales over {days} days: total per unit (1 per product).",
+        "empty": "No product for this client.",
+        "matrix": "Matrix 1–5",
+        "noGrid": "No active grid: margins cannot be computed."
+      },
+      "productPage": {
+        "kicker": "Voltship margin · product",
+        "back": "Client page",
+        "lead": "Client price vs Voltship cost vs margin, per market and quantity (1 to 5 units in one parcel).",
+        "factory": "Factory price",
+        "factoryMissing": "Factory price missing in sourcing — the sourcing margin is not computed.",
+        "quantity": "Qty",
+        "clientPays": "Client pays",
+        "cost": "Voltship cost",
+        "margin": "Margin",
+        "pct": "%",
+        "perUnit": "/ unit",
+        "fx": "FX (est.)",
+        "sourcing": "Sourcing",
+        "transport": "Transport",
+        "handling": "Handling",
+        "noRate": "No rate",
+        "market": "Market {market}",
+        "grid": "Grid {version}",
+        "notFound": "Product not found."
+      },
+      "settingsNote": "Handling cost {handling} · FX {fx} RMB/€ · market rate {fxMarket} — editable in Pricing › Update rates › Margin rule."
+    },
+    "finance": {
+      "kicker": "Voltship finances",
+      "title": "Week-by-week result",
+      "lead": "Parcels shipped, client revenue, variable costs, fixed costs and result over the last {weeks} ISO weeks (Monday → Sunday, Paris time).",
+      "formula": "Result = (client revenue − variable costs) − fixed costs of the week. Monthly fixed costs × 12/52. Break-even = fixed costs ÷ average margin per parcel.",
+      "manageCosts": "Fixed costs & adjustments",
+      "recompute": "Recompute every week",
+      "currentWeek": "Current week",
+      "estimated": "estimated",
+      "kpi": {
+        "parcels": "Parcels",
+        "unpriced": "{count} unpriced",
+        "revenue": "Client revenue",
+        "grossMargin": "Gross margin",
+        "perParcel": "{amount} / parcel",
+        "fixed": "Fixed costs",
+        "result": "Result",
+        "breakEven": "Break-even parcels / day",
+        "breakEvenSub": "{week} parcels / week · {working} / working day",
+        "breakEvenNone": "No usable margin per parcel"
+      },
+      "chart": {
+        "title": "Weekly result",
+        "lead": "Green: positive week. Rust: negative week. Hatched: estimated (Shopify orders, no ECCANG shipment)."
+      },
+      "table": {
+        "title": "Last {weeks} weeks",
+        "lead": "Click a week to see the per-client split.",
+        "week": "Week",
+        "parcels": "Parcels",
+        "revenue": "Revenue",
+        "variable": "Var. costs",
+        "grossMargin": "Gross margin",
+        "fixed": "Fixed",
+        "result": "Result",
+        "perParcel": "Margin / parcel",
+        "source": "Source",
+        "current": "current"
+      },
+      "source": {
+        "real": "real",
+        "none": "no parcels",
+        "cached": "cached"
+      },
+      "byClient": {
+        "title": "Per client",
+        "lead": "Parcels valued with the active grid and the sourcing factory prices.",
+        "adjustments": "Week adjustments: revenue {revenue} · costs {cost}.",
+        "client": "Client",
+        "share": "Parcel share",
+        "empty": "No parcels this week."
+      },
+      "caveat": "Margin per parcel = Voltship margin engine (product + commission − factory, shipping − carrier − tax pass-through, handling fee − cost). Parcels without a factory price or carrier cost are partial. This is not accounting: VAT, real FX and payroll charges are not modelled.",
+      "costs": {
+        "title": "Fixed costs & adjustments",
+        "lead": "Rent, salaries, tools… prorated per week; one-off adjustments attached to a week.",
+        "backToWeeks": "← Weeks",
+        "thisWeek": "Fixed costs this week",
+        "thisWeekSub": "W{week} · monthly × 12/52",
+        "perMonth": "Monthly equivalent",
+        "perMonthSub": "week costs × 52/12",
+        "count": "Cost lines",
+        "addTitle": "Add a fixed cost",
+        "addLead": "Monthly: × 12/52 per week. Weekly: as is. One-off: counted in the week of the start date.",
+        "listTitle": "Fixed costs",
+        "empty": "No fixed cost yet. The result equals the gross margin.",
+        "weekly": "Per week",
+        "validity": "Validity"
+      },
+      "adjustments": {
+        "addTitle": "Add an adjustment",
+        "addLead": "A refund, a bonus billed to a client, a damaged parcel… signed amount, attached to the week of the date.",
+        "listTitle": "Adjustments",
+        "empty": "No adjustment."
+      },
+      "forms": {
+        "label": "Label",
+        "labelPlaceholder": "Fenggang warehouse rent",
+        "adjustmentPlaceholder": "Damaged parcel — client refund",
+        "amount": "Amount (€)",
+        "signedAmount": "Signed amount (€)",
+        "period": "Period",
+        "category": "Category",
+        "start": "Start",
+        "end": "End (optional)",
+        "notes": "Notes",
+        "weekDate": "Date (within the week)",
+        "kind": "Kind",
+        "addCost": "Add cost",
+        "costSaved": "Cost saved.",
+        "addAdjustment": "Add adjustment",
+        "adjustmentSaved": "Adjustment saved.",
+        "saving": "Saving…",
+        "delete": "Delete"
+      },
+      "periods": {
+        "monthly": "Monthly",
+        "weekly": "Weekly",
+        "one_off": "One-off"
+      },
+      "categories": {
+        "loyer": "Rent",
+        "salaires": "Salaries",
+        "outils": "Tools",
+        "logistique": "Logistics",
+        "marketing": "Marketing",
+        "autre": "Other"
+      },
+      "kinds": {
+        "revenue": "Revenue",
+        "cost": "Cost"
+      }
+    },
+    "support": {
+      "line": "Support: {mailbox} · {count} open ticket(s)",
+      "connected": "Gmail connected ({email})",
+      "notConnected": "Gmail not connected"
     }
   },
   "impersonate": {
@@ -545,5 +1232,66 @@
   "sourcer": {
     "title": "Sourcing queue",
     "soon": "Oldest requests first. Complete the quote fields and send the client-ready COGS."
+  },
+  "support": {
+    "title": "Support",
+    "lead": "Your customer e-mails, the matched order and a suggested reply to review before sending.",
+    "empty": "No ticket yet. Connect your Gmail inbox in Settings to get started.",
+    "noMailbox": "No Gmail inbox connected.",
+    "goSettings": "Open settings",
+    "syncNow": "Sync now",
+    "syncing": "Syncing…",
+    "lastSync": "Last sync:",
+    "never": "never",
+    "unknownCustomer": "Unknown customer",
+    "noSubject": "(no subject)",
+    "order": "Order",
+    "noOrder": "Order not identified",
+    "open": "Open",
+    "answered": "Answered",
+    "closed": "Resolved",
+    "filters": {
+      "all": "All",
+      "open": "Open",
+      "answered": "Answered",
+      "closed": "Resolved"
+    },
+    "intent": {
+      "where_is_my_order": "Where is my order",
+      "delivery_delay": "Delivery delay",
+      "damaged": "Damaged parcel",
+      "return": "Return",
+      "other": "Other"
+    },
+    "fulfillment": {
+      "received": "Received",
+      "preparing": "Preparing",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled",
+      "unknown": "To check"
+    },
+    "thread": {
+      "back": "All tickets",
+      "customer": "Customer",
+      "store": "You",
+      "draftTitle": "Suggested reply",
+      "draftLead": "Review, edit, then send. Nothing goes out without your click.",
+      "noDraft": "No suggested reply (AI assistant not configured or pending). Write your reply below.",
+      "confidence": "confidence",
+      "send": "Send",
+      "sending": "Sending…",
+      "sent": "Reply sent.",
+      "resolve": "Mark resolved",
+      "reopen": "Reopen",
+      "orderCard": "Matched order",
+      "tracking": "Tracking",
+      "carrier": "Carrier",
+      "shippedAt": "Shipped on",
+      "eta": "Estimated delivery",
+      "noTracking": "No tracking number yet",
+      "items": "Items",
+      "viewTracking": "Open tracking"
+    }
   }
 }
