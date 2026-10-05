@@ -1,10 +1,16 @@
+import { getTranslations } from "next-intl/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { activateRateGridFormAction } from "@/app/actions/pricing";
+import { ButtonLink } from "@/components/ui/button";
 import { CreateGridForm, RateCellForm, RateGridCsvForm } from "@/components/admin/pricing-forms";
+import { readPricingSettings } from "@/lib/pricing/settings";
+import { ConfidentialTag } from "@/components/admin/margin-ui";
 
 export default async function AdminPricingPage() {
+  const t = await getTranslations("admin.rateImport");
+  const tc = await getTranslations("admin.pricingCells");
   const admin = createAdminClient();
-  const [{ data: grids }, { data: cells }, { data: active }] = await Promise.all([
+  const [{ data: grids }, { data: cells }, { data: active }, settings] = await Promise.all([
     admin
       .from("rate_grids")
       .select("grid_version, effective_date, source, created_at")
@@ -12,7 +18,8 @@ export default async function AdminPricingPage() {
     admin
       .from("rate_grid_cells")
       .select(
-        "id, grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range",
+        // carrier_cost_rmb is INTERNAL: this page is rendered for voltship_admin only.
+        "id, grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, tax_included, carrier_cost_rmb",
       )
       .order("grid_version", { ascending: false })
       .order("destination"),
@@ -21,8 +28,11 @@ export default async function AdminPricingPage() {
       .select("value")
       .eq("key", "active_grid_version")
       .maybeSingle(),
+    readPricingSettings(admin),
   ]);
   const versions = (grids ?? []).map((grid) => grid.grid_version);
+  const hasCarrierCost = (cells ?? []).some((cell) => cell.carrier_cost_rmb != null);
+  const eur = (value: number) => `${value.toFixed(2)} €`;
 
   return (
     <div>
@@ -34,6 +44,11 @@ export default async function AdminPricingPage() {
         Versioned shipping rates. Activating a version updates live COGS; accepted quotes stay
         frozen.
       </p>
+      <div className="mt-4">
+        <ButtonLink href="/admin/pricing/update" variant="gold">
+          ✦ {t("linkFromPricing")}
+        </ButtonLink>
+      </div>
 
       <section className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
         <h2 className="text-sm font-semibold">New grid version</h2>
@@ -103,8 +118,9 @@ export default async function AdminPricingPage() {
       ) : null}
 
       <section className="mt-6 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--card)]">
-        <div className="p-6">
+        <div className="flex flex-wrap items-center gap-3 p-6">
           <h2 className="text-sm font-semibold">Rate cells</h2>
+          {hasCarrierCost ? <ConfidentialTag /> : null}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -112,10 +128,17 @@ export default async function AdminPricingPage() {
               <tr>
                 <th className="px-4 py-3">Version</th>
                 <th className="px-4 py-3">Carrier</th>
+                <th className="px-4 py-3">Line</th>
                 <th className="px-4 py-3">Destination</th>
                 <th className="px-4 py-3">Channel</th>
                 <th className="px-4 py-3">Weight</th>
-                <th className="px-4 py-3">Price</th>
+                <th className="px-4 py-3">Price (EUR)</th>
+                {hasCarrierCost ? (
+                  <>
+                    <th className="px-4 py-3">{tc("carrierCost")}</th>
+                    <th className="px-4 py-3">{tc("transportMargin")}</th>
+                  </>
+                ) : null}
                 <th className="px-4 py-3">Delivery</th>
               </tr>
             </thead>
@@ -124,12 +147,31 @@ export default async function AdminPricingPage() {
                 <tr key={cell.id} className="border-b border-[var(--line)]">
                   <td className="px-4 py-3">{cell.grid_version}</td>
                   <td className="px-4 py-3">{cell.carrier}</td>
+                  <td className="px-4 py-3">
+                    {cell.line_name ?? "—"}
+                    {cell.tax_included === false ? (
+                      <span className="ml-1 text-[var(--rust-ink)]" title="Not tax-inclusive: EU parcel tax added">
+                        ⚠
+                      </span>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-3">{cell.destination}</td>
                   <td className="px-4 py-3">{cell.channel.replaceAll("_", " ")}</td>
                   <td className="px-4 py-3">
                     {cell.weight_min_g}–{cell.weight_max_g}g
                   </td>
-                  <td className="px-4 py-3">${Number(cell.price).toFixed(2)}</td>
+                  <td className="tabular px-4 py-3">{Number(cell.price).toFixed(2)} €</td>
+                  {hasCarrierCost ? (
+                    <CarrierCostCells
+                      price={Number(cell.price)}
+                      carrierCostRmb={cell.carrier_cost_rmb == null ? null : Number(cell.carrier_cost_rmb)}
+                      taxIncluded={cell.tax_included !== false}
+                      fx={settings.fx_rmb_per_eur}
+                      tax={settings.eu_parcel_tax_eur}
+                      eur={eur}
+                      taxNote={tc("taxNote", { tax: eur(settings.eu_parcel_tax_eur) })}
+                    />
+                  ) : null}
                   <td className="px-4 py-3">{cell.delivery_range ?? "—"}</td>
                 </tr>
               ))}
@@ -138,5 +180,47 @@ export default async function AdminPricingPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+/** Internal columns (admin only): carrier cost RMB → € and the transport margin of the cell. */
+function CarrierCostCells({
+  price,
+  carrierCostRmb,
+  taxIncluded,
+  fx,
+  tax,
+  eur,
+  taxNote,
+}: {
+  price: number;
+  carrierCostRmb: number | null;
+  taxIncluded: boolean;
+  fx: number;
+  tax: number;
+  eur: (value: number) => string;
+  taxNote: string;
+}) {
+  if (carrierCostRmb == null) {
+    return (
+      <>
+        <td className="px-4 py-3 text-[var(--faint)]">—</td>
+        <td className="px-4 py-3 text-[var(--faint)]">—</td>
+      </>
+    );
+  }
+  const costEur = carrierCostRmb / fx;
+  const passThrough = taxIncluded ? 0 : tax;
+  const margin = price - costEur - passThrough;
+  return (
+    <>
+      <td className="tabular px-4 py-3">
+        {carrierCostRmb.toFixed(2)} RMB → {eur(costEur)}
+      </td>
+      <td className={`tabular px-4 py-3 ${margin < 0 ? "text-[var(--rust-ink)]" : "text-[var(--green-ink)]"}`}>
+        {eur(margin)}
+        {passThrough > 0 ? <span className="ml-1 text-[11px] text-[var(--faint)]">({taxNote})</span> : null}
+      </td>
+    </>
   );
 }
