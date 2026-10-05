@@ -3,6 +3,10 @@ import { verifyShopifyWebhookHmac } from "@/lib/shopify/auth";
 import type { ShopifyOrder } from "@/lib/shopify/admin-api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  cacheOrderLines,
+  customerKeyForOrder,
+  hashCustomerEmail,
+  orderNumberOf,
   packOrderLines,
   resolveShopifyFulfillment,
   unpackOrderLines,
@@ -11,6 +15,7 @@ import {
   finishWebhookEvent,
   persistWebhookEvent,
 } from "@/lib/integrations/webhook-events";
+import { pushOrderIfEnabled } from "@/lib/eccang/sync";
 
 type CachedLine = { sku: string; quantity: number };
 
@@ -62,7 +67,7 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
     const { data: shop } = await admin
       .from("shops")
-      .select("id, client_id")
+      .select("id, client_id, shopify_domain")
       .eq("shopify_domain", shopDomain)
       .eq("status", "active")
       .maybeSingle();
@@ -87,9 +92,7 @@ export async function POST(request: Request) {
     }
 
     const date = order.created_at.slice(0, 10);
-    const lines = order.line_items
-      .filter((line) => line.sku?.trim())
-      .map((line) => ({ sku: line.sku!.trim(), quantity: line.quantity }));
+    const lines = cacheOrderLines(order.line_items);
     if (!order.cancelled_at) {
       await applyLines({
         clientId: shop.client_id,
@@ -104,8 +107,12 @@ export async function POST(request: Request) {
         client_id: shop.client_id,
         shop_id: shop.id,
         shopify_order_id: String(order.id),
+        order_number: orderNumberOf(order),
+        placed_at: order.created_at,
         order_date: date,
         cancelled: Boolean(order.cancelled_at),
+        customer_key: customerKeyForOrder(order),
+        customer_email_key: hashCustomerEmail(order.email ?? order.contact_email),
         line_items_json: packOrderLines(
           lines,
           resolveShopifyFulfillment(order.fulfillment_status, previousOrder.fulfilled),
@@ -115,6 +122,12 @@ export async function POST(request: Request) {
       { onConflict: "shop_id,shopify_order_id" },
     );
     if (error) throw error;
+
+    // ECCANG: push new orders to the warehouse when the client is enabled (no-op otherwise).
+    // Flag-gated and never throws — the cache above is the source of truth for sales.
+    if (!previous) {
+      await pushOrderIfEnabled(shop.client_id, order, { id: shop.id, domain: shop.shopify_domain });
+    }
 
     await finishWebhookEvent(event.id, "processed");
     return Response.json({ ok: true });
