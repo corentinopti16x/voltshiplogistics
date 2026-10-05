@@ -25,7 +25,6 @@ function isPublicPath(pathname: string) {
   if (path === "/" || path === "/en" || path === "/fr") return true;
   return (
     path.endsWith("/login") ||
-    path.endsWith("/signup") ||
     path.endsWith("/forgot-password") ||
     path.endsWith("/reset-password") ||
     pathname.startsWith("/auth/") ||
@@ -51,7 +50,7 @@ export async function proxy(request: NextRequest) {
     return copySupabaseCookies(supabaseResponse, NextResponse.redirect(redirectUrl));
   }
 
-  if (user && (pathname.includes("/login") || pathname.includes("/signup"))) {
+  if (user && pathname.includes("/login")) {
     const locale = pathname.startsWith("/fr") ? "fr" : "en";
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = locale === "fr" ? "/fr/home" : "/home";
