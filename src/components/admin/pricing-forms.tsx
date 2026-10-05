@@ -98,7 +98,7 @@ export function RateCellForm({ versions }: { versions: string[] }) {
       </label>
       <Input name="weight_min_g" label="Min weight (g)" type="number" min="0" required />
       <Input name="weight_max_g" label="Max weight (g)" type="number" min="0" required />
-      <Input name="price" label="Shipping price" type="number" min="0" step="0.0001" required />
+      <Input name="price" label="Shipping price (EUR)" type="number" min="0" step="0.0001" required />
       <Input name="delivery_range" label="Delivery range" placeholder="8–12 days" />
       <div className="sm:col-span-2 lg:col-span-4 flex items-center gap-3">
         <SubmitState state={state} pending={pending} idle="Save rate cell" />
