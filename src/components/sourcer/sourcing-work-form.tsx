@@ -8,8 +8,9 @@ import {
   sendQuoteAction,
   type SourcingActionResult,
 } from "@/app/actions/sourcing";
-import type { ProductRow, SourcingStatus } from "@/lib/products/types";
+import { getProductRequest, type ProductRow, type SourcingStatus } from "@/lib/products/types";
 import type { ShippingChannel } from "@/lib/domain/pricing";
+import { isShippingChannel, parseProductAttributes, tickedAttributes } from "@/lib/products/attributes";
 
 const initial: SourcingActionResult = { ok: false };
 const channels: ShippingChannel[] = [
@@ -20,6 +21,21 @@ const channels: ShippingChannel[] = [
   "magnetic",
   "sensitive_other",
 ];
+const channelLabels: Record<ShippingChannel, string> = {
+  standard: "standard",
+  electronics_battery: "électronique / batterie",
+  cosmetics: "cosmétique",
+  liquid_perfume: "liquide / parfum",
+  magnetic: "magnétique",
+  sensitive_other: "sensible (ingérable)",
+};
+const attributeLabels: Record<string, string> = {
+  electronics: "batterie / électronique",
+  liquid: "liquide / crème",
+  alcohol: "parfum ou alcool",
+  ingestible: "ingérable",
+  magnetic: "aimant",
+};
 const statuses: SourcingStatus[] = [
   "brief_received",
   "factories",
@@ -52,6 +68,11 @@ export function SourcingWorkForm({
   const [saveState, saveAction, saving] = useActionState(saveSourcingDraftAction, initial);
   const [sendState, sendAction, sending] = useActionState(sendQuoteAction, initial);
   const [flagState, flagAction, flagging] = useActionState(flagSourcingAction, initial);
+  // Client's answers → suggested channel. Pre-fills the select only when the sourcer
+  // has not stored a channel yet; the sourcer's value always wins once saved.
+  const request = getProductRequest(product);
+  const suggested = isShippingChannel(request.suggested_channel) ? request.suggested_channel : null;
+  const ticked = tickedAttributes(parseProductAttributes(request.attributes));
 
   useEffect(() => {
     if (sendState.ok && sendState.nextId) {
@@ -88,7 +109,7 @@ export function SourcingWorkForm({
               <span className="text-[var(--muted)]">Shipping channel</span>
               <select
                 name="shipping_channel"
-                defaultValue={product.shipping_channel ?? ""}
+                defaultValue={product.shipping_channel ?? suggested ?? ""}
                 className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
               >
                 <option value="">Select</option>
@@ -98,6 +119,17 @@ export function SourcingWorkForm({
                   </option>
                 ))}
               </select>
+              {suggested ? (
+                <span className="text-xs text-[var(--muted)]">
+                  Suggéré par le client : <strong>{channelLabels[suggested]}</strong>
+                  {ticked.length > 0
+                    ? ` (coché : ${ticked.map((key) => attributeLabels[key] ?? key).join(", ")})`
+                    : " (rien coché)"}
+                  {product.shipping_channel && product.shipping_channel !== suggested
+                    ? " — ta valeur l'emporte"
+                    : " — confirme ou corrige"}
+                </span>
+              ) : null}
             </label>
             <Input
               name="production_lead_days"
