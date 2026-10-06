@@ -16,11 +16,15 @@ export function ProductFilters({
   q,
   lifecycle,
   sourcing,
+  sort,
+  minSales,
   counts,
 }: {
   q: string;
   lifecycle: string;
   sourcing: string;
+  sort: string;
+  minSales: string;
   counts: Record<"all" | LifecycleStatus, number> | Record<string, number>;
 }) {
   const t = useTranslations("products");
@@ -108,6 +112,34 @@ export function ProductFilters({
               </option>
             ))}
           </select>
+        </label>
+        <label className="flex items-center gap-2 text-[12px] font-semibold text-white/80">
+          {t("sortLabel")}
+          <select
+            name="sort"
+            defaultValue={sort}
+            onChange={(event) => event.currentTarget.form?.requestSubmit()}
+            className="vs-input cursor-pointer !py-1.5 text-[13px]"
+          >
+            {(["sales90", "sales30", "salesLow", "profit", "price", "newest", "name"] as const).map(
+              (key) => (
+                <option key={key} value={key}>
+                  {t(`sort.${key}`)}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-[12px] font-semibold text-white/80">
+          {t("minSalesLabel")}
+          <input
+            type="number"
+            name="min"
+            min={0}
+            defaultValue={minSales}
+            placeholder="0"
+            className="vs-input w-20 !py-1.5 text-[13px]"
+          />
         </label>
         <button
           type="submit"

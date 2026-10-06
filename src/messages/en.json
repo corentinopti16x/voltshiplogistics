@@ -615,6 +615,17 @@
       "error": "Could not save the line.",
       "note": "The chosen line drives the COGS, the matrix and the warehouse shipment. The accepted quote stays frozen.",
       "readOnly": "Only members of your workspace can change the line."
+    },
+    "sortLabel": "Sort by",
+    "minSalesLabel": "Min. 90-day sales",
+    "sort": {
+      "sales90": "Sales 90 d (best sellers)",
+      "sales30": "Sales 30 d",
+      "salesLow": "Least sold",
+      "profit": "Profit / order",
+      "price": "Selling price",
+      "newest": "Newest",
+      "name": "Name (A→Z)"
     }
   },
   "economics": {

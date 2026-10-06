@@ -9,7 +9,13 @@ import { Bolt, ButtonLink, EmptyState, PageTitle } from "@/components/ui";
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; lifecycle?: string; sourcing?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    lifecycle?: string;
+    sourcing?: string;
+    sort?: string;
+    min?: string;
+  }>;
 }) {
   const t = await getTranslations("products");
   const ctx = await getAuthContext();
@@ -17,6 +23,9 @@ export default async function ProductsPage({
   const q = (filters.q ?? "").trim().toLowerCase();
   const lifecycle = filters.lifecycle ?? "";
   const sourcing = filters.sourcing ?? "";
+  const sort = filters.sort ?? "sales90";
+  const minSalesRaw = filters.min ?? "";
+  const minSales = Math.max(0, Number(minSalesRaw) || 0);
 
   let insights: ProductInsight[] = [];
   let alertIds = new Set<string>();
@@ -38,6 +47,27 @@ export default async function ProductsPage({
     if (sourcing === "open") return sourcingOpen;
     if (sourcing && product.sourcing_status !== sourcing) return false;
     return true;
+  }).filter((row) => (minSales > 0 ? (row.metrics?.units90 ?? 0) >= minSales : true));
+
+  const num = (value: number | null | undefined, empty: number) =>
+    value == null || !Number.isFinite(value) ? empty : value;
+  visible.sort((a, b) => {
+    switch (sort) {
+      case "sales30":
+        return num(b.metrics?.units30, -1) - num(a.metrics?.units30, -1);
+      case "salesLow":
+        return num(a.metrics?.units90, 0) - num(b.metrics?.units90, 0);
+      case "profit":
+        return num(b.economics.profit, -Infinity) - num(a.economics.profit, -Infinity);
+      case "price":
+        return num(b.product.selling_price, -1) - num(a.product.selling_price, -1);
+      case "newest":
+        return (b.product.created_at ?? "").localeCompare(a.product.created_at ?? "");
+      case "name":
+        return a.product.title.localeCompare(b.product.title);
+      default:
+        return num(b.metrics?.units90, -1) - num(a.metrics?.units90, -1);
+    }
   });
 
   const counts = {
@@ -62,7 +92,14 @@ export default async function ProductsPage({
         }
       />
 
-      <ProductFilters q={q} lifecycle={lifecycle} sourcing={sourcing} counts={counts} />
+      <ProductFilters
+        q={q}
+        lifecycle={lifecycle}
+        sourcing={sourcing}
+        sort={sort}
+        minSales={minSalesRaw}
+        counts={counts}
+      />
 
       {loadError ? (
         <p className="rounded-xl border border-[#f0d9b5] bg-[var(--gold-soft)] px-4 py-3 text-sm text-[var(--gold-ink)]">
