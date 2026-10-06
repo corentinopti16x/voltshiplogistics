@@ -3,6 +3,7 @@ import type { ProductRow } from "@/lib/products/types";
 import { countOrderWindows } from "@/lib/domain/orders-shipped";
 import { calculateSafetyStock, type StockStatus } from "@/lib/domain/safety-stock";
 import { unpackOrderLines } from "@/lib/shopify/order-cache";
+import { loadProductSkus } from "@/lib/products/skus";
 import {
   CLIENT_PRODUCT_SELECT,
   serializeClientProduct,
@@ -80,9 +81,8 @@ export type RestockAlert = {
 
 export async function listRestockAlerts(clientId: string, products: ProductRow[]) {
   const admin = createAdminClient();
-  const skus = products
-    .map((product) => product.sku)
-    .filter((sku): sku is string => Boolean(sku));
+  const productSkus = await loadProductSkus(products);
+  const skus = [...new Set([...productSkus.values()].flat())];
   const since = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
   const recentSince = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
   const [{ data: sales }, { data: stock }, { data: client }] = await Promise.all([
@@ -130,7 +130,8 @@ export async function listRestockAlerts(clientId: string, products: ProductRow[]
   const alerts: RestockAlert[] = [];
 
   for (const product of products) {
-    const cached = product.sku ? stockBySku.get(product.sku) : undefined;
+    const own = productSkus.get(product.id) ?? [];
+    const cached = own.map((sku) => stockBySku.get(sku)).find(Boolean);
     const tracked =
       product.sourcing_status === "in_stock" ||
       product.lifecycle_status === "winning" ||
@@ -140,7 +141,7 @@ export async function listRestockAlerts(clientId: string, products: ProductRow[]
       cached != null;
     if (!tracked) continue;
 
-    const salesPerDay = product.sku ? (units.get(product.sku) ?? 0) / 30 : 0;
+    const salesPerDay = own.reduce((sum, sku) => sum + (units.get(sku) ?? 0), 0) / 30;
     const result = calculateSafetyStock({
       qtyAvailable: cached?.qty_available ?? product.stock_manual ?? 0,
       qtyReserved: cached?.qty_reserved ?? 0,
@@ -152,7 +153,12 @@ export async function listRestockAlerts(clientId: string, products: ProductRow[]
       moq: product.moq,
     });
     if (result.status === "ok") continue;
-    const sinceSale = product.sku ? lastSale.get(product.sku) ?? null : null;
+    const sinceSale =
+      own
+        .map((sku) => lastSale.get(sku))
+        .filter((date): date is string => Boolean(date))
+        .sort()
+        .at(-1) ?? null;
     const stockout =
       result.status === "out_of_stock" && sinceSale
         ? stockoutFromLastSale(sinceSale, salesPerDay)
@@ -229,7 +235,8 @@ export async function getTenantProductMetrics(
   clientId: string,
   products: ProductRow[],
 ) {
-  const skus = products.map((product) => product.sku).filter((sku): sku is string => Boolean(sku));
+  const productSkus = await loadProductSkus(products);
+  const skus = [...new Set([...productSkus.values()].flat())];
   const metrics = new Map<string, ProductMetrics>();
   if (skus.length === 0) return metrics;
 
@@ -265,14 +272,17 @@ export async function getTenantProductMetrics(
     ]),
   );
   for (const product of products) {
-    if (!product.sku) continue;
-    const units30 = units30BySku.get(product.sku) ?? 0;
+    const own = productSkus.get(product.id) ?? [];
+    if (own.length === 0) continue;
+    const units30 = own.reduce((sum, sku) => sum + (units30BySku.get(sku) ?? 0), 0);
+    const hasSales = own.some((sku) => units90BySku.has(sku));
+    const units90 = own.reduce((sum, sku) => sum + (units90BySku.get(sku) ?? 0), 0);
     const salesDay = units30 / 30;
-    const cached = stockBySku.get(product.sku);
+    const cached = own.map((sku) => stockBySku.get(sku)).find(Boolean);
     const available = cached?.available ?? product.stock_manual ?? 0;
     metrics.set(product.id, {
       units30,
-      units90: units90BySku.has(product.sku) ? (units90BySku.get(product.sku) ?? 0) : null,
+      units90: hasSales ? units90 : null,
       salesDay,
       daysLeft: salesDay > 0 ? available / salesDay : null,
       qtyAvailable: available,
@@ -284,15 +294,16 @@ export async function getTenantProductMetrics(
 
 export async function getProductStockSnapshot(product: ProductRow) {
   const admin = createAdminClient();
+  const ownSkus = (await loadProductSkus([product])).get(product.id) ?? [];
   const since = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
   const recentSince = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
   const [{ data: sales }, { data: stock }, { data: client }] = await Promise.all([
-    product.sku
+    ownSkus.length > 0
       ? admin
           .from("sales_cache")
           .select("units_sold, date")
           .eq("client_id", product.client_id)
-          .eq("sku", product.sku)
+          .in("sku", ownSkus)
           .gte("date", since)
       : Promise.resolve({ data: [] as Array<{ units_sold: number; date: string }> }),
     product.sku
