@@ -1,4 +1,5 @@
 import "server-only";
+import { loadProductSkus } from "@/lib/products/skus";
 
 /**
  * Voltship margin loaders — CONFIDENTIAL. Every loader calls `assertVoltshipAdmin()`
@@ -282,10 +283,14 @@ export async function loadClientMargin(clientId: string, windowDays = 30): Promi
   const channels = [...new Set(products.map((product) => product.shipping_channel).filter(Boolean))] as string[];
   const cells = activeGridVersion ? await loadInternalRateCells(activeGridVersion, markets, channels) : [];
 
+  const productSkus = await loadProductSkus(products);
   const rows: ClientMarginRow[] = products.map((product) => {
     const factoryPriceRmb = factoryPrices.get(product.id) ?? null;
     const market = getProductMarkets(product)[0];
-    const units = product.sku ? unitsSold.get(product.sku) ?? 0 : 0;
+    const units = (productSkus.get(product.id) ?? []).reduce(
+      (sum, sku) => sum + (unitsSold.get(sku) ?? 0),
+      0,
+    );
     return {
       product,
       market,
@@ -455,10 +460,12 @@ async function buildOrderPricingContext(clientIds: string[]): Promise<OrderPrici
   const relevant = clientIds.length > 0 ? await loadAdminProducts({ clientIds, includeArchived: true }) : [];
   const factoryPrices = await loadFactoryPrices(relevant.map((product) => product.id));
   const productsByClient = new Map<string, Map<string, ProductRow>>();
+  const relevantSkus = await loadProductSkus(relevant);
   for (const product of relevant) {
-    if (!product.sku) continue;
     const map = productsByClient.get(product.client_id) ?? new Map<string, ProductRow>();
-    if (!map.has(product.sku)) map.set(product.sku, product);
+    for (const sku of relevantSkus.get(product.id) ?? []) {
+      if (!map.has(sku)) map.set(sku, product);
+    }
     productsByClient.set(product.client_id, map);
   }
   const markets = [...new Set(relevant.map((product) => getProductMarkets(product)[0]))];

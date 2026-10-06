@@ -272,7 +272,7 @@ export async function syncAirtableRecord(
   const admin = createAdminClient();
   const { data: existing } = await admin
     .from("products_cache")
-    .select("id, photo_url, quote_json, accepted_quote_snapshot_json")
+    .select("id, sku, photo_url, quote_json, accepted_quote_snapshot_json")
     .eq("airtable_record_id", record.id)
     .maybeSingle();
   const existingQuote =
@@ -291,6 +291,8 @@ export async function syncAirtableRecord(
   }
   const merged = {
     ...row,
+    // Airtable may not carry the Shopify SKU of a migrated product: keep ours.
+    sku: row.sku || existing?.sku || null,
     id: existing?.id ?? randomUUID(),
     photo_url: photoUrl,
     quote_json: {
