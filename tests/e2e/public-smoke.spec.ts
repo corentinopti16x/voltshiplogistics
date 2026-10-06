@@ -23,8 +23,10 @@ test("staff login is a separate portal", async ({ page }) => {
 });
 
 test("admin signup is disabled (invite-only) and password reset is reachable", async ({ page }) => {
-  const res = await page.goto("/staff/signup");
-  expect(res?.status()).toBe(404);
+  // There is no signup page: anonymous visitors are sent to the staff login instead.
+  await page.goto("/staff/signup");
+  await expect(page).not.toHaveURL(/signup/);
+  await expect(page).toHaveURL(/staff\/login/);
 
   await page.goto("/staff/forgot-password");
   await expect(page.getByRole("heading", { name: /reset admin password/i })).toBeVisible();
