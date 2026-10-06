@@ -615,6 +615,17 @@
       "error": "Impossible d'enregistrer la ligne.",
       "note": "La ligne choisie est utilisée pour le COGS, la matrice et l'expédition entrepôt. Le devis accepté reste figé.",
       "readOnly": "Seuls les membres de votre espace peuvent changer la ligne."
+    },
+    "sortLabel": "Trier par",
+    "minSalesLabel": "Ventes 90 j min.",
+    "sort": {
+      "sales90": "Ventes 90 j (plus vendus)",
+      "sales30": "Ventes 30 j",
+      "salesLow": "Moins vendus",
+      "profit": "Profit / commande",
+      "price": "Prix de vente",
+      "newest": "Plus récents",
+      "name": "Nom (A→Z)"
     }
   },
   "economics": {
