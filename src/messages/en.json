@@ -330,7 +330,8 @@
         "P": "Problem",
         "X": "Cancelled"
       }
-    }
+    },
+    "allShops": "All stores"
   },
   "products": {
     "title": "Products",
