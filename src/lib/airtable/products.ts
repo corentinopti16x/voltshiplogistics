@@ -272,7 +272,9 @@ export async function syncAirtableRecord(
   const admin = createAdminClient();
   const { data: existing } = await admin
     .from("products_cache")
-    .select("id, sku, photo_url, quote_json, accepted_quote_snapshot_json")
+    .select(
+      "id, sku, photo_url, quote_json, accepted_quote_snapshot_json, lifecycle_status, selling_price, weight_g, shipping_channel, production_lead_days, moq, client_price, stock_manual",
+    )
     .eq("airtable_record_id", record.id)
     .maybeSingle();
   const existingQuote =
@@ -289,10 +291,24 @@ export async function syncAirtableRecord(
       ? await storeAirtableImage(row.client_id, record.id, source.url)
       : source.url;
   }
+  // Airtable does not carry every field (a migrated product's SKU and Shopify selling
+  // price, or values set in the app): an empty Airtable cell never erases ours.
+  const keep = <T,>(fromAirtable: T | null | undefined, current: T | null | undefined) =>
+    fromAirtable == null || fromAirtable === "" ? (current ?? null) : fromAirtable;
+  const airtableLifecycle = normalizeStatus(record.fields[getAirtableConfig().fields.lifecycleStatus]);
   const merged = {
     ...row,
-    // Airtable may not carry the Shopify SKU of a migrated product: keep ours.
-    sku: row.sku || existing?.sku || null,
+    sku: keep(row.sku, existing?.sku),
+    lifecycle_status: lifecycleStatuses.has(airtableLifecycle)
+      ? row.lifecycle_status
+      : (existing?.lifecycle_status ?? row.lifecycle_status),
+    selling_price: keep(row.selling_price, existing?.selling_price),
+    weight_g: keep(row.weight_g, existing?.weight_g),
+    shipping_channel: keep(row.shipping_channel, existing?.shipping_channel),
+    production_lead_days: keep(row.production_lead_days, existing?.production_lead_days),
+    moq: keep(row.moq, existing?.moq),
+    client_price: keep(row.client_price, existing?.client_price),
+    stock_manual: keep(row.stock_manual, existing?.stock_manual),
     id: existing?.id ?? randomUUID(),
     photo_url: photoUrl,
     quote_json: {
