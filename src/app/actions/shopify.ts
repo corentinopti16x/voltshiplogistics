@@ -138,7 +138,7 @@ export async function importShopifyProductsAction(
       photo_url: variants.find((v) => v.photo_url)?.photo_url ?? null,
       created_date: new Date().toISOString().slice(0, 10),
       lifecycle_status: "winning",
-      sourcing_status: "brief_received",
+      sourcing_status: "validated",
       migration_state: "imported_pending",
       quote_json: {
         _request: request,
