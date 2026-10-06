@@ -1,3 +1,4 @@
+import { getActiveShopId } from "@/lib/shops/active";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { getAuthContext } from "@/lib/auth/context";
@@ -71,13 +72,14 @@ export default async function DashboardPage() {
   let warehouseLive = false;
   let loadError = false;
 
+  const activeShopId = clientId ? await getActiveShopId(clientId) : null;
   if (clientId) {
     try {
       const admin = createAdminClient();
       const [overview, orderTotals, notificationResult, recurrenceResult, eccangEnabled] =
         await Promise.all([
-          loadProductInsights(clientId),
-          sumOrdersShipped(clientId),
+          loadProductInsights(clientId, activeShopId),
+          sumOrdersShipped(clientId, activeShopId),
           admin
             .from("notifications")
             .select("id, type, created_at, read_at, payload_json")
@@ -85,7 +87,7 @@ export default async function DashboardPage() {
             .order("created_at", { ascending: false })
             .limit(12)
             .returns<NotificationRow[]>(),
-          loadClientRecurrence(clientId).catch(() => null),
+          loadClientRecurrence(clientId, [], 60, activeShopId).catch(() => null),
           isClientEccangEnabled(clientId),
         ]);
       insights = overview.insights;
