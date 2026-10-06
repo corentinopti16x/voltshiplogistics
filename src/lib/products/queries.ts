@@ -244,6 +244,7 @@ export async function listStaffRestockAlerts() {
 
 export type ProductMetrics = {
   salesDay: number;
+  units7: number;
   units30: number;
   /** Units sold over the last 90 days (Shopify sales cache); null when the SKU has no sales rows. */
   units90: number | null;
@@ -262,6 +263,7 @@ export async function getTenantProductMetrics(
   if (skus.length === 0) return metrics;
 
   const admin = createAdminClient();
+  const since7 = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
   const since30 = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
   const since90 = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
   const [{ data: sales }, { data: stock }] = await Promise.all([
@@ -277,11 +279,15 @@ export async function getTenantProductMetrics(
       .eq("client_id", clientId)
       .in("sku", skus),
   ]);
+  const units7BySku = new Map<string, number>();
   const units30BySku = new Map<string, number>();
   const units90BySku = new Map<string, number>();
   for (const row of sales ?? []) {
     const sold = Number(row.units_sold);
     units90BySku.set(row.sku, (units90BySku.get(row.sku) ?? 0) + sold);
+    if (row.date >= since7) {
+      units7BySku.set(row.sku, (units7BySku.get(row.sku) ?? 0) + sold);
+    }
     if (row.date >= since30) {
       units30BySku.set(row.sku, (units30BySku.get(row.sku) ?? 0) + sold);
     }
@@ -295,6 +301,7 @@ export async function getTenantProductMetrics(
   for (const product of products) {
     const own = productSkus.get(product.id) ?? [];
     if (own.length === 0) continue;
+    const units7 = own.reduce((sum, sku) => sum + (units7BySku.get(sku) ?? 0), 0);
     const units30 = own.reduce((sum, sku) => sum + (units30BySku.get(sku) ?? 0), 0);
     const hasSales = own.some((sku) => units90BySku.has(sku));
     const units90 = own.reduce((sum, sku) => sum + (units90BySku.get(sku) ?? 0), 0);
@@ -302,6 +309,7 @@ export async function getTenantProductMetrics(
     const cached = own.map((sku) => stockBySku.get(sku)).find(Boolean);
     const available = cached?.available ?? product.stock_manual ?? 0;
     metrics.set(product.id, {
+      units7,
       units30,
       units90: hasSales ? units90 : null,
       salesDay,

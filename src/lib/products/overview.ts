@@ -24,6 +24,7 @@ import {
   getProductRequest,
   isQuoteAccepted,
   isQuoteReady,
+  isMigratedProduct,
   isSourcingOpen,
   type ProductRow,
 } from "@/lib/products/types";
@@ -150,7 +151,7 @@ export function buildInsight(
     economics: computeEconomics(product.selling_price ?? 0, cogs, profile),
     quotePending:
       isQuoteReady(product) && !isQuoteAccepted(product) && product.sourcing_status === "quote_sent",
-    sourcingOpen: isSourcingOpen(product.sourcing_status),
+    sourcingOpen: !isMigratedProduct(product) && isSourcingOpen(product.sourcing_status),
     primaryMarket: primary?.destination ?? "FR",
     cogsLadder: (primary?.cells ?? []).map((cell) => ({
       quantity: cell.quantity,
