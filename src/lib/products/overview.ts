@@ -97,8 +97,8 @@ export async function calculateProductEstimate(
   };
 }
 
-export async function loadProductInsights(clientId: string) {
-  const products = await listTenantProducts(clientId);
+export async function loadProductInsights(clientId: string, shopId?: string | null) {
+  const products = await listTenantProducts(clientId, shopId);
   const admin = createAdminClient();
   const carrierRules = await loadCarrierRules(clientId);
   const [{ data: client }, metrics, matrices, shopifyImages] = await Promise.all([

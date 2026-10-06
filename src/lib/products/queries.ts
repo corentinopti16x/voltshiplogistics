@@ -9,7 +9,7 @@ import {
   serializeClientProduct,
 } from "@/lib/products/visibility";
 
-export async function listTenantProducts(clientId: string) {
+export async function listTenantProducts(clientId: string, shopId?: string | null) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("products_cache")
@@ -20,7 +20,27 @@ export async function listTenantProducts(clientId: string) {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return (data ?? []).map((row) => serializeClientProduct(row));
+  const products = (data ?? []).map((row) => serializeClientProduct(row));
+  if (!shopId) return products;
+  // One store selected: only the products imported from (or mapped to) that store.
+  const [{ data: imported }, { data: mapped }] = await Promise.all([
+    admin
+      .from("shopify_products_cache")
+      .select("imported_product_id")
+      .eq("client_id", clientId)
+      .eq("shop_id", shopId)
+      .not("imported_product_id", "is", null),
+    admin
+      .from("sku_maps")
+      .select("airtable_record_id")
+      .eq("client_id", clientId)
+      .eq("shop_id", shopId),
+  ]);
+  const ids = new Set((imported ?? []).map((row) => row.imported_product_id as string));
+  const records = new Set((mapped ?? []).map((row) => row.airtable_record_id));
+  return products.filter(
+    (product) => ids.has(product.id) || records.has(product.airtable_record_id),
+  );
 }
 
 export async function getTenantProduct(clientId: string, productId: string) {
@@ -36,7 +56,7 @@ export async function getTenantProduct(clientId: string, productId: string) {
   return data ? serializeClientProduct(data) : null;
 }
 
-export async function sumOrdersShipped(clientId: string) {
+export async function sumOrdersShipped(clientId: string, shopId?: string | null) {
   const admin = createAdminClient();
   const since = new Date();
   since.setDate(since.getDate() - 29);
@@ -48,6 +68,7 @@ export async function sumOrdersShipped(clientId: string) {
       .from("shopify_orders_cache")
       .select("order_date, cancelled, line_items_json")
       .eq("client_id", clientId)
+      .match(shopId ? { shop_id: shopId } : {})
       .gte("order_date", sinceDate)
       .order("order_date", { ascending: true })
       .order("id", { ascending: true })
