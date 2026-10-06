@@ -33,8 +33,19 @@ function isPublicPath(pathname: string) {
 }
 
 export async function proxy(request: NextRequest) {
-  const { supabaseResponse, user } = await updateSession(request);
   const pathname = request.nextUrl.pathname;
+  // A merchant just installed a store app: Shopify opens the App URL with ?shop&hmac.
+  const params = request.nextUrl.searchParams;
+  if (
+    params.has("shop") &&
+    params.has("hmac") &&
+    ["/", "/fr", "/en"].includes(pathname.replace(/\/$/, "") || "/")
+  ) {
+    const installUrl = request.nextUrl.clone();
+    installUrl.pathname = "/api/shopify/install";
+    return NextResponse.redirect(installUrl);
+  }
+  const { supabaseResponse, user } = await updateSession(request);
 
   if (!user && !isPublicPath(pathname)) {
     const locale = pathname.startsWith("/fr") ? "fr" : "en";
