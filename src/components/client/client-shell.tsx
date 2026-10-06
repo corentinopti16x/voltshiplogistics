@@ -6,11 +6,15 @@ import { ClientNavLinks } from "@/components/client/nav-links";
 import { SignOutButton } from "@/app/[locale]/(client)/dashboard/sign-out-button";
 import { getAuthContext } from "@/lib/auth/context";
 import { Bolt } from "@/components/ui";
+import { ShopSwitcher } from "@/components/client/shop-switcher";
+import { getActiveShopId, listClientShops } from "@/lib/shops/active";
 
 export async function ClientShell({ children }: { children: ReactNode }) {
   const t = await getTranslations("dashboard");
   const ctx = await getAuthContext();
   const initials = (ctx?.email ?? "").slice(0, 2).toUpperCase() || "CL";
+  const shops = ctx?.clientId ? await listClientShops(ctx.clientId) : [];
+  const activeShop = ctx?.clientId && shops.length > 1 ? await getActiveShopId(ctx.clientId) : null;
 
   return (
     <div className="relative isolate min-h-screen bg-[var(--bg)]">
@@ -19,6 +23,9 @@ export async function ClientShell({ children }: { children: ReactNode }) {
           <BrandMark href="/dashboard" inverted compact />
           <ClientNavLinks showSettings={ctx?.role !== "staff"} />
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            {shops.length > 1 ? (
+              <ShopSwitcher shops={shops} active={activeShop} allLabel={t("allShops")} />
+            ) : null}
             <Link
               href="/products/new"
               className="inline-flex items-center gap-2 rounded-[10px] bg-[var(--gold-bright)] px-3 py-2 text-[13px] font-bold text-[var(--navy)] transition hover:bg-[#f0bb5a] sm:px-4"
