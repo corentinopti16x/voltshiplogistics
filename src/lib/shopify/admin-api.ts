@@ -50,6 +50,7 @@ type ShopifyProduct = {
   variants: Array<{
     id: number;
     sku: string | null;
+    price?: string | null;
     image_id?: number | null;
   }>;
   images?: Array<{ id: number; src: string; position?: number }>;
@@ -498,6 +499,7 @@ export async function syncShopifyProducts(input: {
 }) {
   let path = "products.json?limit=250&status=active";
   const rows: Array<Record<string, unknown>> = [];
+  const priceByVariant = new Map<string, number>();
   do {
     const response = await shopifyRequest<{ products: ShopifyProduct[] }>(
       input.shop,
@@ -506,6 +508,8 @@ export async function syncShopifyProducts(input: {
     );
     for (const product of response.data.products) {
       for (const variant of product.variants) {
+        const price = Number(variant.price);
+        if (Number.isFinite(price) && price > 0) priceByVariant.set(String(variant.id), price);
         const images = pickProductImages(product, variant.image_id);
         rows.push({
           client_id: input.clientId,
@@ -550,5 +554,35 @@ export async function syncShopifyProducts(input: {
       .eq("shop_id", input.shopId)
       .eq("shopify_variant_id", row.shopify_variant_id);
   }
+  await fillImportedSellingPrices(input.shopId, priceByVariant);
   return rows.length;
+}
+
+/**
+ * Imported products without a selling price take the cheapest active variant price of
+ * their Shopify product (the single-unit offer when variants are quantity bundles).
+ * A price already set on the Voltship product is never overwritten.
+ */
+async function fillImportedSellingPrices(shopId: string, priceByVariant: Map<string, number>) {
+  if (priceByVariant.size === 0) return;
+  const admin = createAdminClient();
+  const { data: imported } = await admin
+    .from("shopify_products_cache")
+    .select("shopify_variant_id, imported_product_id")
+    .eq("shop_id", shopId)
+    .not("imported_product_id", "is", null);
+  const lowest = new Map<string, number>();
+  for (const row of imported ?? []) {
+    const price = priceByVariant.get(String(row.shopify_variant_id));
+    if (price == null || !row.imported_product_id) continue;
+    const current = lowest.get(row.imported_product_id);
+    if (current == null || price < current) lowest.set(row.imported_product_id, price);
+  }
+  for (const [productId, price] of lowest) {
+    await admin
+      .from("products_cache")
+      .update({ selling_price: price })
+      .eq("id", productId)
+      .is("selling_price", null);
+  }
 }
