@@ -101,17 +101,28 @@ export async function classifyAllProducts() {
   for (const raw of products ?? []) {
     const product = raw as ProductRow;
     if (!product.sku) continue;
+    // A product imported from Shopify maps every variant SKU to it: count them all.
+    const { data: mapped } = await admin
+      .from("sku_maps")
+      .select("shopify_sku")
+      .eq("client_id", product.client_id)
+      .eq("airtable_record_id", product.airtable_record_id);
+    const skus = [...new Set([product.sku, ...(mapped ?? []).map((row) => row.shopify_sku)])];
     const { data: sales } = await admin
       .from("sales_cache")
       .select("date, units_sold")
       .eq("client_id", product.client_id)
-      .eq("sku", product.sku)
+      .in("sku", skus)
       .gte("date", new Date(Date.now() - 120 * 86400000).toISOString().slice(0, 10));
+    const byDate = new Map<string, number>();
+    for (const row of sales ?? []) {
+      byDate.set(row.date, (byDate.get(row.date) ?? 0) + Number(row.units_sold));
+    }
     const status = classifyLifecycle({
       current: product.lifecycle_status,
       createdDate: product.created_date,
-      sales: (sales ?? []).map(
-        (row): DailySale => ({ date: row.date, units: Number(row.units_sold) }),
+      sales: [...byDate.entries()].map(
+        ([date, units]): DailySale => ({ date, units }),
       ),
       thresholds: parseLifecycleThresholds(thresholdMap.get(product.client_id)),
     });
