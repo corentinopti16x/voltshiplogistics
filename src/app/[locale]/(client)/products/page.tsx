@@ -1,3 +1,4 @@
+import { getActiveShopId } from "@/lib/shops/active";
 import { getTranslations } from "next-intl/server";
 import { getAuthContext } from "@/lib/auth/context";
 import { listRestockAlerts } from "@/lib/products/queries";
@@ -32,7 +33,10 @@ export default async function ProductsPage({
   let loadError = false;
   if (ctx?.clientId) {
     try {
-      const overview = await loadProductInsights(ctx.clientId);
+      const overview = await loadProductInsights(
+        ctx.clientId,
+        await getActiveShopId(ctx.clientId),
+      );
       insights = overview.insights;
       const alerts = await listRestockAlerts(ctx.clientId, overview.products);
       alertIds = new Set(alerts.map((alert) => alert.product.id));
