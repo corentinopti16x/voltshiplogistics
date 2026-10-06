@@ -88,11 +88,21 @@ export async function importShopifyProductsAction(
     .is("imported_product_id", null);
   if (readError) return { ok: false, error: readError.message };
 
-  let imported = 0;
+  // One Voltship product per Shopify product: all selected variants of the same
+  // product are imported together and each variant SKU is mapped to it.
+  type CacheRow = NonNullable<typeof rows>[number];
+  const groups = new Map<string, CacheRow[]>();
   for (const row of rows ?? []) {
+    const key = `${row.shop_id}:${row.shopify_product_id}`;
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+
+  let imported = 0;
+  for (const variants of groups.values()) {
+    const row = variants[0];
     const id = randomUUID();
     const request = {
-      description: `Imported from Shopify product ${row.shopify_product_id}.`,
+      description: `Imported from Shopify product ${row.shopify_product_id} (${variants.length} variant(s)).`,
       destination_markets: "FR",
       notes: "Winning-product migration. Sourcer backfill required.",
     };
@@ -123,9 +133,9 @@ export async function importShopifyProductsAction(
       id,
       client_id: row.client_id,
       airtable_record_id: airtableRecordId,
-      sku: row.sku,
+      sku: variants.find((v) => v.sku)?.sku ?? null,
       title: row.title,
-      photo_url: row.photo_url,
+      photo_url: variants.find((v) => v.photo_url)?.photo_url ?? null,
       created_date: new Date().toISOString().slice(0, 10),
       lifecycle_status: "winning",
       sourcing_status: "brief_received",
@@ -138,21 +148,23 @@ export async function importShopifyProductsAction(
       },
     });
     if (insertError) return { ok: false, error: insertError.message };
-    await admin
-      .from("shopify_products_cache")
-      .update({ imported_product_id: id })
-      .eq("id", row.id)
-      .eq("client_id", row.client_id);
-    if (row.sku) {
-      await admin.from("sku_maps").upsert(
-        {
-          client_id: row.client_id,
-          shop_id: row.shop_id,
-          shopify_sku: row.sku,
-          airtable_record_id: airtableRecordId,
-        },
-        { onConflict: "client_id,shop_id,shopify_sku" },
-      );
+    for (const variant of variants) {
+      await admin
+        .from("shopify_products_cache")
+        .update({ imported_product_id: id })
+        .eq("id", variant.id)
+        .eq("client_id", variant.client_id);
+      if (variant.sku) {
+        await admin.from("sku_maps").upsert(
+          {
+            client_id: variant.client_id,
+            shop_id: variant.shop_id,
+            shopify_sku: variant.sku,
+            airtable_record_id: airtableRecordId,
+          },
+          { onConflict: "client_id,shop_id,shopify_sku" },
+        );
+      }
     }
     imported += 1;
   }
