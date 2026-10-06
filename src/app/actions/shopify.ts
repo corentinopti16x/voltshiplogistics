@@ -188,16 +188,28 @@ export async function saveShopifyAppCredentialsAction(formData: FormData): Promi
   const apiKey = String(formData.get("api_key") ?? "").trim();
   const apiSecret = String(formData.get("api_secret") ?? "").trim();
   const label = String(formData.get("label") ?? "").trim() || null;
+  const clientId = String(formData.get("client_id") ?? "").trim() || null;
   if (!shop) throw new Error("Domaine myshopify.com invalide.");
+  const admin = createAdminClient();
+  // Only re-assigning the client of an already registered store: keep its app keys.
+  if (!apiKey && !apiSecret) {
+    const { error } = await admin
+      .from("shopify_app_credentials")
+      .update({ client_id: clientId, ...(label ? { label } : {}), updated_at: new Date().toISOString() })
+      .eq("shopify_domain", shop);
+    if (error) throw new Error(error.message);
+    revalidatePath("/admin/shops");
+    return;
+  }
   if (!/^[a-f0-9]{32}$/i.test(apiKey)) throw new Error("ID client Shopify invalide.");
   if (apiSecret.length < 16) throw new Error("Secret client Shopify invalide.");
-  const admin = createAdminClient();
   const { error } = await admin.from("shopify_app_credentials").upsert(
     {
       shopify_domain: shop,
       api_key: apiKey,
       api_secret_encrypted: encryptShopifyToken(apiSecret),
       label,
+      ...(clientId ? { client_id: clientId } : {}),
       updated_at: new Date().toISOString(),
     },
     { onConflict: "shopify_domain" },

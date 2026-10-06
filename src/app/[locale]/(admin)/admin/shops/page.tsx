@@ -38,7 +38,7 @@ export default async function AdminShopsPage({
       : Promise.resolve({ data: [] as never[] }),
     admin
       .from("shopify_app_credentials")
-      .select("shopify_domain, api_key, label, updated_at")
+      .select("*")
       .order("shopify_domain"),
   ]);
 
@@ -75,14 +75,29 @@ export default async function AdminShopsPage({
         <h2 className="text-sm font-semibold">Apps Shopify par boutique</h2>
         <p className="mt-1 text-xs text-[var(--muted)]">
           Une app « Custom distribution » par boutique client (Dev Dashboard de l’orga Partner
-          Voltship). Colle ici son ID client et son secret : le bouton « Connecter ma boutique »
+          Voltship). Choisis le client, colle l’ID client et le secret (laisse-les vides pour seulement changer de client) : à l’installation, la boutique se rattache toute seule à ce client. Le bouton « Connecter ma boutique »
           utilisera automatiquement cette app pour ce domaine.
         </p>
         <form
           action={saveShopifyAppCredentialsAction}
-          className="mt-4 grid gap-3 sm:grid-cols-4"
+          className="mt-4 grid gap-3 sm:grid-cols-5"
           autoComplete="off"
         >
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-[var(--muted)]">Client</span>
+            <select
+              name="client_id"
+              required
+              className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
+            >
+              <option value="">Choisir…</option>
+              {(clients ?? []).map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-[var(--muted)]">Domaine boutique</span>
             <input
@@ -96,7 +111,6 @@ export default async function AdminShopsPage({
             <span className="text-[var(--muted)]">ID client (app)</span>
             <input
               name="api_key"
-              required
               className="rounded-md border border-[var(--line)] bg-white px-3 py-2 font-mono text-xs"
             />
           </label>
@@ -105,7 +119,6 @@ export default async function AdminShopsPage({
             <input
               name="api_secret"
               type="password"
-              required
               autoComplete="new-password"
               className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
             />
@@ -131,6 +144,12 @@ export default async function AdminShopsPage({
                 <span className="font-medium text-[var(--ink,inherit)]">
                   {app.label ? `${app.label} · ` : ""}
                   {app.shopify_domain}
+                </span>
+                <span>
+                  →{" "}
+                  {(clients ?? []).find(
+                    (client) => client.id === (app as { client_id?: string | null }).client_id,
+                  )?.name ?? "aucun client"}
                 </span>
                 <span className="font-mono text-xs">{app.api_key}</span>
               </li>
