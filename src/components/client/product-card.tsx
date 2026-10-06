@@ -5,8 +5,9 @@ import { Metric } from "@/components/ui/stat";
 import { LifecycleBadge } from "@/components/client/lifecycle-badge";
 import { ProductPhoto } from "@/components/client/product-photo";
 import { ProductImageCarousel } from "@/components/client/product-image-carousel";
-import { SOURCING_PIPELINE } from "@/lib/products/types";
+import { SIMPLE_PIPELINE, isMigratedProduct, simpleStage } from "@/lib/products/types";
 import type { ProductInsight } from "@/lib/products/overview";
+import type { SalesPeriod } from "@/lib/products/periods";
 import { formatAmount, formatDays, formatNumber, formatRatio } from "@/lib/format";
 
 /**
@@ -18,17 +19,28 @@ import { formatAmount, formatDays, formatNumber, formatRatio } from "@/lib/forma
 export async function ProductCard({
   insight,
   stockAlert = false,
+  period = 90,
 }: {
   insight: ProductInsight;
   stockAlert?: boolean;
+  /** Sales window shown on the card (7, 30 or 90 days). */
+  period?: SalesPeriod;
 }) {
   const [t, locale] = await Promise.all([getTranslations("products.card"), getLocale()]);
   const { product, metrics, cogs, cogsSource, economics, cogsLadder, shopifyImages, estimate } = insight;
   // Early estimate (client answers × active grid) — only while no real quote exists.
   const early = estimate && estimate.cogs != null ? estimate : null;
-  const stage = product.sourcing_status;
-  const stageIndex =
-    stage === "quote_sent" ? SOURCING_PIPELINE.indexOf("negotiation") : stage ? SOURCING_PIPELINE.indexOf(stage) : -1;
+  const migrated = isMigratedProduct(product);
+  const stage = simpleStage(product.sourcing_status);
+  const stageIndex = SIMPLE_PIPELINE.indexOf(stage);
+  const units =
+    metrics?.units90 == null
+      ? null
+      : period === 7
+        ? metrics.units7
+        : period === 30
+          ? metrics.units30
+          : metrics.units90;
   const daysLeft = metrics?.daysLeft ?? null;
   const lowStock = stockAlert || (daysLeft != null && daysLeft < 19 && product.lifecycle_status !== "dead");
 
@@ -74,8 +86,8 @@ export async function ProductCard({
 
         <span className="grid grid-cols-3 gap-x-2 gap-y-2.5">
           <Metric
-            label={t("sales90")}
-            value={metrics?.units90 == null ? "—" : formatNumber(metrics.units90, locale)}
+            label={t("salesPeriod", { days: period })}
+            value={units == null ? "—" : formatNumber(units, locale)}
           />
           <Metric label={t("price")} value={formatAmount(product.selling_price, locale)} />
           <Metric
@@ -148,18 +160,24 @@ export async function ProductCard({
         ) : null}
 
         <span className="mt-auto flex flex-col gap-1.5">
-          <span className="flex gap-[3px]" aria-hidden>
-            {SOURCING_PIPELINE.map((step, index) => (
-              <span
-                key={step}
-                className={`h-1 flex-1 rounded-sm ${
-                  index <= stageIndex ? "bg-[var(--gold)]" : "bg-[var(--line-soft)]"
-                }`}
-              />
-            ))}
-          </span>
+          {migrated ? null : (
+            <span className="flex gap-[3px]" aria-hidden>
+              {SIMPLE_PIPELINE.map((step, index) => (
+                <span
+                  key={step}
+                  className={`h-1 flex-1 rounded-sm ${
+                    index <= stageIndex ? "bg-[var(--gold)]" : "bg-[var(--line-soft)]"
+                  }`}
+                />
+              ))}
+            </span>
+          )}
           <span className="text-[12px] font-semibold text-[var(--muted)]">
-            {stage ? t(`stage.${stage}`) : t("stage.none")}
+            {migrated ? (
+              <span className="text-[var(--green-ink,#1F7A4D)]">✓ {t("live")}</span>
+            ) : (
+              t(`simpleStage.${stage}`)
+            )}
             {product.lifecycle_status === "winning" && metrics?.inboundQty ? (
               <span className="text-[var(--faint)]">
                 {" "}

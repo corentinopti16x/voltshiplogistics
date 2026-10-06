@@ -1,15 +1,20 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { SOURCING_PIPELINE, type SourcingStatus } from "@/lib/products/types";
+import { SIMPLE_PIPELINE, simpleStage, type SourcingStatus } from "@/lib/products/types";
 
-export function SourcingPipeline({ step }: { step: SourcingStatus }) {
+export function SourcingPipeline({ step, migrated = false }: { step: SourcingStatus; migrated?: boolean }) {
   const t = useTranslations("products");
-  const currentIndex =
-    step === "quote_sent"
-      ? SOURCING_PIPELINE.indexOf("negotiation")
-      : Math.max(0, SOURCING_PIPELINE.indexOf(step));
-  const total = SOURCING_PIPELINE.length;
+  if (migrated) {
+    return (
+      <p className="text-[14px] font-semibold text-[var(--ink)]">
+        <span className="mr-2 text-[#1F7A4D]">✓</span>
+        {t("liveNote")}
+      </p>
+    );
+  }
+  const currentIndex = SIMPLE_PIPELINE.indexOf(simpleStage(step));
+  const total = SIMPLE_PIPELINE.length;
   const inset = 100 / (total * 2);
   const progress = ((100 - 2 * inset) * currentIndex) / (total - 1);
 
@@ -17,7 +22,7 @@ export function SourcingPipeline({ step }: { step: SourcingStatus }) {
     <div>
       <p className="mb-4 text-[12px] text-[var(--muted)]">{t("pipeline.caption")}</p>
       <div className="overflow-x-auto">
-        <div className="relative min-w-[640px]">
+        <div className="relative min-w-[320px]">
           <span
             aria-hidden
             className="absolute top-[13px] h-[3px] rounded-full bg-[#E9EEF5]"
@@ -29,7 +34,7 @@ export function SourcingPipeline({ step }: { step: SourcingStatus }) {
             style={{ left: `${inset}%`, width: `${progress}%` }}
           />
           <ol className="relative grid" style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}>
-            {SOURCING_PIPELINE.map((status, index) => {
+            {SIMPLE_PIPELINE.map((status, index) => {
               const current = index === currentIndex;
               const done = index < currentIndex;
               return (
@@ -54,7 +59,7 @@ export function SourcingPipeline({ step }: { step: SourcingStatus }) {
                       index <= currentIndex ? "text-[var(--ink)]" : "text-[var(--faint)]"
                     }`}
                   >
-                    {t(`pipeline.${status}`)}
+                    {t(`simpleStage.${status}`)}
                   </span>
                 </li>
               );
