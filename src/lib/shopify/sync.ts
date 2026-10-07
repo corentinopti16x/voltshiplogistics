@@ -38,7 +38,7 @@ export async function accessTokenForConnectedShop(shop: {
   }
 }
 
-export async function syncConnectedShopifyShops() {
+export async function syncConnectedShopifyShops(options: { days?: number } = {}) {
   const admin = createAdminClient();
   const { data: shops } = await admin
     .from("shops")
@@ -55,6 +55,7 @@ export async function syncConnectedShopifyShops() {
         shopId: shop.id,
         shop: shop.shopify_domain,
         accessToken,
+        days: options.days,
       });
       await syncShopifyProducts({
         clientId: shop.client_id,

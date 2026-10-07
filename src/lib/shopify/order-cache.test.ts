@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cacheOrderLines,
   customerKeyForOrder,
   isShopifyFulfilled,
   packOrderLines,
@@ -16,6 +17,16 @@ describe("shopify order cache", () => {
       lines: [{ sku: "A", quantity: 2 }],
       total: null,
       currency: null,
+      units: null,
+    });
+  });
+
+  it("keeps line prices for per-product revenue", () => {
+    const lines = cacheOrderLines([{ sku: "A", quantity: 2, price: "29.99" }]);
+    expect(unpackOrderLines(packOrderLines(lines, false, { amount: 64.97, units: 3 }))).toMatchObject({
+      lines: [{ sku: "A", quantity: 2, price: 29.99 }],
+      total: 64.97,
+      units: 3,
     });
   });
 
@@ -33,6 +44,7 @@ describe("shopify order cache", () => {
       lines: [{ sku: "A", quantity: 1 }],
       total: null,
       currency: null,
+      units: null,
     });
   });
 
