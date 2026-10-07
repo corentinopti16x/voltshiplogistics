@@ -195,7 +195,12 @@
     "staffCreateAccount": "Create admin account",
     "staffSignupTitle": "New admin sign-in",
     "staffSignupLead": "Create a Voltship admin account, then continue into the admin console.",
-    "staffSignupAside": "A new admin sign-in.\nThe same console."
+    "staffSignupAside": "A new admin sign-in.\nThe same console.",
+    "forgotBackClient": "Back to sign in",
+    "clientForgotTitle": "Forgot password",
+    "clientForgotLead": "Enter the e-mail of your Voltship account: we'll send you a link to choose a new password.",
+    "clientResetTitle": "Choose your password",
+    "clientResetLead": "Set the password of your Voltship account (8 characters minimum)."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -354,7 +359,8 @@
       "units": "Units sold",
       "shipping": "Orders shipped",
       "toShip": "{count, plural, =0 {Nothing waiting to ship} =1 {1 order to ship} other {# orders to ship}}",
-      "trend": "{pct} vs previous period"
+      "trend": "{pct} vs previous period",
+      "basketQty": "{qty} items / order on average"
     }
   },
   "products": {
@@ -582,7 +588,11 @@
       },
       "periodUnits": "Sales {period}",
       "periodOrders": "Orders {period}",
-      "periodRevenue": "Revenue {period}"
+      "periodRevenue": "Revenue {period}",
+      "avgQty": "Avg qty / order",
+      "avgBasket": "Avg basket",
+      "avgMargin": "Margin / order",
+      "avgCogs": "Avg COGS"
     },
     "howItWorks": {
       "title": "How it works",
@@ -831,6 +841,17 @@
       "cancel": "Cancel",
       "ownerOnly": "Only the company owner can connect or disconnect the inbox.",
       "scopes": "Requested access: read e-mails and send replies (gmail.modify). Customer addresses are never stored in clear text."
+    },
+    "password": {
+      "title": "Password",
+      "lead": "Change your account password.",
+      "new": "New password",
+      "confirm": "Confirm",
+      "submit": "Change password",
+      "saving": "Saving…",
+      "saved": "Password changed ✓",
+      "mismatch": "The two passwords don't match.",
+      "error": "Could not change the password. Sign out and use “Forgot password”."
     }
   },
   "admin": {
@@ -851,7 +872,7 @@
     "usersTitle": "Users",
     "noUsers": "No users invited yet.",
     "inviteTitle": "Invite user",
-    "inviteHelp": "They sign in with this email. If you leave the password blank, we generate one — copy it now.",
+    "inviteHelp": "The client receives an e-mail to choose their password. Leave the password field empty (otherwise the account is created with that password).",
     "inviteUser": "Invite",
     "inviting": "Inviting…",
     "inviteDone": "User invited. They can sign in with the password you set.",
@@ -1282,7 +1303,12 @@
       "line": "Support: {mailbox} · {count} open ticket(s)",
       "connected": "Gmail connected ({email})",
       "notConnected": "Gmail not connected"
-    }
+    },
+    "resetSend": "Send reset link",
+    "resetSending": "Sending…",
+    "resetSent": "Link sent ✓",
+    "resetFailed": "Could not send (SMTP?)",
+    "inviteEmailed": "Invitation e-mailed: the client chooses their password."
   },
   "impersonate": {
     "banner": "Viewing as {client}. Writes are audit-logged as you.",

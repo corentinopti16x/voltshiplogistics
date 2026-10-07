@@ -195,7 +195,12 @@
     "staffCreateAccount": "Créer un compte admin",
     "staffSignupTitle": "Nouvelle connexion admin",
     "staffSignupLead": "Créez un compte admin Voltship, puis continuez vers la console admin.",
-    "staffSignupAside": "Une nouvelle connexion admin.\nLa même console."
+    "staffSignupAside": "Une nouvelle connexion admin.\nLa même console.",
+    "forgotBackClient": "Retour à la connexion",
+    "clientForgotTitle": "Mot de passe oublié",
+    "clientForgotLead": "Saisis l'e-mail de ton compte Voltship : on t'envoie un lien pour choisir un nouveau mot de passe.",
+    "clientResetTitle": "Choisis ton mot de passe",
+    "clientResetLead": "Définis le mot de passe de ton compte Voltship (8 caractères minimum)."
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -354,7 +359,8 @@
       "units": "Produits vendus",
       "shipping": "Commandes expédiées",
       "toShip": "{count, plural, =0 {Rien en attente d'expédition} =1 {1 commande à expédier} other {# commandes à expédier}}",
-      "trend": "{pct} vs période précédente"
+      "trend": "{pct} vs période précédente",
+      "basketQty": "{qty} articles / commande en moyenne"
     }
   },
   "products": {
@@ -582,7 +588,11 @@
       },
       "periodUnits": "Ventes {period}",
       "periodOrders": "Commandes {period}",
-      "periodRevenue": "CA {period}"
+      "periodRevenue": "CA {period}",
+      "avgQty": "Qté moy. / cmd",
+      "avgBasket": "Panier moyen",
+      "avgMargin": "Marge / cmd",
+      "avgCogs": "COGS moyen"
     },
     "howItWorks": {
       "title": "Comment ça se passe",
@@ -831,6 +841,17 @@
       "cancel": "Annuler",
       "ownerOnly": "Seul le owner de la société peut connecter ou déconnecter la boîte.",
       "scopes": "Accès demandé : lecture des e-mails et envoi de réponses (gmail.modify). Les adresses clients ne sont jamais stockées en clair."
+    },
+    "password": {
+      "title": "Mot de passe",
+      "lead": "Change le mot de passe de ton compte.",
+      "new": "Nouveau mot de passe",
+      "confirm": "Confirmer",
+      "submit": "Changer le mot de passe",
+      "saving": "Enregistrement…",
+      "saved": "Mot de passe changé ✓",
+      "mismatch": "Les deux mots de passe ne correspondent pas.",
+      "error": "Impossible de changer le mot de passe. Déconnecte-toi puis utilise « Mot de passe oublié »."
     }
   },
   "admin": {
@@ -851,7 +872,7 @@
     "usersTitle": "Utilisateurs",
     "noUsers": "Personne n’est encore invité.",
     "inviteTitle": "Inviter un utilisateur",
-    "inviteHelp": "Connexion avec cet e-mail. Sans mot de passe, nous en générons un — copiez-le tout de suite.",
+    "inviteHelp": "Le client reçoit un e-mail pour choisir son mot de passe. Laisse le champ mot de passe vide (sinon le compte est créé avec ce mot de passe).",
     "inviteUser": "Inviter",
     "inviting": "Invitation…",
     "inviteDone": "Utilisateur invité. Il se connecte avec le mot de passe que vous avez choisi.",
@@ -1282,7 +1303,12 @@
       "line": "SAV : {mailbox} · {count} ticket(s) ouvert(s)",
       "connected": "Gmail connecté ({email})",
       "notConnected": "Gmail non connecté"
-    }
+    },
+    "resetSend": "Envoyer un lien de réinitialisation",
+    "resetSending": "Envoi…",
+    "resetSent": "Lien envoyé ✓",
+    "resetFailed": "Envoi impossible (SMTP ?)",
+    "inviteEmailed": "Invitation envoyée par e-mail : le client choisit son mot de passe."
   },
   "impersonate": {
     "banner": "Vue {client}. Les écritures sont journalisées à votre nom.",
