@@ -93,6 +93,17 @@ export function parseImagesJson(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 }
 
+/**
+ * An order that cannot be a real sale: at least 10 units paid less than 1 € each in total
+ * (e.g. a checkout bug abused: 50 coffrets for 2.99 €). Kept in the cache, flagged, and left
+ * out of every sales figure (units, revenue, lifecycle, stock days).
+ */
+export function isSuspiciousOrder(total: unknown, units: number) {
+  const amount = Number(total);
+  if (total == null || !Number.isFinite(amount) || units < 10) return false;
+  return amount / units < 1;
+}
+
 export function packOrderLines(
   lines: OrderLine[],
   fulfilled: boolean,
@@ -105,6 +116,7 @@ export function packOrderLines(
     meta.currency = total.currency ?? null;
   }
   if (total?.units != null && Number.isFinite(total.units)) meta.units = total.units;
+  if (total && isSuspiciousOrder(total.amount, total.units ?? 0)) meta.suspicious = true;
   return [{ _order: meta }, ...lines];
 }
 
@@ -116,10 +128,13 @@ export function unpackOrderLines(value: unknown): {
   currency: string | null;
   /** Units over every line of the order (with or without SKU), when recorded. */
   units: number | null;
+  /** Flagged as not a real sale (see isSuspiciousOrder): excluded from sales figures. */
+  suspicious: boolean;
 } {
   if (!Array.isArray(value)) {
-    return { fulfilled: null, lines: [], total: null, currency: null, units: null };
+    return { fulfilled: null, lines: [], total: null, currency: null, units: null, suspicious: false };
   }
+  let suspicious = false;
   let units: number | null = null;
   let fulfilled: boolean | null = null;
   let total: number | null = null;
@@ -132,13 +147,20 @@ export function unpackOrderLines(value: unknown): {
       quantity?: unknown;
       title?: unknown;
       price?: unknown;
-      _order?: { fulfilled?: unknown; total?: unknown; currency?: unknown; units?: unknown };
+      _order?: {
+        fulfilled?: unknown;
+        total?: unknown;
+        currency?: unknown;
+        units?: unknown;
+        suspicious?: unknown;
+      };
     };
     if (row._order && typeof row._order === "object") {
       fulfilled = row._order.fulfilled === true;
       const amount = Number(row._order.total);
       if (row._order.total != null && Number.isFinite(amount)) total = amount;
       if (typeof row._order.currency === "string") currency = row._order.currency;
+      if (row._order.suspicious === true) suspicious = true;
       if (row._order.units != null && Number.isFinite(Number(row._order.units))) {
         units = Number(row._order.units);
       }
@@ -150,7 +172,7 @@ export function unpackOrderLines(value: unknown): {
     if (row.price != null && Number.isFinite(Number(row.price))) line.price = Number(row.price);
     lines.push(line);
   }
-  return { fulfilled, lines, total, currency, units };
+  return { fulfilled, lines, total, currency, units, suspicious };
 }
 
 export function isShopifyFulfilled(status: string | null | undefined) {

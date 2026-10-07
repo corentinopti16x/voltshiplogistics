@@ -5,7 +5,11 @@ import { getAuthContext } from "@/lib/auth/context";
 import { getAirtableConfig } from "@/lib/airtable/config";
 import { patchAirtableProduct } from "@/lib/airtable/products";
 import { createNotification } from "@/lib/notifications/server";
-import { calculateLiveProductQuote } from "@/lib/pricing/server";
+import {
+  calculateLiveProductQuote,
+  calculateProductCogsMatrix,
+  getProductMarkets,
+} from "@/lib/pricing/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ProductRow, SourcingStatus } from "@/lib/products/types";
 import type { ShippingChannel } from "@/lib/domain/pricing";
@@ -230,6 +234,18 @@ export async function sendQuoteAction(
     };
   }
 
+  // COGS for 1..5 units in one parcel (same engine as the client's product card).
+  const matrix = await calculateProductCogsMatrix(candidate, {
+    markets: getProductMarkets(candidate).slice(0, 1),
+  }).catch(() => null);
+  const primary = matrix?.markets[0];
+  const cogsLadder = (primary?.cells ?? []).map((cell) => ({
+    quantity: cell.quantity,
+    cogs: cell.breakdown?.cogs != null ? Math.round(cell.breakdown.cogs * 100) / 100 : null,
+  }));
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.voltshiplogistics.com").replace(/\/$/, "");
+  const shippingLine = [quote.breakdown.carrier, quote.breakdown.lineName].filter(Boolean).join(" ");
+
   try {
     await persistDraft(product, draft, ctx.userId);
     await createNotification({
@@ -239,8 +255,14 @@ export async function sendQuoteAction(
       payload: {
         productId: product.id,
         productTitle: product.title,
+        productUrl: `${appUrl}/fr/products/${product.id}`,
+        photoUrl: product.photo_url ?? null,
+        destination: quote.breakdown.destination,
+        currency: "EUR",
         cogs: quote.breakdown.cogs,
-        carrier: quote.breakdown.carrier,
+        cogsLadder,
+        weightG: draft.client.weight_g,
+        shippingLine: shippingLine || null,
         deliveryRange: quote.breakdown.deliveryRange,
         message: `Quote ready for ${product.title}.`,
       },

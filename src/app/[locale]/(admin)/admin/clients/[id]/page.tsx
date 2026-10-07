@@ -4,6 +4,7 @@ import { Link } from "@/i18n/routing";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { InviteUserForm } from "@/components/admin/invite-user-form";
 import { SendResetButton } from "@/components/admin/send-reset-button";
+import { WhatsappNumberForm } from "@/components/admin/whatsapp-number-form";
 import { PlanTierForm } from "@/components/admin/plan-tier-form";
 import { ImpersonateButton } from "@/components/admin/impersonate-button";
 import { ClientPricingForm } from "@/components/admin/pricing-forms";
@@ -57,6 +58,14 @@ export default async function AdminClientDetailPage({
     .maybeSingle<ClientWithPricing>();
 
   if (!client) notFound();
+
+  // Separate read: works before migration 00015 (whatsapp_number) is applied.
+  const { data: whatsappRow } = await admin
+    .from("clients")
+    .select("whatsapp_number")
+    .eq("id", id)
+    .maybeSingle<{ whatsapp_number: string | null }>();
+  const whatsappNumber = whatsappRow?.whatsapp_number ?? null;
 
   const { data: users } = await admin
     .from("profiles")
@@ -143,6 +152,15 @@ export default async function AdminClientDetailPage({
       </div>
 
       <section className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
+        <h2 className="text-sm font-semibold">WhatsApp</h2>
+        <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
+          Numéro qui reçoit les notifications WhatsApp (devis prêt avec COGS 1 à 5, alertes stock,
+          passage en Winning / Declining). Vide = pas de WhatsApp.
+        </p>
+        <WhatsappNumberForm clientId={client.id} current={whatsappNumber} />
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
         <h2 className="text-sm font-semibold">{t("planTitle")}</h2>
         <p className="mt-1 mb-4 text-sm text-[var(--muted)]">{t("planHelp")}</p>
         <PlanTierForm clientId={client.id} current={client.plan_tier} />

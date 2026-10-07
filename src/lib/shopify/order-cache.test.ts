@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   cacheOrderLines,
+  isSuspiciousOrder,
   customerKeyForOrder,
   isShopifyFulfilled,
   packOrderLines,
@@ -18,6 +19,7 @@ describe("shopify order cache", () => {
       total: null,
       currency: null,
       units: null,
+      suspicious: false,
     });
   });
 
@@ -28,6 +30,14 @@ describe("shopify order cache", () => {
       total: 64.97,
       units: 3,
     });
+  });
+
+  it("flags orders that cannot be real sales (≥10 units for < 1 € each)", () => {
+    expect(isSuspiciousOrder("2.99", 50)).toBe(true);
+    expect(isSuspiciousOrder(1495, 50)).toBe(false);
+    expect(isSuspiciousOrder(0, 3)).toBe(false);
+    const packed = packOrderLines([{ sku: "A", quantity: 50 }], false, { amount: "2.99", units: 50 });
+    expect(unpackOrderLines(packed).suspicious).toBe(true);
   });
 
   it("keeps the order total and currency for the dashboard revenue", () => {
@@ -45,6 +55,7 @@ describe("shopify order cache", () => {
       total: null,
       currency: null,
       units: null,
+      suspicious: false,
     });
   });
 

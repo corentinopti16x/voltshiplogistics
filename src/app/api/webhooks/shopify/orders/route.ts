@@ -8,6 +8,7 @@ import {
   customerKeyForOrder,
   hashCustomerEmail,
   orderNumberOf,
+  isSuspiciousOrder,
   packOrderLines,
   resolveShopifyFulfillment,
   unpackOrderLines,
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
       .maybeSingle();
     const previousOrder = unpackOrderLines(previous?.line_items_json);
     const previousLines = previousOrder.lines;
-    if (previous && !previous.cancelled) {
+    if (previous && !previous.cancelled && !previousOrder.suspicious) {
       await applyLines({
         clientId: shop.client_id,
         shopId: shop.id,
@@ -101,7 +102,8 @@ export async function POST(request: Request) {
 
     const date = order.created_at.slice(0, 10);
     const lines = cacheOrderLines(order.line_items);
-    if (!order.cancelled_at) {
+    const orderUnits = order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
+    if (!order.cancelled_at && !isSuspiciousOrder(order.total_price, orderUnits)) {
       await applyLines({
         clientId: shop.client_id,
         shopId: shop.id,

@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptShopifyToken, encryptShopifyToken } from "./crypto";
+import { unpackOrderLines } from "./order-cache";
 import { backfillShopifyOrders, issueShopifyAccessToken, syncShopifyProducts } from "./admin-api";
 import {
   classifyLifecycle,
@@ -38,6 +39,19 @@ export async function accessTokenForConnectedShop(shop: {
   }
 }
 
+async function hasUnpricedRecentOrders(shopId: string) {
+  const admin = createAdminClient();
+  const since = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const { data } = await admin
+    .from("shopify_orders_cache")
+    .select("line_items_json")
+    .eq("shop_id", shopId)
+    .gte("order_date", since)
+    .order("order_date", { ascending: true })
+    .limit(200);
+  return (data ?? []).some((row) => unpackOrderLines(row.line_items_json).total == null);
+}
+
 export async function syncConnectedShopifyShops(options: { days?: number } = {}) {
   const admin = createAdminClient();
   const { data: shops } = await admin
@@ -50,12 +64,16 @@ export async function syncConnectedShopifyShops(options: { days?: number } = {})
   for (const shop of shops ?? []) {
     try {
       const accessToken = await accessTokenForConnectedShop(shop);
+      // Light refresh, unless orders of the last 30 days still lack their price (cached
+      // before prices were stored): then rebuild the full 90 days once.
+      let days = options.days;
+      if (days != null && days < 90 && (await hasUnpricedRecentOrders(shop.id))) days = 90;
       await backfillShopifyOrders({
         clientId: shop.client_id,
         shopId: shop.id,
         shop: shop.shopify_domain,
         accessToken,
-        days: options.days,
+        days,
       });
       await syncShopifyProducts({
         clientId: shop.client_id,

@@ -175,6 +175,7 @@ export async function getSalesSummary(
     const bucket = age <= span ? current : age <= 2 * span ? previous : null;
     if (!bucket) continue;
     const order = unpackOrderLines(row.line_items_json);
+    if (order.suspicious) continue;
     bucket.orders += 1;
     bucket.units += order.units ?? order.lines.reduce((sum, line) => sum + line.quantity, 0);
     if (order.total != null) {
@@ -258,13 +259,9 @@ export async function listRestockAlerts(clientId: string, products: ProductRow[]
   for (const product of products) {
     const own = productSkus.get(product.id) ?? [];
     const cached = own.map((sku) => stockBySku.get(sku)).find(Boolean);
-    const tracked =
-      product.sourcing_status === "in_stock" ||
-      product.lifecycle_status === "winning" ||
-      product.lifecycle_status === "declining" ||
-      product.lifecycle_status === "dead" ||
-      (product.stock_manual ?? 0) > 0 ||
-      cached != null;
+    // Only products whose stock is actually known (warehouse or declared) can raise an
+    // alert; otherwise every winning product would show "0 days" before ECCANG is live.
+    const tracked = cached != null || product.stock_manual != null;
     if (!tracked) continue;
 
     const salesPerDay = own.reduce((sum, sku) => sum + (units.get(sku) ?? 0), 0) / 30;
@@ -410,7 +407,9 @@ export async function getTenantProductMetrics(
     const age = now - at;
     if (age > PERIOD_MS["30d"]) continue;
     const touched = new Set<string>();
-    for (const line of unpackOrderLines(order.line_items_json).lines) {
+    const unpacked = unpackOrderLines(order.line_items_json);
+    if (unpacked.suspicious) continue;
+    for (const line of unpacked.lines) {
       const productId = skuToProduct.get(line.sku);
       if (!productId) continue;
       hasOrders = true;
@@ -460,6 +459,8 @@ export async function getTenantProductMetrics(
     const units90 = own.reduce((sum, sku) => sum + (units90BySku.get(sku) ?? 0), 0);
     const salesDay = units30 / 30;
     const cached = own.map((sku) => stockBySku.get(sku)).find(Boolean);
+    // Without warehouse stock nor a declared stock, days of stock are unknown (not 0).
+    const stockKnown = cached != null || product.stock_manual != null;
     const available = cached?.available ?? product.stock_manual ?? 0;
     const own_ = windows.get(product.id) ?? blank();
     // Revenue only when every unit of the window carries its Shopify price (orders cached
@@ -475,7 +476,7 @@ export async function getTenantProductMetrics(
       units30: hasOrders ? own_["30d"].units : units30,
       units90: hasSales ? units90 : null,
       salesDay,
-      daysLeft: salesDay > 0 ? available / salesDay : null,
+      daysLeft: stockKnown && salesDay > 0 ? available / salesDay : null,
       qtyAvailable: available,
       inboundQty: cached?.inbound ?? 0,
     });
