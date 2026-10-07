@@ -5,6 +5,8 @@ import { listStaffRestockAlerts } from "@/lib/products/queries";
 import { listStuckEccangOrders } from "@/lib/eccang/queries";
 import { loadWeeklyFinance } from "@/lib/finance/weekly";
 import { formatAmount, formatNumber } from "@/lib/format";
+import { loadPricingTiers } from "@/lib/clients/pricing-tier";
+import { pricingTierLabel } from "@/lib/domain/pricing-tiers";
 
 type RecentProduct = {
   id: string;
@@ -133,6 +135,7 @@ export default async function AdminDashboardPage() {
     activeGridValue && activeGridValue !== "uninitialized" ? activeGridValue : null;
   const recentProducts = recentProductsResult.data ?? [];
   const recentClients = recentClientsResult.data ?? [];
+  const recentTiers = await loadPricingTiers(recentClients.map((client) => client.id));
   const shopErrors = shopErrorsResult.data ?? [];
   const syncErrors = shopErrors.length;
   const pendingAirtable = pendingAirtableResult.count ?? 0;
@@ -403,8 +406,8 @@ export default async function AdminDashboardPage() {
                 className="rounded-2xl border border-[var(--line)] bg-[var(--card)] p-4 hover:border-[var(--accent)]"
               >
                 <p className="text-sm font-medium">{client.name}</p>
-                <p className="mt-1 text-xs capitalize text-[var(--muted)]">
-                  {client.plan_tier} · {date.format(new Date(client.created_at))}
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  {pricingTierLabel(recentTiers.get(client.id))} · {date.format(new Date(client.created_at))}
                 </p>
               </Link>
             ))}
