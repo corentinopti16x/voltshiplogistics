@@ -9,7 +9,9 @@ import {
   getProductRequest,
   getResearchState,
   getRestockRequests,
+  isMigratedProduct,
   isQuoteAccepted,
+  simpleStage,
 } from "@/lib/products/types";
 import {
   formatWeightTier,
@@ -198,7 +200,7 @@ export default async function ProductDetailPage({
           <div className="flex flex-wrap items-center gap-2">
             <LifecycleBadge status={product.lifecycle_status} />
             <Badge tone="outline" className="!border-white/25 !bg-white/12 !text-white">
-              {t(`sourcing.${step}`)}
+              {isMigratedProduct(product) ? `✓ ${t("live")}` : t(`simpleStage.${simpleStage(step)}`)}
             </Badge>
             {product.sku ? <span className="text-[12px] text-white/70">{product.sku}</span> : null}
           </div>
@@ -218,7 +220,7 @@ export default async function ProductDetailPage({
       />
 
       <Card as="section" padding="md">
-        <SourcingPipeline step={step} />
+        <SourcingPipeline step={step} migrated={isMigratedProduct(product)} />
       </Card>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
