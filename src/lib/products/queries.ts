@@ -244,6 +244,9 @@ export async function listStaffRestockAlerts() {
 
 export type ProductMetrics = {
   salesDay: number;
+  /** Units sold over the last 24 hours (rolling, from Shopify order timestamps). */
+  units24h: number;
+  /** Rolling 7 days. */
   units7: number;
   units30: number;
   /** Units sold over the last 90 days (Shopify sales cache); null when the SKU has no sales rows. */
@@ -266,7 +269,8 @@ export async function getTenantProductMetrics(
   const since7 = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
   const since30 = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
   const since90 = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
-  const [{ data: sales }, { data: stock }] = await Promise.all([
+  const since30At = new Date(Date.now() - 30 * 86400000).toISOString();
+  const [{ data: sales }, { data: stock }, { data: orders }] = await Promise.all([
     admin
       .from("sales_cache")
       .select("sku, units_sold, date")
@@ -278,7 +282,34 @@ export async function getTenantProductMetrics(
       .select("sku, qty_available, inbound_qty")
       .eq("client_id", clientId)
       .in("sku", skus),
+    admin
+      .from("shopify_orders_cache")
+      .select("placed_at, order_date, cancelled, line_items_json")
+      .eq("client_id", clientId)
+      .gte("order_date", since30.slice(0, 10))
+      .eq("cancelled", false),
   ]);
+  // Rolling windows (24 h / 7 d / 30 d) from the exact order time; orders without a
+  // timestamp fall back to their order date at midnight UTC.
+  const skuSet = new Set(skus);
+  const now = Date.now();
+  const rolling24 = new Map<string, number>();
+  const rolling7 = new Map<string, number>();
+  const rolling30 = new Map<string, number>();
+  let hasOrders = false;
+  for (const order of orders ?? []) {
+    const at = new Date(order.placed_at ?? `${order.order_date}T00:00:00Z`).getTime();
+    if (!Number.isFinite(at) || at < Date.parse(since30At)) continue;
+    const age = now - at;
+    for (const line of unpackOrderLines(order.line_items_json).lines) {
+      if (!skuSet.has(line.sku)) continue;
+      hasOrders = true;
+      const qty = Number(line.quantity) || 0;
+      rolling30.set(line.sku, (rolling30.get(line.sku) ?? 0) + qty);
+      if (age <= 7 * 86400000) rolling7.set(line.sku, (rolling7.get(line.sku) ?? 0) + qty);
+      if (age <= 86400000) rolling24.set(line.sku, (rolling24.get(line.sku) ?? 0) + qty);
+    }
+  }
   const units7BySku = new Map<string, number>();
   const units30BySku = new Map<string, number>();
   const units90BySku = new Map<string, number>();
@@ -308,9 +339,12 @@ export async function getTenantProductMetrics(
     const salesDay = units30 / 30;
     const cached = own.map((sku) => stockBySku.get(sku)).find(Boolean);
     const available = cached?.available ?? product.stock_manual ?? 0;
+    const sumOwn = (map: Map<string, number>) =>
+      own.reduce((sum, sku) => sum + (map.get(sku) ?? 0), 0);
     metrics.set(product.id, {
-      units7,
-      units30,
+      units24h: sumOwn(rolling24),
+      units7: hasOrders ? sumOwn(rolling7) : units7,
+      units30: hasOrders ? sumOwn(rolling30) : units30,
       units90: hasSales ? units90 : null,
       salesDay,
       daysLeft: salesDay > 0 ? available / salesDay : null,

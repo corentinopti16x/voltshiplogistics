@@ -7,7 +7,6 @@ import { ProductPhoto } from "@/components/client/product-photo";
 import { ProductImageCarousel } from "@/components/client/product-image-carousel";
 import { SIMPLE_PIPELINE, isMigratedProduct, simpleStage } from "@/lib/products/types";
 import type { ProductInsight } from "@/lib/products/overview";
-import type { SalesPeriod } from "@/lib/products/periods";
 import { formatAmount, formatDays, formatNumber, formatRatio } from "@/lib/format";
 
 /**
@@ -19,12 +18,9 @@ import { formatAmount, formatDays, formatNumber, formatRatio } from "@/lib/forma
 export async function ProductCard({
   insight,
   stockAlert = false,
-  period = 90,
 }: {
   insight: ProductInsight;
   stockAlert?: boolean;
-  /** Sales window shown on the card (7, 30 or 90 days). */
-  period?: SalesPeriod;
 }) {
   const [t, locale] = await Promise.all([getTranslations("products.card"), getLocale()]);
   const { product, metrics, cogs, cogsSource, economics, cogsLadder, shopifyImages, estimate } = insight;
@@ -33,14 +29,8 @@ export async function ProductCard({
   const migrated = isMigratedProduct(product);
   const stage = simpleStage(product.sourcing_status);
   const stageIndex = SIMPLE_PIPELINE.indexOf(stage);
-  const units =
-    metrics?.units90 == null
-      ? null
-      : period === 7
-        ? metrics.units7
-        : period === 30
-          ? metrics.units30
-          : metrics.units90;
+  const sales = (value: number | undefined) =>
+    metrics?.units90 == null || value == null ? "—" : formatNumber(value, locale);
   const daysLeft = metrics?.daysLeft ?? null;
   const lowStock = stockAlert || (daysLeft != null && daysLeft < 19 && product.lifecycle_status !== "dead");
 
@@ -84,11 +74,13 @@ export async function ProductCard({
           ) : null}
         </span>
 
+        <span className="grid grid-cols-3 gap-x-2 rounded-[10px] bg-[var(--card-soft)] px-2.5 py-2">
+          <Metric label={t("sales24h")} value={sales(metrics?.units24h)} />
+          <Metric label={t("sales7d")} value={sales(metrics?.units7)} />
+          <Metric label={t("sales30d")} value={sales(metrics?.units30)} />
+        </span>
+
         <span className="grid grid-cols-3 gap-x-2 gap-y-2.5">
-          <Metric
-            label={t("salesPeriod", { days: period })}
-            value={units == null ? "—" : formatNumber(units, locale)}
-          />
           <Metric label={t("price")} value={formatAmount(product.selling_price, locale)} />
           <Metric
             label={t("grossMargin")}
