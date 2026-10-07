@@ -575,9 +575,14 @@
         "validation": "Validation"
       },
       "live": "Live",
-      "sales24h": "Sales 24h",
-      "sales7d": "Sales 7d",
-      "sales30d": "Sales 30d"
+      "period": {
+        "24h": "24h",
+        "7d": "7d",
+        "30d": "30d"
+      },
+      "periodUnits": "Sales {period}",
+      "periodOrders": "Orders {period}",
+      "periodRevenue": "Revenue {period}"
     },
     "howItWorks": {
       "title": "How it works",
@@ -651,18 +656,15 @@
       "readOnly": "Only members of your workspace can change the line."
     },
     "sortLabel": "Sort by",
-    "minSalesLabel": "Min. 30-day sales",
+    "minSalesLabel": "Min. sales (period)",
     "sort": {
-      "sales90": "Sales 90 d (best sellers)",
-      "sales30": "Best sellers 30d",
       "salesLow": "Least sold",
       "profit": "Profit / order",
       "price": "Selling price",
       "newest": "Newest",
       "name": "Name (A→Z)",
       "sales": "Best sellers",
-      "sales24h": "Best sellers 24h",
-      "sales7": "Best sellers 7d"
+      "revenue": "Top revenue"
     },
     "simpleStage": {
       "brief": "Request received",
@@ -670,7 +672,9 @@
       "validation": "Validation"
     },
     "live": "Live",
-    "liveNote": "Already selling on your store — nothing to source, all good."
+    "liveNote": "Already selling on your store — nothing to source, all good.",
+    "periodHint": "Units, orders and revenue per product over the chosen rolling period.",
+    "periodLabel": "Period"
   },
   "economics": {
     "title": "Unit economics",
@@ -1348,5 +1352,10 @@
       "items": "Items",
       "viewTracking": "Open tracking"
     }
+  },
+  "periods": {
+    "24h": "24 h",
+    "7d": "7 days",
+    "30d": "30 days"
   }
 }

@@ -124,7 +124,11 @@ export async function POST(request: Request) {
         line_items_json: packOrderLines(
           lines,
           resolveShopifyFulfillment(order.fulfillment_status, previousOrder.fulfilled),
-          { amount: order.total_price, currency: order.currency },
+          {
+            amount: order.total_price,
+            currency: order.currency,
+            units: order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0),
+          },
         ),
         updated_at: new Date().toISOString(),
       },

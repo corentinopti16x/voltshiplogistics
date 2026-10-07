@@ -416,9 +416,13 @@ export async function backfillShopifyOrders(input: {
   shopId: string;
   shop: string;
   accessToken: string;
+  /** How many days back to re-read (90 for the nightly full sync, a few for the 10-minute refresh). */
+  days?: number;
 }) {
+  // Start of the UTC day so the sales_cache days rebuilt below are complete.
   const since = new Date();
-  since.setUTCDate(since.getUTCDate() - 90);
+  since.setUTCDate(since.getUTCDate() - (input.days ?? 90));
+  since.setUTCHours(0, 0, 0, 0);
   const fulfillment = await loadShopifyFulfillmentMap(input.shop, input.accessToken, since);
   let path =
     `orders.json?status=any&limit=250&created_at_min=${encodeURIComponent(since.toISOString())}` +
@@ -447,7 +451,11 @@ export async function backfillShopifyOrders(input: {
         line_items_json: packOrderLines(
           normalizedLines,
           fulfillment.get(String(order.id)) ?? isShopifyFulfilled(order.fulfillment_status),
-          { amount: order.total_price, currency: order.currency },
+          {
+            amount: order.total_price,
+            currency: order.currency,
+            units: order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0),
+          },
         ),
         updated_at: new Date().toISOString(),
       });

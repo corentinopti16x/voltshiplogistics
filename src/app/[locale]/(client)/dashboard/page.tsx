@@ -3,12 +3,9 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { getAuthContext } from "@/lib/auth/context";
 import { SIMPLE_PIPELINE, simpleStage } from "@/lib/products/types";
-import {
-  DASHBOARD_PERIODS,
-  getSalesSummary,
-  listRestockAlerts,
-  type DashboardPeriod,
-} from "@/lib/products/queries";
+import { getSalesSummary, listRestockAlerts } from "@/lib/products/queries";
+import { parseDashboardPeriod } from "@/lib/products/periods";
+import { PeriodTabs } from "@/components/client/period-tabs";
 import { loadProductInsights, type ProductInsight } from "@/lib/products/overview";
 import { LaunchRestockButton } from "@/components/client/launch-restock-button";
 import { ProductCard } from "@/components/client/product-card";
@@ -49,10 +46,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ period?: string }>;
 }) {
-  const requested = (await searchParams).period;
-  const period: DashboardPeriod = (DASHBOARD_PERIODS as string[]).includes(requested ?? "")
-    ? (requested as DashboardPeriod)
-    : "7d";
+  const period = parseDashboardPeriod((await searchParams).period);
   const [t, tp, locale] = await Promise.all([
     getTranslations("dashboard"),
     getTranslations("products.card"),
@@ -119,7 +113,7 @@ export default async function DashboardPage({
       const rankA = lifecycleRank[a.product.lifecycle_status ?? ""] ?? 4;
       const rankB = lifecycleRank[b.product.lifecycle_status ?? ""] ?? 4;
       if (rankA !== rankB) return rankA - rankB;
-      return (b.metrics?.units90 ?? -1) - (a.metrics?.units90 ?? -1);
+      return (b.metrics?.windows[period].units ?? -1) - (a.metrics?.windows[period].units ?? -1);
     })
     .slice(0, 6);
 
@@ -157,23 +151,11 @@ export default async function DashboardPage({
       {/* Ventes — getSalesSummary: rolling window from shopify_orders_cache (placed_at, total) */}
       <section aria-label={t("sales.title")} className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <SectionTitle sub={t("sales.lead")}>{t("sales.title")}</SectionTitle>
-          <nav aria-label={t("sales.periodLabel")} className="flex gap-1 rounded-full border border-[var(--line)] bg-white p-1">
-            {DASHBOARD_PERIODS.map((key) => (
-              <Link
-                key={key}
-                href={`/dashboard?period=${key}`}
-                aria-current={key === period ? "true" : undefined}
-                className={`rounded-full px-3.5 py-1.5 text-[13px] font-bold transition ${
-                  key === period
-                    ? "bg-[var(--navy)] text-white"
-                    : "text-[var(--muted)] hover:bg-[var(--card-soft)]"
-                }`}
-              >
-                {t(`sales.periods.${key}`)}
-              </Link>
-            ))}
-          </nav>
+          <div className="flex flex-col">
+            <h2 className="font-display text-[20px] font-extrabold text-white">{t("sales.title")}</h2>
+            <p className="text-[13px] text-white/75">{t("sales.lead")}</p>
+          </div>
+          <PeriodTabs basePath="/dashboard" period={period} label={t("sales.periodLabel")} />
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Card padding="sm" className="px-5 py-4">
@@ -445,6 +427,7 @@ export default async function DashboardPage({
                   key={insight.product.id}
                   insight={insight}
                   stockAlert={alertIds.has(insight.product.id)}
+                  period={period}
                 />
               ))}
             </div>

@@ -18,6 +18,7 @@ export function ProductFilters({
   sourcing,
   sort,
   minSales,
+  period,
   counts,
 }: {
   q: string;
@@ -25,12 +26,14 @@ export function ProductFilters({
   sourcing: string;
   sort: string;
   minSales: string;
+  period: string;
   counts: Record<"all" | LifecycleStatus, number> | Record<string, number>;
 }) {
   const t = useTranslations("products");
 
   return (
     <form method="get" className="flex flex-col gap-3">
+      <input type="hidden" name="period" value={period} />
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("allLifecycle")}>
           {LIFECYCLES.map((value) => {
@@ -109,7 +112,7 @@ export function ProductFilters({
             onChange={(event) => event.currentTarget.form?.requestSubmit()}
             className="vs-input cursor-pointer !py-1.5 text-[13px]"
           >
-            {(["sales24h", "sales7", "sales30", "salesLow", "profit", "price", "newest", "name"] as const).map(
+            {(["sales", "revenue", "salesLow", "profit", "price", "newest", "name"] as const).map(
               (key) => (
                 <option key={key} value={key}>
                   {t(`sort.${key}`)}

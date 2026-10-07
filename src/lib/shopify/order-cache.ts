@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 
-export type OrderLine = { sku: string; quantity: number; title?: string };
+export type OrderLine = { sku: string; quantity: number; title?: string; price?: number };
 
 /**
  * Anonymised customer identifier for recurrence stats (no read_customers scope needed):
@@ -44,15 +44,23 @@ export function orderNumberOf(order: {
 
 /** Cached line items: SKU + quantity, with the Shopify line title when available. */
 export function cacheOrderLines(
-  lines: Array<{ sku: string | null; quantity: number; title?: string | null; name?: string | null }>,
+  lines: Array<{
+    sku: string | null;
+    quantity: number;
+    title?: string | null;
+    name?: string | null;
+    price?: string | number | null;
+  }>,
 ): OrderLine[] {
   return lines
     .filter((line) => line.sku?.trim())
     .map((line) => {
       const title = (line.title ?? line.name ?? "").trim();
-      return title
-        ? { sku: line.sku!.trim(), quantity: line.quantity, title: title.slice(0, 200) }
-        : { sku: line.sku!.trim(), quantity: line.quantity };
+      const out: OrderLine = { sku: line.sku!.trim(), quantity: line.quantity };
+      if (title) out.title = title.slice(0, 200);
+      const price = Number(line.price);
+      if (line.price != null && Number.isFinite(price)) out.price = price;
+      return out;
     });
 }
 
@@ -88,17 +96,16 @@ export function parseImagesJson(value: unknown): string[] {
 export function packOrderLines(
   lines: OrderLine[],
   fulfilled: boolean,
-  total?: { amount: unknown; currency?: string | null } | null,
+  total?: { amount: unknown; currency?: string | null; units?: number } | null,
 ) {
   const amount = Number(total?.amount);
-  return [
-    {
-      _order: Number.isFinite(amount)
-        ? { fulfilled, total: amount, currency: total?.currency ?? null }
-        : { fulfilled },
-    },
-    ...lines,
-  ];
+  const meta: Record<string, unknown> = { fulfilled };
+  if (total?.amount != null && Number.isFinite(amount)) {
+    meta.total = amount;
+    meta.currency = total.currency ?? null;
+  }
+  if (total?.units != null && Number.isFinite(total.units)) meta.units = total.units;
+  return [{ _order: meta }, ...lines];
 }
 
 export function unpackOrderLines(value: unknown): {
@@ -107,8 +114,13 @@ export function unpackOrderLines(value: unknown): {
   /** Order total paid by the customer (Shopify total_price), null for orders cached before it was stored. */
   total: number | null;
   currency: string | null;
+  /** Units over every line of the order (with or without SKU), when recorded. */
+  units: number | null;
 } {
-  if (!Array.isArray(value)) return { fulfilled: null, lines: [], total: null, currency: null };
+  if (!Array.isArray(value)) {
+    return { fulfilled: null, lines: [], total: null, currency: null, units: null };
+  }
+  let units: number | null = null;
   let fulfilled: boolean | null = null;
   let total: number | null = null;
   let currency: string | null = null;
@@ -119,21 +131,26 @@ export function unpackOrderLines(value: unknown): {
       sku?: unknown;
       quantity?: unknown;
       title?: unknown;
-      _order?: { fulfilled?: unknown; total?: unknown; currency?: unknown };
+      price?: unknown;
+      _order?: { fulfilled?: unknown; total?: unknown; currency?: unknown; units?: unknown };
     };
     if (row._order && typeof row._order === "object") {
       fulfilled = row._order.fulfilled === true;
       const amount = Number(row._order.total);
       if (row._order.total != null && Number.isFinite(amount)) total = amount;
       if (typeof row._order.currency === "string") currency = row._order.currency;
+      if (row._order.units != null && Number.isFinite(Number(row._order.units))) {
+        units = Number(row._order.units);
+      }
       continue;
     }
     if (typeof row.sku !== "string" || !row.sku.trim()) continue;
     const line: OrderLine = { sku: row.sku.trim(), quantity: Number(row.quantity) || 0 };
     if (typeof row.title === "string" && row.title.trim()) line.title = row.title.trim();
+    if (row.price != null && Number.isFinite(Number(row.price))) line.price = Number(row.price);
     lines.push(line);
   }
-  return { fulfilled, lines, total, currency };
+  return { fulfilled, lines, total, currency, units };
 }
 
 export function isShopifyFulfilled(status: string | null | undefined) {

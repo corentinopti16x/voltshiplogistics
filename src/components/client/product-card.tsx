@@ -6,6 +6,7 @@ import { LifecycleBadge } from "@/components/client/lifecycle-badge";
 import { ProductPhoto } from "@/components/client/product-photo";
 import { ProductImageCarousel } from "@/components/client/product-image-carousel";
 import { SIMPLE_PIPELINE, isMigratedProduct, simpleStage } from "@/lib/products/types";
+import type { DashboardPeriod } from "@/lib/products/periods";
 import type { ProductInsight } from "@/lib/products/overview";
 import { formatAmount, formatDays, formatNumber, formatRatio } from "@/lib/format";
 
@@ -18,9 +19,12 @@ import { formatAmount, formatDays, formatNumber, formatRatio } from "@/lib/forma
 export async function ProductCard({
   insight,
   stockAlert = false,
+  period = "7d",
 }: {
   insight: ProductInsight;
   stockAlert?: boolean;
+  /** Rolling window shown in the sales band (24 h, 7 d or 30 d). */
+  period?: DashboardPeriod;
 }) {
   const [t, locale] = await Promise.all([getTranslations("products.card"), getLocale()]);
   const { product, metrics, cogs, cogsSource, economics, cogsLadder, shopifyImages, estimate } = insight;
@@ -29,8 +33,8 @@ export async function ProductCard({
   const migrated = isMigratedProduct(product);
   const stage = simpleStage(product.sourcing_status);
   const stageIndex = SIMPLE_PIPELINE.indexOf(stage);
-  const sales = (value: number | undefined) =>
-    metrics?.units90 == null || value == null ? "—" : formatNumber(value, locale);
+  const window = metrics?.windows[period] ?? null;
+  const periodLabel = t(`period.${period}`);
   const daysLeft = metrics?.daysLeft ?? null;
   const lowStock = stockAlert || (daysLeft != null && daysLeft < 19 && product.lifecycle_status !== "dead");
 
@@ -74,10 +78,21 @@ export async function ProductCard({
           ) : null}
         </span>
 
-        <span className="grid grid-cols-3 gap-x-2 rounded-[10px] bg-[var(--card-soft)] px-2.5 py-2">
-          <Metric label={t("sales24h")} value={sales(metrics?.units24h)} />
-          <Metric label={t("sales7d")} value={sales(metrics?.units7)} />
-          <Metric label={t("sales30d")} value={sales(metrics?.units30)} />
+        <span className="grid grid-cols-2 gap-x-2 rounded-[10px] bg-[var(--card-soft)] px-2.5 py-2">
+          <Metric
+            label={t("periodUnits", { period: periodLabel })}
+            value={window ? formatNumber(window.units, locale) : "—"}
+          />
+          <Metric
+            label={t("periodRevenue", { period: periodLabel })}
+            value={
+              window?.revenue != null
+                ? formatAmount(window.revenue, locale)
+                : window && window.units === 0
+                  ? formatAmount(0, locale)
+                  : "—"
+            }
+          />
         </span>
 
         <span className="grid grid-cols-3 gap-x-2 gap-y-2.5">
