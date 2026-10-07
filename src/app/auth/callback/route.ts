@@ -21,6 +21,11 @@ export async function GET(request: Request) {
     }
   }
 
+  // Password e-mails sent from the server use the implicit flow: the session travels in the
+  // URL fragment (#access_token=…), which the browser keeps across this redirect.
+  if (next.endsWith("/reset-password")) {
+    return NextResponse.redirect(`${origin}${next}`);
+  }
   const loginPath = next.includes("/staff/") ? "/staff/login" : "/login";
   return NextResponse.redirect(`${origin}${loginPath}?error=auth`);
 }
