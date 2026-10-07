@@ -3,7 +3,7 @@ import { Link } from "@/i18n/routing";
 import { BrandMark } from "@/components/brand-mark";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
-import { ForgotPasswordForm } from "./forgot-password-form";
+import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 
 export default async function StaffForgotPasswordPage() {
   const t = await getTranslations();
