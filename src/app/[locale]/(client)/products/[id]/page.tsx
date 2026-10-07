@@ -7,7 +7,6 @@ import { isClientEccangEnabled } from "@/lib/eccang/queries";
 import {
   getProductQuestions,
   getProductRequest,
-  getResearchState,
   getRestockRequests,
   isMigratedProduct,
   isQuoteAccepted,
@@ -30,7 +29,6 @@ import { LifecycleBadge } from "@/components/client/lifecycle-badge";
 import { SourcingPipeline } from "@/components/client/sourcing-pipeline";
 import { EconomicsCalculator } from "@/components/client/economics-calculator";
 import { ProductQuoteActions } from "@/components/client/product-quote-actions";
-import { ProductResearchActions } from "@/components/client/product-research-actions";
 import { ProductStockActions } from "@/components/client/product-stock-actions";
 import { LifecycleBanner } from "@/components/client/lifecycle-banner";
 import { ProductPhoto } from "@/components/client/product-photo";
@@ -499,16 +497,6 @@ export default async function ProductDetailPage({
             />
           </Card>
 
-          {/* Research — quote_json._research */}
-          <Card as="section" padding="md" id="research">
-            <SectionTitle>{t("research.title")}</SectionTitle>
-            <ProductResearchActions
-              productId={product.id}
-              research={getResearchState(product)}
-              showPack={product.lifecycle_status === "testing"}
-              planTier={ctx.client?.plan_tier ?? "bronze"}
-            />
-          </Card>
         </div>
       </div>
     </div>

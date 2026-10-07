@@ -2,15 +2,13 @@ import { getActiveShopId } from "@/lib/shops/active";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { getAuthContext } from "@/lib/auth/context";
+import { SIMPLE_PIPELINE, simpleStage } from "@/lib/products/types";
 import {
-  getResearchState,
-  RESEARCH_KINDS,
-  SIMPLE_PIPELINE,
-  simpleStage,
-  type ProductRow,
-  type ResearchKind,
-} from "@/lib/products/types";
-import { listRestockAlerts, sumOrdersShipped } from "@/lib/products/queries";
+  DASHBOARD_PERIODS,
+  getSalesSummary,
+  listRestockAlerts,
+  type DashboardPeriod,
+} from "@/lib/products/queries";
 import { loadProductInsights, type ProductInsight } from "@/lib/products/overview";
 import { LaunchRestockButton } from "@/components/client/launch-restock-button";
 import { ProductCard } from "@/components/client/product-card";
@@ -33,7 +31,7 @@ import {
   SectionTitle,
   Stat,
 } from "@/components/ui";
-import { formatDate, formatDays, formatNumber, formatPercent } from "@/lib/format";
+import { formatAmount, formatDate, formatDays, formatNumber, formatPercent } from "@/lib/format";
 
 type NotificationRow = {
   id: string;
@@ -46,14 +44,15 @@ type NotificationRow = {
   } | null;
 };
 
-type ReadyResearch = {
-  product: ProductRow;
-  kind: ResearchKind;
-  readyAt: string;
-  title: string;
-};
-
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string }>;
+}) {
+  const requested = (await searchParams).period;
+  const period: DashboardPeriod = (DASHBOARD_PERIODS as string[]).includes(requested ?? "")
+    ? (requested as DashboardPeriod)
+    : "7d";
   const [t, tp, locale] = await Promise.all([
     getTranslations("dashboard"),
     getTranslations("products.card"),
@@ -64,12 +63,7 @@ export default async function DashboardPage() {
   const clientId = ctx?.clientId;
 
   let insights: ProductInsight[] = [];
-  let orders: { today: number; week: number; month: number; source: "fulfilled" | "placed" } = {
-    today: 0,
-    week: 0,
-    month: 0,
-    source: "placed",
-  };
+  let sales: Awaited<ReturnType<typeof getSalesSummary>> | null = null;
   let restockAlerts: Awaited<ReturnType<typeof listRestockAlerts>> = [];
   let notifications: NotificationRow[] = [];
   let recurrence: RecurrenceSnapshot | null = null;
@@ -81,10 +75,10 @@ export default async function DashboardPage() {
   if (clientId) {
     try {
       const admin = createAdminClient();
-      const [overview, orderTotals, notificationResult, recurrenceResult, eccangEnabled] =
+      const [overview, salesSummary, notificationResult, recurrenceResult, eccangEnabled] =
         await Promise.all([
           loadProductInsights(clientId, activeShopId),
-          sumOrdersShipped(clientId, activeShopId),
+          getSalesSummary(clientId, activeShopId, period),
           admin
             .from("notifications")
             .select("id, type, created_at, read_at, payload_json")
@@ -96,7 +90,7 @@ export default async function DashboardPage() {
           isClientEccangEnabled(clientId),
         ]);
       insights = overview.insights;
-      orders = orderTotals;
+      sales = salesSummary;
       notifications = notificationResult.data ?? [];
       recurrence = recurrenceResult;
       warehouseLive = eccangEnabled;
@@ -129,23 +123,10 @@ export default async function DashboardPage() {
     })
     .slice(0, 6);
 
-  const readyResearch = products
-    .flatMap((product) => {
-      const state = getResearchState(product);
-      return RESEARCH_KINDS.flatMap((kind): ReadyResearch[] => {
-        const block = state[kind];
-        if (block.status !== "ready") return [];
-        return [
-          {
-            product,
-            kind,
-            readyAt: block.ready_at ?? product.created_at,
-            title: block.title ?? t(`researchKinds.${kind}`),
-          },
-        ];
-      });
-    })
-    .sort((a, b) => Date.parse(b.readyAt) - Date.parse(a.readyAt));
+  const trendText = (current: number, previous: number | null) => {
+    const pct = trendPct(current, previous);
+    return pct ? t("sales.trend", { pct }) : undefined;
+  };
 
   const today = new Intl.DateTimeFormat(locale, {
     weekday: "long",
@@ -158,10 +139,7 @@ export default async function DashboardPage() {
       <PageTitle
         kicker={today.charAt(0).toUpperCase() + today.slice(1)}
         title={t("greeting", { name: client?.name ?? t("title") })}
-        lead={t("summary", {
-          decisions,
-          shipped: formatNumber(orders.today, locale),
-        })}
+        lead={t("summary", { decisions })}
         actions={
           <ButtonLink href="/products/new" variant="gold">
             <Bolt fill="#10284A" />
@@ -176,25 +154,82 @@ export default async function DashboardPage() {
         </p>
       ) : null}
 
-      {/* KPIs — orders from sumOrdersShipped (Shopify orders cache), the rest from products_cache */}
-      <section aria-label={t("kpi.sectionLabel")} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        <Card padding="sm" className="px-5 py-4">
-          <Stat
-            label={t("kpi.orders")}
-            value={formatNumber(orders.today, locale)}
-            sub={orders.source === "fulfilled" ? t("kpi.fulfilled") : t("kpi.placed")}
-            pill={<Badge tone="gold">{t("kpi.today")}</Badge>}
-          />
-          <div className="mt-3 grid grid-cols-2 gap-3 border-t border-[var(--line-soft)] pt-3">
-            <MiniStat label={t("kpi.week")} value={formatNumber(orders.week, locale)} />
-            <MiniStat label={t("kpi.month")} value={formatNumber(orders.month, locale)} />
-          </div>
-        </Card>
+      {/* Ventes — getSalesSummary: rolling window from shopify_orders_cache (placed_at, total) */}
+      <section aria-label={t("sales.title")} className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SectionTitle sub={t("sales.lead")}>{t("sales.title")}</SectionTitle>
+          <nav aria-label={t("sales.periodLabel")} className="flex gap-1 rounded-full border border-[var(--line)] bg-white p-1">
+            {DASHBOARD_PERIODS.map((key) => (
+              <Link
+                key={key}
+                href={`/dashboard?period=${key}`}
+                aria-current={key === period ? "true" : undefined}
+                className={`rounded-full px-3.5 py-1.5 text-[13px] font-bold transition ${
+                  key === period
+                    ? "bg-[var(--navy)] text-white"
+                    : "text-[var(--muted)] hover:bg-[var(--card-soft)]"
+                }`}
+              >
+                {t(`sales.periods.${key}`)}
+              </Link>
+            ))}
+          </nav>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <Card padding="sm" className="px-5 py-4">
+            <Stat
+              label={t("sales.revenue")}
+              value={sales?.current.revenue == null ? "—" : formatAmount(sales.current.revenue, locale, sales.currency)}
+              sub={
+                sales?.current.revenue == null
+                  ? t("sales.revenuePending")
+                  : trendText(sales.current.revenue, sales.previous.revenue)
+              }
+            />
+          </Card>
+          <Card padding="sm" className="px-5 py-4">
+            <Stat
+              label={t("sales.orders")}
+              value={formatNumber(sales?.current.orders ?? 0, locale)}
+              sub={trendText(sales?.current.orders ?? 0, sales?.previous.orders ?? 0)}
+            />
+          </Card>
+          <Card padding="sm" className="px-5 py-4">
+            <Stat
+              label={t("sales.basket")}
+              value={
+                sales?.current.revenue != null && sales.current.orders > 0
+                  ? formatAmount(sales.current.revenue / sales.current.orders, locale, sales.currency)
+                  : "—"
+              }
+              sub={t("sales.basketSub")}
+            />
+          </Card>
+          <Card padding="sm" className="px-5 py-4">
+            <Stat
+              label={t("sales.units")}
+              value={formatNumber(sales?.current.units ?? 0, locale)}
+              sub={trendText(sales?.current.units ?? 0, sales?.previous.units ?? 0)}
+            />
+          </Card>
+          <Card padding="sm" className="px-5 py-4">
+            <Stat
+              label={t("sales.shipping")}
+              value={formatNumber(sales?.current.shipped ?? 0, locale)}
+              sub={t("sales.toShip", {
+                count: Math.max(0, (sales?.current.orders ?? 0) - (sales?.current.shipped ?? 0)),
+              })}
+            />
+          </Card>
+        </div>
+      </section>
+
+      <section aria-label={t("kpi.sectionLabel")} className="grid gap-4 lg:grid-cols-3">
         <KpiLink href="/products">
           <Stat
             label={t("kpi.activeProducts")}
             value={formatNumber(activeProducts.length, locale)}
-            sub={t("kpi.activeProductsDetail", { total: products.length })}
+            sub={t("kpi.lifecycleRule")}
             pill={
               <Badge tone="blue">
                 {t("kpi.lifecycleMix", {
@@ -205,27 +240,31 @@ export default async function DashboardPage() {
             }
           />
         </KpiLink>
-        <KpiLink href={quotesPending[0] ? `/products/${quotesPending[0].product.id}` : "/products"}>
-          <Stat
-            label={t("kpi.quotes")}
-            value={formatNumber(quotesPending.length, locale)}
-            sub={quotesPending[0]?.product.title ?? t("kpi.quotesDetail")}
-            tone={quotesPending.length > 0 ? "gold" : "default"}
-            pill={quotesPending.length > 0 ? <Badge tone="gold">{t("kpi.toReview")}</Badge> : null}
-          />
-        </KpiLink>
-        <KpiLink href="/products?sourcing=open">
+        {/* Nouveaux produits — sourcing requests (products_cache.sourcing_status) and quotes to approve */}
+        <Card padding="sm" className="flex flex-col gap-3 px-5 py-4">
           <Stat
             label={t("kpi.sourcing")}
             value={formatNumber(sourcingOpen.length, locale)}
             sub={t("kpi.sourcingDetail")}
+            tone={quotesPending.length > 0 ? "gold" : "default"}
             pill={
-              restockAlerts.length > 0 ? (
-                <Badge tone="rust">{t("kpi.stockAlerts", { count: restockAlerts.length })}</Badge>
+              quotesPending.length > 0 ? (
+                <Badge tone="gold">{t("kpi.quotesReady", { count: quotesPending.length })}</Badge>
               ) : null
             }
           />
-        </KpiLink>
+          <p className="text-[12px] leading-snug text-[var(--muted)]">{t("kpi.sourcingExplain")}</p>
+          <div className="mt-auto flex flex-wrap gap-2">
+            <ButtonLink href="/products/new" variant="gold" size="sm">
+              {t("kpi.sourcingCta")}
+            </ButtonLink>
+            {quotesPending[0] ? (
+              <ButtonLink href={`/products/${quotesPending[0].product.id}`} variant="secondary" size="sm">
+                {t("kpi.quotesCta")}
+              </ButtonLink>
+            ) : null}
+          </div>
+        </Card>
         {/* Récurrence — loadClientRecurrence over shopify_orders_cache.customer_key */}
         {!recurrence || !recurrence.shopConnected ? (
           <KpiLink href="/settings">
@@ -443,17 +482,7 @@ export default async function DashboardPage() {
                   }
                 />
               ))}
-              {readyResearch.slice(0, 2).map((item) => (
-                <TodoRow
-                  key={`research-${item.product.id}-${item.kind}`}
-                  href={`/products/${item.product.id}`}
-                  tag={t("actions.researchTag")}
-                  tone="blue"
-                  title={item.product.title}
-                  sub={item.title}
-                />
-              ))}
-              {decisions === 0 && readyResearch.length === 0 ? (
+              {decisions === 0 ? (
                 <EmptyState>{t("actions.empty")}</EmptyState>
               ) : null}
             </div>
@@ -510,41 +539,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        {/* Research deliverables — quote_json._research blocks with status ready */}
-        <Card as="section" padding="none">
-          <div className="border-b border-[var(--line-soft)] px-5 py-4">
-            <SectionTitle sub={t("research.lead")}>{t("research.title")}</SectionTitle>
-          </div>
-          {readyResearch.length === 0 ? (
-            <p className="px-5 py-5 text-sm text-[var(--muted)]">{t("research.empty")}</p>
-          ) : (
-            <ul className="divide-y divide-[var(--line-soft)]">
-              {readyResearch.slice(0, 5).map((item) => (
-                <li key={`${item.product.id}:${item.kind}`}>
-                  <Link
-                    href={`/products/${item.product.id}`}
-                    className="flex items-center gap-3 px-5 py-3.5 hover:bg-[var(--card-soft)]"
-                  >
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[var(--blue-soft)]">
-                      <Bolt fill="#3D74C4" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">{item.title}</span>
-                      <span className="mt-0.5 block truncate text-[12px] text-[var(--muted)]">
-                        {item.product.title} · {t(`researchKinds.${item.kind}`)}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-[12px] text-[var(--faint)]">
-                      {formatDate(item.readyAt, locale)}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
+      <div className="grid gap-5">
         {/* Notifications — notifications table, unread first */}
         <Card as="section" padding="none">
           <div className="flex items-baseline justify-between gap-3 border-b border-[var(--line-soft)] px-5 py-4">
@@ -658,4 +653,11 @@ function TodoRow({
       </span>
     </Link>
   );
+}
+
+/** Change vs the previous window of the same length, e.g. "+12 %"; null when nothing to compare. */
+function trendPct(current: number, previous: number | null) {
+  if (previous == null || previous === 0) return null;
+  const pct = Math.round(((current - previous) / previous) * 100);
+  return `${pct > 0 ? "+" : ""}${pct} %`;
 }

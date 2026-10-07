@@ -85,16 +85,33 @@ export function parseImagesJson(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 }
 
-export function packOrderLines(lines: OrderLine[], fulfilled: boolean) {
-  return [{ _order: { fulfilled } }, ...lines];
+export function packOrderLines(
+  lines: OrderLine[],
+  fulfilled: boolean,
+  total?: { amount: unknown; currency?: string | null } | null,
+) {
+  const amount = Number(total?.amount);
+  return [
+    {
+      _order: Number.isFinite(amount)
+        ? { fulfilled, total: amount, currency: total?.currency ?? null }
+        : { fulfilled },
+    },
+    ...lines,
+  ];
 }
 
 export function unpackOrderLines(value: unknown): {
   fulfilled: boolean | null;
   lines: OrderLine[];
+  /** Order total paid by the customer (Shopify total_price), null for orders cached before it was stored. */
+  total: number | null;
+  currency: string | null;
 } {
-  if (!Array.isArray(value)) return { fulfilled: null, lines: [] };
+  if (!Array.isArray(value)) return { fulfilled: null, lines: [], total: null, currency: null };
   let fulfilled: boolean | null = null;
+  let total: number | null = null;
+  let currency: string | null = null;
   const lines: OrderLine[] = [];
   for (const item of value) {
     if (!item || typeof item !== "object") continue;
@@ -102,10 +119,13 @@ export function unpackOrderLines(value: unknown): {
       sku?: unknown;
       quantity?: unknown;
       title?: unknown;
-      _order?: { fulfilled?: unknown };
+      _order?: { fulfilled?: unknown; total?: unknown; currency?: unknown };
     };
     if (row._order && typeof row._order === "object") {
       fulfilled = row._order.fulfilled === true;
+      const amount = Number(row._order.total);
+      if (row._order.total != null && Number.isFinite(amount)) total = amount;
+      if (typeof row._order.currency === "string") currency = row._order.currency;
       continue;
     }
     if (typeof row.sku !== "string" || !row.sku.trim()) continue;
@@ -113,7 +133,7 @@ export function unpackOrderLines(value: unknown): {
     if (typeof row.title === "string" && row.title.trim()) line.title = row.title.trim();
     lines.push(line);
   }
-  return { fulfilled, lines };
+  return { fulfilled, lines, total, currency };
 }
 
 export function isShopifyFulfilled(status: string | null | undefined) {

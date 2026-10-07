@@ -124,6 +124,7 @@ export async function POST(request: Request) {
         line_items_json: packOrderLines(
           lines,
           resolveShopifyFulfillment(order.fulfillment_status, previousOrder.fulfilled),
+          { amount: order.total_price, currency: order.currency },
         ),
         updated_at: new Date().toISOString(),
       },
