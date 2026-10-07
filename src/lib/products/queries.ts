@@ -125,6 +125,8 @@ export type SalesWindow = {
   revenue: number | null;
   /** Orders already marked shipped in Shopify. */
   shipped: number;
+  /** Orders whose total is known (revenue is only shown when all of them are). */
+  priced: number;
 };
 
 /**
@@ -161,7 +163,7 @@ export async function getSalesSummary(
     rows.push(...(page ?? []));
     if (!page || page.length < pageSize) break;
   }
-  const empty = (): SalesWindow => ({ orders: 0, units: 0, revenue: null, shipped: 0 });
+  const empty = (): SalesWindow => ({ orders: 0, units: 0, revenue: null, shipped: 0, priced: 0 });
   const current = empty();
   const previous = empty();
   let currency: string | null = null;
@@ -175,9 +177,15 @@ export async function getSalesSummary(
     const order = unpackOrderLines(row.line_items_json);
     bucket.orders += 1;
     bucket.units += order.units ?? order.lines.reduce((sum, line) => sum + line.quantity, 0);
-    if (order.total != null) bucket.revenue = (bucket.revenue ?? 0) + order.total;
+    if (order.total != null) {
+      bucket.revenue = (bucket.revenue ?? 0) + order.total;
+      bucket.priced += 1;
+    }
     if (order.fulfilled) bucket.shipped += 1;
     currency ??= order.currency;
+  }
+  for (const bucket of [current, previous]) {
+    if (bucket.priced < bucket.orders) bucket.revenue = null;
   }
   return {
     period,
@@ -395,6 +403,7 @@ export async function getTenantProductMetrics(
       DASHBOARD_PERIODS.map((key) => [key, { units: 0, orders: 0, revenue: null }]),
     ) as Record<DashboardPeriod, PeriodStats>;
   let hasOrders = false;
+  const pricedUnits = new Map<string, number>();
   for (const order of orders) {
     const at = Date.parse(order.placed_at ?? `${order.order_date}T00:00:00Z`);
     if (!Number.isFinite(at)) continue;
@@ -412,7 +421,10 @@ export async function getTenantProductMetrics(
         if (age > PERIOD_MS[key]) continue;
         const bucket = stats[key];
         bucket.units += qty;
-        if (line.price != null) bucket.revenue = (bucket.revenue ?? 0) + qty * line.price;
+        if (line.price != null) {
+          bucket.revenue = (bucket.revenue ?? 0) + qty * line.price;
+          pricedUnits.set(`${productId}:${key}`, (pricedUnits.get(`${productId}:${key}`) ?? 0) + qty);
+        }
         if (!touched.has(`${productId}:${key}`)) {
           touched.add(`${productId}:${key}`);
           bucket.orders += 1;
@@ -450,6 +462,12 @@ export async function getTenantProductMetrics(
     const cached = own.map((sku) => stockBySku.get(sku)).find(Boolean);
     const available = cached?.available ?? product.stock_manual ?? 0;
     const own_ = windows.get(product.id) ?? blank();
+    // Revenue only when every unit of the window carries its Shopify price (orders cached
+    // before prices were stored would understate it).
+    for (const key of DASHBOARD_PERIODS) {
+      const bucket = own_[key];
+      if ((pricedUnits.get(`${product.id}:${key}`) ?? 0) < bucket.units) bucket.revenue = null;
+    }
     metrics.set(product.id, {
       windows: own_,
       units24h: own_["24h"].units,

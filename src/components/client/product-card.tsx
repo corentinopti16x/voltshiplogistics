@@ -7,6 +7,7 @@ import { ProductPhoto } from "@/components/client/product-photo";
 import { ProductImageCarousel } from "@/components/client/product-image-carousel";
 import { SIMPLE_PIPELINE, isMigratedProduct, simpleStage } from "@/lib/products/types";
 import type { DashboardPeriod } from "@/lib/products/periods";
+import { cogsForQuantity } from "@/lib/products/average-order";
 import type { ProductInsight } from "@/lib/products/overview";
 import { formatAmount, formatDays, formatNumber, formatRatio } from "@/lib/format";
 
@@ -35,6 +36,13 @@ export async function ProductCard({
   const stageIndex = SIMPLE_PIPELINE.indexOf(stage);
   const window = metrics?.windows[period] ?? null;
   const periodLabel = t(`period.${period}`);
+  // Average order of this product over the period: units per order, basket, COGS at that
+  // quantity (live grid ladder) and the resulting gross margin per order.
+  const avgQty = window && window.orders > 0 ? window.units / window.orders : null;
+  const avgBasket =
+    window?.revenue != null && window.orders > 0 ? window.revenue / window.orders : null;
+  const avgCogs = cogsForQuantity(cogsLadder, avgQty) ?? (avgQty != null && cogs != null ? cogs * avgQty : null);
+  const avgMargin = avgBasket != null && avgCogs != null ? avgBasket - avgCogs : null;
   const daysLeft = metrics?.daysLeft ?? null;
   const lowStock = stockAlert || (daysLeft != null && daysLeft < 19 && product.lifecycle_status !== "dead");
 
@@ -78,7 +86,7 @@ export async function ProductCard({
           ) : null}
         </span>
 
-        <span className="grid grid-cols-2 gap-x-2 rounded-[10px] bg-[var(--card-soft)] px-2.5 py-2">
+        <span className="grid grid-cols-3 gap-x-2 rounded-[10px] bg-[var(--card-soft)] px-2.5 py-2">
           <Metric
             label={t("periodUnits", { period: periodLabel })}
             value={window ? formatNumber(window.units, locale) : "—"}
@@ -93,14 +101,21 @@ export async function ProductCard({
                   : "—"
             }
           />
+          <Metric
+            label={t("avgQty")}
+            value={avgQty == null ? "—" : formatNumber(avgQty, locale, 1)}
+          />
         </span>
 
         <span className="grid grid-cols-3 gap-x-2 gap-y-2.5">
-          <Metric label={t("price")} value={formatAmount(product.selling_price, locale)} />
           <Metric
-            label={t("grossMargin")}
-            value={formatAmount(economics.profit, locale)}
-            tone={economics.profit != null && economics.profit < 0 ? "warning" : "default"}
+            label={avgBasket != null ? t("avgBasket") : t("price")}
+            value={formatAmount(avgBasket ?? product.selling_price, locale)}
+          />
+          <Metric
+            label={avgMargin != null ? t("avgMargin") : t("grossMargin")}
+            value={formatAmount(avgMargin ?? economics.profit, locale)}
+            tone={(avgMargin ?? economics.profit ?? 0) < 0 ? "warning" : "default"}
           />
           <Metric
             label={t("stockDays")}
@@ -119,8 +134,14 @@ export async function ProductCard({
             />
           ) : (
             <Metric
-              label={cogsSource === "accepted" ? t("cogsReal") : t("cogsEstimate")}
-              value={formatAmount(cogs, locale)}
+              label={
+                avgCogs != null && avgQty != null
+                  ? t("avgCogs")
+                  : cogsSource === "accepted"
+                    ? t("cogsReal")
+                    : t("cogsEstimate")
+              }
+              value={formatAmount(avgCogs ?? cogs, locale)}
             />
           )}
           <Metric

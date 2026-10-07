@@ -53,7 +53,9 @@ export function InviteUserForm({ clientId }: { clientId: string }) {
           <code className="font-semibold">{state.password}</code>
         </p>
       ) : null}
-      {state.ok && !state.password ? (
+      {state.ok && state.emailed ? (
+        <p className="text-sm text-[var(--accent)]">{t("inviteEmailed")}</p>
+      ) : state.ok && !state.password ? (
         <p className="text-sm text-[var(--accent)]">{t("inviteDone")}</p>
       ) : null}
       <button

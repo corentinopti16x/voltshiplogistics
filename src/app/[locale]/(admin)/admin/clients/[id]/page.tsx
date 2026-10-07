@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { InviteUserForm } from "@/components/admin/invite-user-form";
+import { SendResetButton } from "@/components/admin/send-reset-button";
 import { PlanTierForm } from "@/components/admin/plan-tier-form";
 import { ImpersonateButton } from "@/components/admin/impersonate-button";
 import { ClientPricingForm } from "@/components/admin/pricing-forms";
@@ -216,9 +217,12 @@ export default async function AdminClientDetailPage({
               <li className="py-3 text-sm text-[var(--muted)]">{t("noUsers")}</li>
             ) : (
               (users ?? []).map((user) => (
-                <li key={user.id} className="flex items-center justify-between py-3 text-sm">
-                  <span>{user.email}</span>
-                  <span className="capitalize text-[var(--muted)]">{user.role}</span>
+                <li key={user.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+                  <span className="min-w-0 truncate">
+                    {user.email}
+                    <span className="ml-2 capitalize text-[var(--muted)]">{user.role}</span>
+                  </span>
+                  <SendResetButton userId={user.id} />
                 </li>
               ))
             )}
