@@ -10,6 +10,7 @@ import {
   hashCustomerEmail,
   isShopifyFulfilled,
   orderNumberOf,
+  isSuspiciousOrder,
   packOrderLines,
   pickProductImages,
 } from "@/lib/shopify/order-cache";
@@ -460,6 +461,8 @@ export async function backfillShopifyOrders(input: {
         updated_at: new Date().toISOString(),
       });
       if (order.cancelled_at) continue;
+      const orderUnits = order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
+      if (isSuspiciousOrder(order.total_price, orderUnits)) continue;
       for (const line of order.line_items) {
         const sku = line.sku?.trim();
         if (!sku) continue;
