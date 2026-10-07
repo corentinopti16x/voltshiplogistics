@@ -31,6 +31,7 @@ export async function createNotification(input: {
   const webhookUrl = process.env.N8N_NOTIFICATION_WEBHOOK_URL;
   if (webhookUrl && channels.some((channel) => channel === "email" || channel === "whatsapp")) {
     try {
+      const contact = await loadClientContact(admin, input.clientId);
       await fetch(webhookUrl, {
         method: "POST",
         headers: {
@@ -46,6 +47,7 @@ export async function createNotification(input: {
           type: input.type,
           channels,
           payload: input.payload,
+          client: contact,
         }),
         cache: "no-store",
       });
@@ -54,6 +56,29 @@ export async function createNotification(input: {
     }
   }
   return data;
+}
+
+/** Name, language and WhatsApp number of the client, sent to n8n with every notification. */
+async function loadClientContact(admin: ReturnType<typeof createAdminClient>, clientId: string) {
+  const { data, error } = await admin
+    .from("clients")
+    .select("name, language, whatsapp_number")
+    .eq("id", clientId)
+    .maybeSingle();
+  if (error) {
+    // Column not migrated yet (00015): still send name + language.
+    const { data: basic } = await admin
+      .from("clients")
+      .select("name, language")
+      .eq("id", clientId)
+      .maybeSingle();
+    return { name: basic?.name ?? null, locale: basic?.language ?? "fr", whatsapp_to: null };
+  }
+  return {
+    name: data?.name ?? null,
+    locale: data?.language ?? "fr",
+    whatsapp_to: data?.whatsapp_number ?? null,
+  };
 }
 
 async function loadChannelPreferences(
