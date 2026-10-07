@@ -5,6 +5,8 @@ import { listRestockAlerts } from "@/lib/products/queries";
 import { loadProductInsights, type ProductInsight } from "@/lib/products/overview";
 import { ProductCard } from "@/components/client/product-card";
 import { ProductFilters } from "@/components/client/product-filters";
+import { parseSalesPeriod } from "@/lib/products/periods";
+import { SIMPLE_PIPELINE, isMigratedProduct, simpleStage } from "@/lib/products/types";
 import { Bolt, ButtonLink, EmptyState, PageTitle } from "@/components/ui";
 
 export default async function ProductsPage({
@@ -16,6 +18,7 @@ export default async function ProductsPage({
     sourcing?: string;
     sort?: string;
     min?: string;
+    period?: string;
   }>;
 }) {
   const t = await getTranslations("products");
@@ -24,7 +27,9 @@ export default async function ProductsPage({
   const q = (filters.q ?? "").trim().toLowerCase();
   const lifecycle = filters.lifecycle ?? "";
   const sourcing = filters.sourcing ?? "";
-  const sort = filters.sort ?? "sales90";
+  const period = parseSalesPeriod(filters.period);
+  const legacySort: Record<string, string> = { sales90: "sales", sales30: "sales" };
+  const sort = legacySort[filters.sort ?? ""] ?? filters.sort ?? "sales";
   const minSalesRaw = filters.min ?? "";
   const minSales = Math.max(0, Number(minSalesRaw) || 0);
 
@@ -45,22 +50,29 @@ export default async function ProductsPage({
     }
   }
 
+  const unitsOf = (row: ProductInsight) => {
+    const m = row.metrics;
+    if (!m || m.units90 == null) return null;
+    return period === 7 ? m.units7 : period === 30 ? m.units30 : m.units90;
+  };
+
   const visible = insights.filter(({ product, sourcingOpen }) => {
     if (q && !product.title.toLowerCase().includes(q)) return false;
     if (lifecycle && product.lifecycle_status !== lifecycle) return false;
     if (sourcing === "open") return sourcingOpen;
+    if (sourcing && (SIMPLE_PIPELINE as readonly string[]).includes(sourcing)) {
+      return !isMigratedProduct(product) && simpleStage(product.sourcing_status) === sourcing;
+    }
     if (sourcing && product.sourcing_status !== sourcing) return false;
     return true;
-  }).filter((row) => (minSales > 0 ? (row.metrics?.units90 ?? 0) >= minSales : true));
+  }).filter((row) => (minSales > 0 ? (unitsOf(row) ?? 0) >= minSales : true));
 
   const num = (value: number | null | undefined, empty: number) =>
     value == null || !Number.isFinite(value) ? empty : value;
   visible.sort((a, b) => {
     switch (sort) {
-      case "sales30":
-        return num(b.metrics?.units30, -1) - num(a.metrics?.units30, -1);
       case "salesLow":
-        return num(a.metrics?.units90, 0) - num(b.metrics?.units90, 0);
+        return num(unitsOf(a), 0) - num(unitsOf(b), 0);
       case "profit":
         return num(b.economics.profit, -Infinity) - num(a.economics.profit, -Infinity);
       case "price":
@@ -70,7 +82,7 @@ export default async function ProductsPage({
       case "name":
         return a.product.title.localeCompare(b.product.title);
       default:
-        return num(b.metrics?.units90, -1) - num(a.metrics?.units90, -1);
+        return num(unitsOf(b), -1) - num(unitsOf(a), -1);
     }
   });
 
@@ -102,6 +114,7 @@ export default async function ProductsPage({
         sourcing={sourcing}
         sort={sort}
         minSales={minSalesRaw}
+        period={period}
         counts={counts}
       />
 
@@ -118,6 +131,7 @@ export default async function ProductsPage({
               key={insight.product.id}
               insight={insight}
               stockAlert={alertIds.has(insight.product.id)}
+              period={period}
             />
           ))}
         </div>
