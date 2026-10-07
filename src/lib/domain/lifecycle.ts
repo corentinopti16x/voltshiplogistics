@@ -2,6 +2,7 @@ import type { LifecycleStatus } from "@/lib/products/types";
 
 export type LifecycleThresholds = {
   testingMaxAgeDays: number;
+  /** Minimum units sold over the last 14 days (total, not per day) to be winning. */
   winningMinOrdersPerDay14d: number;
   decliningSalesDropPct: number;
   deadNoSalesDays: number;
@@ -43,7 +44,6 @@ export function classifyLifecycle(input: {
 
   const last14 = unitsSince(14);
   const previous14 = unitsSince(28, 14);
-  const average14 = last14 / 14;
   const latestSale = dated
     .filter((row) => row.units > 0)
     .sort((a, b) => b.day.getTime() - a.day.getTime())[0];
@@ -54,11 +54,13 @@ export function classifyLifecycle(input: {
       : Number.POSITIVE_INFINITY;
 
   if (daysWithoutSale >= thresholds.deadNoSalesDays) return "dead" as const;
-  if (average14 >= thresholds.winningMinOrdersPerDay14d) return "winning" as const;
-  if (previous14 > 0) {
+  // A real seller (enough sales in the previous 14 days) whose sales halve is declining.
+  if (previous14 >= thresholds.winningMinOrdersPerDay14d && previous14 > 0) {
     const dropPct = ((previous14 - last14) / previous14) * 100;
     if (dropPct >= thresholds.decliningSalesDropPct) return "declining" as const;
   }
+  // Rule set by Voltship: at least N sales (default 5) over the last 14 days = winning.
+  if (last14 >= thresholds.winningMinOrdersPerDay14d) return "winning" as const;
   return "testing" as const;
 }
 

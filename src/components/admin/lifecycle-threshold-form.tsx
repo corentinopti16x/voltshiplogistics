@@ -18,7 +18,7 @@ export function LifecycleThresholdForm({
     ["testing_max_age_days", "Testing max age (days)", thresholds.testingMaxAgeDays, 1, 365],
     [
       "winning_min_orders_per_day_14d",
-      "Winning orders / day (14 days)",
+      "Winning : ventes min. sur 14 jours",
       thresholds.winningMinOrdersPerDay14d,
       0,
       1000,

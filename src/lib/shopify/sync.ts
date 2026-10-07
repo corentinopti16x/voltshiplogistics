@@ -126,10 +126,7 @@ export async function classifyAllProducts() {
       ),
       thresholds: parseLifecycleThresholds(thresholdMap.get(product.client_id)),
     });
-    // Migrated products were already selling on the client's store: they are winners
-    // unless sales actually drop (declining/dead), never back to testing.
-    const migrated = (product.migration_state ?? "").startsWith("imported");
-    const status = migrated && classified === "testing" ? "winning" : classified;
+    const status = classified;
     if (status === product.lifecycle_status) continue;
 
     if (
