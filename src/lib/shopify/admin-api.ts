@@ -1,4 +1,10 @@
 import "server-only";
+import {
+  detectShopifyOrder,
+  loadOrderReviews,
+  recordOrderAlerts,
+  type AlertCandidate,
+} from "@/lib/orders/alerts-server";
 
 import { shopifyAppCredentialsFor } from "./app-credentials";
 
@@ -10,7 +16,7 @@ import {
   hashCustomerEmail,
   isShopifyFulfilled,
   orderNumberOf,
-  isSuspiciousOrder,
+  isExcludedOrder,
   packOrderLines,
   pickProductImages,
 } from "@/lib/shopify/order-cache";
@@ -42,6 +48,10 @@ export type ShopifyOrder = {
    * cached with the order for the dashboard revenue, and sent to the warehouse. */
   currency?: string | null;
   total_price?: string | number | null;
+  /** Read only to spot odd orders (commandes à vérifier); never cached raw. */
+  total_line_items_price?: string | number | null;
+  total_discounts?: string | number | null;
+  discount_codes?: Array<{ code?: string | null; amount?: string | null; type?: string | null }> | null;
   shipping_address?: import("@/lib/eccang/mapping").ShopifyAddress | null;
 };
 
@@ -427,9 +437,11 @@ export async function backfillShopifyOrders(input: {
   const fulfillment = await loadShopifyFulfillmentMap(input.shop, input.accessToken, since);
   let path =
     `orders.json?status=any&limit=250&created_at_min=${encodeURIComponent(since.toISOString())}` +
-    "&fields=id,order_number,name,created_at,cancelled_at,fulfillment_status,total_price,currency,line_items,customer,email,contact_email";
+    "&fields=id,order_number,name,created_at,cancelled_at,fulfillment_status,total_price,total_line_items_price,total_discounts,discount_codes,currency,line_items,customer,email,contact_email";
   const counts = new Map<string, number>();
   const orderRows: Array<Record<string, unknown>> = [];
+  const alertCandidates: AlertCandidate[] = [];
+  const reviews = await loadOrderReviews(createAdminClient(), input.shopId);
   do {
     const response = await shopifyRequest<{ orders: ShopifyOrder[] }>(
       input.shop,
@@ -439,6 +451,17 @@ export async function backfillShopifyOrders(input: {
     for (const order of response.data.orders) {
       const date = order.created_at.slice(0, 10);
       const normalizedLines = cacheOrderLines(order.line_items);
+      const review = reviews.get(String(order.id)) ?? null;
+      const anomalies = detectShopifyOrder(order);
+      if (anomalies.reasons.length > 0) {
+        alertCandidates.push({
+          clientId: input.clientId,
+          shopId: input.shopId,
+          order,
+          reasons: anomalies.reasons,
+          details: anomalies.details,
+        });
+      }
       orderRows.push({
         client_id: input.clientId,
         shop_id: input.shopId,
@@ -456,13 +479,14 @@ export async function backfillShopifyOrders(input: {
             amount: order.total_price,
             currency: order.currency,
             units: order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0),
+            review,
           },
         ),
         updated_at: new Date().toISOString(),
       });
       if (order.cancelled_at) continue;
       const orderUnits = order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
-      if (isSuspiciousOrder(order.total_price, orderUnits)) continue;
+      if (isExcludedOrder(order.total_price, orderUnits, review)) continue;
       for (const line of order.line_items) {
         const sku = line.sku?.trim();
         if (!sku) continue;
@@ -502,6 +526,7 @@ export async function backfillShopifyOrders(input: {
       .upsert(rows, { onConflict: "client_id,shop_id,sku,date" });
     if (error) throw error;
   }
+  await recordOrderAlerts(admin, alertCandidates);
   return counts.size;
 }
 

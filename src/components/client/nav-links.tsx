@@ -6,6 +6,7 @@ import { Link, usePathname } from "@/i18n/routing";
 const items = [
   { href: "/dashboard", key: "dashboard" },
   { href: "/products", key: "products" },
+  { href: "/alerts", key: "alerts" },
   { href: "/inbound", key: "inbound" },
   { href: "/support", key: "support" },
   { href: "/notifications", key: "notifications" },
@@ -16,12 +17,17 @@ export function ClientNavLinks({
   showSettings = true,
   showInbound = true,
   showSupport = true,
+  showAlerts = false,
+  openAlerts = 0,
 }: {
   showSettings?: boolean;
   /** Réceptions only once the warehouse (ECCANG) is live for the client. */
   showInbound?: boolean;
   /** SAV only once the client has connected a mailbox. */
   showSupport?: boolean;
+  /** « À vérifier » once the client has had at least one flagged order. */
+  showAlerts?: boolean;
+  openAlerts?: number;
 }) {
   const t = useTranslations("dashboard.nav");
   const pathname = usePathname();
@@ -29,7 +35,8 @@ export function ClientNavLinks({
     (item) =>
       (showSettings || item.key !== "settings") &&
       (showInbound || item.key !== "inbound") &&
-      (showSupport || item.key !== "support"),
+      (showSupport || item.key !== "support") &&
+      (showAlerts || item.key !== "alerts"),
   );
 
   return (
@@ -49,6 +56,11 @@ export function ClientNavLinks({
             }`}
           >
             {t(item.key)}
+            {item.key === "alerts" && openAlerts > 0 ? (
+              <span className="ml-1.5 rounded-full bg-[var(--gold-bright)] px-1.5 text-[11px] font-bold text-[var(--navy)]">
+                {openAlerts}
+              </span>
+            ) : null}
           </Link>
         );
       })}

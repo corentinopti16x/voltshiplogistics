@@ -14,7 +14,7 @@ type NotificationRow = {
   type: string;
   created_at: string;
   read_at: string | null;
-  payload_json: { message?: string; productId?: string } | null;
+  payload_json: { message?: string; productId?: string; href?: string } | null;
 };
 
 export default async function NotificationsPage() {
@@ -61,6 +61,13 @@ export default async function NotificationsPage() {
               const isUnread = !row.read_at;
               const message = row.payload_json?.message ?? row.type.replaceAll("_", " ");
               const productId = row.payload_json?.productId;
+              // Internal links only (e.g. /alerts); anything else is ignored.
+              const rawHref = row.payload_json?.href;
+              const href = productId
+                ? `/products/${productId}`
+                : typeof rawHref === "string" && rawHref.startsWith("/") && !rawHref.startsWith("//")
+                  ? rawHref
+                  : null;
               return (
                 <li
                   key={row.id}
@@ -74,9 +81,9 @@ export default async function NotificationsPage() {
                     <Bolt fill={isUnread ? "#D9A03A" : "#9AA8BA"} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    {productId ? (
+                    {href ? (
                       <Link
-                        href={`/products/${productId}`}
+                        href={href}
                         className={`block truncate text-sm hover:underline ${isUnread ? "font-bold" : "font-medium"}`}
                       >
                         {message}

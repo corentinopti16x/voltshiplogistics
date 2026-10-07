@@ -11,6 +11,7 @@ const items = [
   { href: "/admin/margin", key: "margin" },
   { href: "/admin/finance", key: "finance" },
   { href: "/admin/shops", key: "shopify" },
+  { href: "/admin/alerts", key: "alerts" },
   { href: "/sourcer", key: "sourcing" },
 ] as const;
 
