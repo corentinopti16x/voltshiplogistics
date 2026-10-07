@@ -14,6 +14,7 @@ import {
 import { isNotificationEvent } from "@/lib/notifications/events";
 import { ShopifyShopsCard, type ShopRow } from "@/components/client/shopify-shops-card";
 import { ApiKeysCard } from "@/components/client/api-keys-card";
+import { ChangePasswordCard } from "@/components/client/change-password-card";
 import { GmailMailboxCard } from "@/components/client/gmail-mailbox-card";
 import { isGmailConfigured } from "@/lib/support/gmail";
 import { getMailbox, listApiKeys, type ApiKeyRow, type MailboxSummary } from "@/lib/support/queries";
@@ -101,6 +102,9 @@ export default async function SettingsPage({
         </Card>
         <Card as="section" padding="md">
           <NotificationPreferencesForm preferences={preferences} />
+        </Card>
+        <Card as="section" padding="md">
+          <ChangePasswordCard />
         </Card>
         <Card as="section" padding="md" className="lg:col-span-2">
           <ShopifyShopsCard
