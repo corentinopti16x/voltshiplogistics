@@ -5,7 +5,8 @@ import { getAuthContext } from "@/lib/auth/context";
 import {
   getResearchState,
   RESEARCH_KINDS,
-  SOURCING_PIPELINE,
+  SIMPLE_PIPELINE,
+  simpleStage,
   type ProductRow,
   type ResearchKind,
 } from "@/lib/products/types";
@@ -53,7 +54,11 @@ type ReadyResearch = {
 };
 
 export default async function DashboardPage() {
-  const [t, locale] = await Promise.all([getTranslations("dashboard"), getLocale()]);
+  const [t, tp, locale] = await Promise.all([
+    getTranslations("dashboard"),
+    getTranslations("products.card"),
+    getLocale(),
+  ]);
   const ctx = await getAuthContext();
   const client = ctx?.client;
   const clientId = ctx?.clientId;
@@ -472,13 +477,8 @@ export default async function DashboardPage() {
             ) : (
               <ul className="mt-3 flex flex-col gap-3">
                 {sourcingOpen.slice(0, 5).map(({ product }) => {
-                  const status = product.sourcing_status;
-                  const index =
-                    status === "quote_sent"
-                      ? SOURCING_PIPELINE.indexOf("negotiation")
-                      : status
-                        ? SOURCING_PIPELINE.indexOf(status)
-                        : -1;
+                  const stage = simpleStage(product.sourcing_status);
+                  const index = SIMPLE_PIPELINE.indexOf(stage);
                   return (
                     <li key={product.id}>
                       <Link href={`/products/${product.id}`} className="group block">
@@ -487,11 +487,11 @@ export default async function DashboardPage() {
                             {product.title}
                           </span>
                           <span className="shrink-0 text-[12px] font-semibold text-[var(--muted)]">
-                            {status ? t(`pipelineSteps.${status}`) : "—"}
+                            {tp(`simpleStage.${stage}`)}
                           </span>
                         </span>
                         <span className="mt-1.5 flex gap-[3px]" aria-hidden>
-                          {SOURCING_PIPELINE.map((step, stepIndex) => (
+                          {SIMPLE_PIPELINE.map((step, stepIndex) => (
                             <span
                               key={step}
                               className={`h-1 flex-1 rounded-sm ${
