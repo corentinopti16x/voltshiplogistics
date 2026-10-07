@@ -3,7 +3,7 @@ import { Link } from "@/i18n/routing";
 import { BrandMark } from "@/components/brand-mark";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
-import { ResetPasswordForm } from "./reset-password-form";
+import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 
 export default async function StaffResetPasswordPage() {
   const t = await getTranslations();
