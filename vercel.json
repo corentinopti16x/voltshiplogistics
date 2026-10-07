@@ -9,6 +9,10 @@
       "schedule": "15 2 * * *"
     },
     {
+      "path": "/api/cron/shopify-sync?days=3",
+      "schedule": "3,13,23,33,43,53 * * * *"
+    },
+    {
       "path": "/api/cron/eccang-sync",
       "schedule": "*/15 * * * *"
     },
