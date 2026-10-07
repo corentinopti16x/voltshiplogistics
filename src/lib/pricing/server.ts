@@ -1,4 +1,5 @@
 import "server-only";
+import { resolveClientPricing } from "@/lib/domain/pricing-tiers";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -66,11 +67,6 @@ export type ProductCogsMatrix = {
   missingReason: "product_data" | "grid" | null;
 };
 
-function numberOrZero(value: unknown) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
 function getDestination(product: ProductRow) {
   const quoteDestination = product.quote_json?.destination;
   if (typeof quoteDestination === "string" && quoteDestination.trim()) {
@@ -108,14 +104,11 @@ export async function getClientPricingProfile(clientId: string): Promise<ClientP
   const admin = createAdminClient();
   const { data } = await admin
     .from("clients")
-    .select("commission_pct, handling_fee, logistics_discount_pct")
+    .select("pricing_tier, commission_pct, handling_fee, logistics_discount_pct")
     .eq("id", clientId)
     .maybeSingle();
-  return {
-    commissionPct: numberOrZero(data?.commission_pct),
-    handlingFee: numberOrZero(data?.handling_fee),
-    logisticsDiscountPct: numberOrZero(data?.logistics_discount_pct),
-  };
+  // Unset fields take the palier's values (Gold by default): never 0 € handling by accident.
+  return resolveClientPricing(data);
 }
 
 /** Markets of a product: brief `destination_markets` (fallback FR), primary market first. */

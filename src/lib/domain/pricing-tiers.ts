@@ -54,3 +54,33 @@ export function inferPricingTier(pricing: {
 export function pricingTierLabel(tier: PricingTier | null | undefined) {
   return tier ? PRICING_TIER_LABELS[tier] : "—";
 }
+
+/**
+ * Client pricing with the palier's values wherever a field was never set (null), so a client
+ * without saved tariffs is never priced at 0 € handling / 0 % commission by accident.
+ * An explicit 0 saved on the client stays 0.
+ */
+export function resolveClientPricing(row: {
+  pricing_tier?: unknown;
+  commission_pct?: number | string | null;
+  handling_fee?: number | string | null;
+  logistics_discount_pct?: number | string | null;
+} | null | undefined): PricingTierPreset {
+  const tier =
+    parsePricingTier(row?.pricing_tier) ??
+    inferPricingTier({
+      commissionPct: row?.commission_pct ?? null,
+      logisticsDiscountPct: row?.logistics_discount_pct ?? null,
+    });
+  const preset = PRICING_TIER_PRESETS[tier];
+  const pick = (value: number | string | null | undefined, fallback: number) => {
+    if (value == null || value === "") return fallback;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+  return {
+    commissionPct: pick(row?.commission_pct, preset.commissionPct),
+    handlingFee: pick(row?.handling_fee, preset.handlingFee),
+    logisticsDiscountPct: pick(row?.logistics_discount_pct, preset.logisticsDiscountPct),
+  };
+}
