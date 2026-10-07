@@ -551,7 +551,9 @@
         "validation": "Validation"
       },
       "live": "Live",
-      "salesPeriod": "Sales {days}d"
+      "sales24h": "Sales 24h",
+      "sales7d": "Sales 7d",
+      "sales30d": "Sales 30d"
     },
     "howItWorks": {
       "title": "How it works",
@@ -625,16 +627,18 @@
       "readOnly": "Only members of your workspace can change the line."
     },
     "sortLabel": "Sort by",
-    "minSalesLabel": "Min. 90-day sales",
+    "minSalesLabel": "Min. 30-day sales",
     "sort": {
       "sales90": "Sales 90 d (best sellers)",
-      "sales30": "Sales 30 d",
+      "sales30": "Best sellers 30d",
       "salesLow": "Least sold",
       "profit": "Profit / order",
       "price": "Selling price",
       "newest": "Newest",
       "name": "Name (A→Z)",
-      "sales": "Best sellers"
+      "sales": "Best sellers",
+      "sales24h": "Best sellers 24h",
+      "sales7": "Best sellers 7d"
     },
     "simpleStage": {
       "brief": "Brief",
@@ -642,9 +646,7 @@
       "validation": "Validation"
     },
     "live": "Live",
-    "liveNote": "Already selling on your store — nothing to source, all good.",
-    "periodLabel": "Sales over",
-    "periodDays": "{days} days"
+    "liveNote": "Already selling on your store — nothing to source, all good."
   },
   "economics": {
     "title": "Unit economics",

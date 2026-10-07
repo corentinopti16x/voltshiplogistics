@@ -551,7 +551,9 @@
         "validation": "Validation"
       },
       "live": "En place",
-      "salesPeriod": "Ventes {days} j"
+      "sales24h": "Ventes 24 h",
+      "sales7d": "Ventes 7 j",
+      "sales30d": "Ventes 30 j"
     },
     "howItWorks": {
       "title": "Comment ça se passe",
@@ -625,16 +627,18 @@
       "readOnly": "Seuls les membres de votre espace peuvent changer la ligne."
     },
     "sortLabel": "Trier par",
-    "minSalesLabel": "Ventes 90 j min.",
+    "minSalesLabel": "Ventes 30 j min.",
     "sort": {
       "sales90": "Ventes 90 j (plus vendus)",
-      "sales30": "Ventes 30 j",
+      "sales30": "Plus vendus 30 j",
       "salesLow": "Moins vendus",
       "profit": "Profit / commande",
       "price": "Prix de vente",
       "newest": "Plus récents",
       "name": "Nom (A→Z)",
-      "sales": "Plus vendus"
+      "sales": "Plus vendus",
+      "sales24h": "Plus vendus 24 h",
+      "sales7": "Plus vendus 7 j"
     },
     "simpleStage": {
       "brief": "Brief",
@@ -642,9 +646,7 @@
       "validation": "Validation"
     },
     "live": "En place",
-    "liveNote": "Produit déjà en vente sur ta boutique — rien à sourcer, tout est OK.",
-    "periodLabel": "Ventes sur",
-    "periodDays": "{days} jours"
+    "liveNote": "Produit déjà en vente sur ta boutique — rien à sourcer, tout est OK."
   },
   "economics": {
     "title": "Économie unitaire",
