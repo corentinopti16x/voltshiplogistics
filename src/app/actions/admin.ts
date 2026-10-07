@@ -364,6 +364,43 @@ export async function inviteUserAction(
   };
 }
 
+/** WhatsApp number of a client (E.164), used by n8n for the WhatsApp notifications. */
+export async function updateClientWhatsappAction(
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { ctx, error } = await requireAdmin();
+  if (!ctx) return { ok: false, error };
+  const clientId = String(formData.get("client_id") ?? "");
+  const raw = String(formData.get("whatsapp_number") ?? "").replace(/[\s.()-]/g, "");
+  const number = raw === "" ? null : raw.startsWith("00") ? `+${raw.slice(2)}` : raw;
+  if (number && !/^\+[1-9]\d{7,14}$/.test(number)) {
+    return { ok: false, error: "Format attendu : +33612345678 (indicatif pays inclus)." };
+  }
+  const admin = createAdminClient();
+  const { error: updateError } = await admin
+    .from("clients")
+    .update({ whatsapp_number: number })
+    .eq("id", clientId);
+  if (updateError) {
+    return {
+      ok: false,
+      error: updateError.message.includes("whatsapp_number")
+        ? "Lance d'abord la migration 00015_client_whatsapp.sql dans Supabase."
+        : updateError.message,
+    };
+  }
+  await writeAudit({
+    actorUserId: ctx.userId,
+    clientId,
+    action: "client.whatsapp_number",
+    entity: "clients",
+    diff: { whatsapp: number ? "set" : "cleared" },
+  });
+  revalidatePath(`/admin/clients/${clientId}`);
+  return { ok: true, clientId };
+}
+
 /** Admin button: e-mails a "choose a new password" link to one user of a client. */
 export async function sendPasswordResetAction(
   _prev: ActionResult | undefined,
