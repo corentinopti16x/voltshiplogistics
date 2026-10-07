@@ -214,7 +214,7 @@
       "today": "Today",
       "week": "7 days",
       "month": "30 days",
-      "activeProducts": "Active products",
+      "activeProducts": "Your products",
       "activeProductsDetail": "{total} products in your library",
       "quotes": "Quotes pending",
       "quotesDetail": "Ready for your decision",
@@ -223,8 +223,8 @@
       "sectionLabel": "Key metrics",
       "lifecycleMix": "{winning} winning · {testing} testing",
       "toReview": "To review",
-      "sourcing": "Sourcings in progress",
-      "sourcingDetail": "From brief received to quote sent",
+      "sourcing": "New products in sourcing",
+      "sourcingDetail": "Requests in progress at Voltship",
       "stockAlerts": "{count, plural, =1 {1 stock alert} other {# stock alerts}}",
       "recurrence": "Repeat purchases",
       "recurrenceConnect": "Connect your Shopify store",
@@ -235,7 +235,12 @@
       "recurrencePerCustomer": "Orders / customer",
       "recurrenceSecond": "2nd order (median)",
       "recurrenceDays": "{days} d",
-      "recurrenceWindow": "Over the last {days} days of Shopify orders"
+      "recurrenceWindow": "Over the last {days} days of Shopify orders",
+      "lifecycleRule": "Winning = at least 5 sales over the last 14 days",
+      "sourcingExplain": "Got a product idea? Send it before building your page: we find the factory and give you your landed cost (COGS) per order, so you know if it's worth it.",
+      "sourcingCta": "Suggest a product",
+      "quotesCta": "See the quote",
+      "quotesReady": "{count, plural, =1 {1 quote to approve} other {# quotes to approve}}"
     },
     "restock": {
       "title": "{count} SKUs under the restock threshold",
@@ -260,7 +265,7 @@
       "quoteTag": "Quote ready",
       "stockTag": "Low stock",
       "researchTag": "Research ready",
-      "empty": "Nothing to handle. Quotes, stock alerts and ready research will show up here."
+      "empty": "Nothing to do. Quotes to approve and stock alerts will show up here."
     },
     "activity": {
       "title": "Recent activity",
@@ -290,7 +295,7 @@
       "support": "Support"
     },
     "greeting": "Hello {name}",
-    "summary": "{decisions, plural, =0 {No decisions waiting} =1 {1 decision waiting for you} other {# decisions waiting for you}} · {shipped} orders shipped today",
+    "summary": "{decisions, plural, =0 {No decision pending} =1 {1 decision waiting} other {# decisions waiting}}",
     "newProductShort": "New",
     "footer": "Voltship Logistics · Dongguan",
     "products": {
@@ -331,7 +336,26 @@
         "X": "Cancelled"
       }
     },
-    "allShops": "All stores"
+    "allShops": "All stores",
+    "sales": {
+      "title": "Your sales",
+      "lead": "Rolling Shopify figures, updated with every order.",
+      "periodLabel": "Period",
+      "periods": {
+        "24h": "24 h",
+        "7d": "7 days",
+        "30d": "30 days"
+      },
+      "revenue": "Revenue",
+      "revenuePending": "Available after the next Shopify sync",
+      "orders": "Orders",
+      "basket": "Average order",
+      "basketSub": "Revenue ÷ orders",
+      "units": "Units sold",
+      "shipping": "Orders shipped",
+      "toShip": "{count, plural, =0 {Nothing waiting to ship} =1 {1 order to ship} other {# orders to ship}}",
+      "trend": "{pct} vs previous period"
+    }
   },
   "products": {
     "title": "Products",
@@ -491,7 +515,7 @@
       "winning": "This product is winning. Secure the next batch before stock runs out.",
       "secureRestock": "Secure your restock",
       "packaging": "Upgrade to branded packaging",
-      "testing": "Generate a research pack while this product is in testing.",
+      "testing": "Testing product: we track its sales. It turns Winning at 5 sales over 14 days.",
       "generate": "Generate research pack",
       "declining": "Stock covers about {days} days at the current pace. Review before restocking.",
       "decliningUnknown": "Sales have slowed. Review stock before restocking.",
@@ -546,7 +570,7 @@
       "cogsEarlyNote": "to be confirmed by sourcing",
       "roasEarly": "Est. ROAS BE · target",
       "simpleStage": {
-        "brief": "Brief",
+        "brief": "Request received",
         "sourcing": "Sourcing",
         "validation": "Validation"
       },
@@ -641,7 +665,7 @@
       "sales7": "Best sellers 7d"
     },
     "simpleStage": {
-      "brief": "Brief",
+      "brief": "Request received",
       "sourcing": "Sourcing",
       "validation": "Validation"
     },

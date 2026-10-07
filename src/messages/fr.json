@@ -214,7 +214,7 @@
       "today": "Aujourd’hui",
       "week": "7 jours",
       "month": "30 jours",
-      "activeProducts": "Produits actifs",
+      "activeProducts": "Tes produits",
       "activeProductsDetail": "{total} produits dans votre bibliothèque",
       "quotes": "Devis en attente",
       "quotesDetail": "Prêts pour votre décision",
@@ -223,8 +223,8 @@
       "sectionLabel": "Indicateurs clés",
       "lifecycleMix": "{winning} winning · {testing} en test",
       "toReview": "À examiner",
-      "sourcing": "Sourcings en cours",
-      "sourcingDetail": "Du brief reçu au devis envoyé",
+      "sourcing": "Nouveaux produits en sourcing",
+      "sourcingDetail": "Demandes en cours chez Voltship",
       "stockAlerts": "{count, plural, =1 {1 alerte stock} other {# alertes stock}}",
       "recurrence": "Récurrence",
       "recurrenceConnect": "Connecte ta boutique Shopify",
@@ -235,7 +235,12 @@
       "recurrencePerCustomer": "Cmd / client",
       "recurrenceSecond": "2ᵉ commande (médiane)",
       "recurrenceDays": "{days} j",
-      "recurrenceWindow": "Sur les {days} derniers jours de commandes Shopify"
+      "recurrenceWindow": "Sur les {days} derniers jours de commandes Shopify",
+      "lifecycleRule": "Winning = au moins 5 ventes sur les 14 derniers jours",
+      "sourcingExplain": "Une idée de produit ? Envoie-la avant de créer ta page : on trouve l'usine et on te donne ton coût de revient (COGS) livré, par commande, pour savoir si ça vaut le coup.",
+      "sourcingCta": "Proposer un produit",
+      "quotesCta": "Voir le devis",
+      "quotesReady": "{count, plural, =1 {1 devis à valider} other {# devis à valider}}"
     },
     "restock": {
       "title": "{count} SKU sous le seuil de réassort",
@@ -260,7 +265,7 @@
       "quoteTag": "Devis prêt",
       "stockTag": "Stock bas",
       "researchTag": "Recherche prête",
-      "empty": "Rien à traiter. Les devis, alertes stock et recherches prêtes apparaîtront ici."
+      "empty": "Rien à traiter. Les devis à valider et les alertes stock apparaîtront ici."
     },
     "activity": {
       "title": "Activité récente",
@@ -290,7 +295,7 @@
       "support": "SAV"
     },
     "greeting": "Bonjour {name}",
-    "summary": "{decisions, plural, =0 {Aucune décision en attente} =1 {1 décision t'attend} other {# décisions t'attendent}} · {shipped} commandes parties aujourd'hui",
+    "summary": "{decisions, plural, =0 {Aucune décision en attente} =1 {1 décision t'attend} other {# décisions t'attendent}}",
     "newProductShort": "Nouveau",
     "footer": "Voltship Logistics · Dongguan",
     "products": {
@@ -331,7 +336,26 @@
         "X": "Annulée"
       }
     },
-    "allShops": "Toutes les boutiques"
+    "allShops": "Toutes les boutiques",
+    "sales": {
+      "title": "Tes ventes",
+      "lead": "Chiffres Shopify glissants, mis à jour à chaque commande.",
+      "periodLabel": "Période",
+      "periods": {
+        "24h": "24 h",
+        "7d": "7 jours",
+        "30d": "30 jours"
+      },
+      "revenue": "Chiffre d'affaires",
+      "revenuePending": "Disponible après la prochaine synchro Shopify",
+      "orders": "Commandes",
+      "basket": "Panier moyen",
+      "basketSub": "CA ÷ commandes",
+      "units": "Produits vendus",
+      "shipping": "Commandes expédiées",
+      "toShip": "{count, plural, =0 {Rien en attente d'expédition} =1 {1 commande à expédier} other {# commandes à expédier}}",
+      "trend": "{pct} vs période précédente"
+    }
   },
   "products": {
     "title": "Produits",
@@ -491,7 +515,7 @@
       "winning": "Ce produit gagne. Sécurisez le prochain lot avant la rupture.",
       "secureRestock": "Sécuriser le restock",
       "packaging": "Passer à un packaging de marque",
-      "testing": "Générez un pack recherche pendant que ce produit est en test.",
+      "testing": "Produit en test : on suit ses ventes. Il passe Winning dès 5 ventes sur 14 jours.",
       "generate": "Générer le pack recherche",
       "declining": "Le stock couvre environ {days} jours au rythme actuel. Vérifiez avant de réassortir.",
       "decliningUnknown": "Les ventes ralentissent. Vérifiez le stock avant de réassortir.",
@@ -546,7 +570,7 @@
       "cogsEarlyNote": "à confirmer par le sourcing",
       "roasEarly": "ROAS estimé BE · cible",
       "simpleStage": {
-        "brief": "Brief",
+        "brief": "Demande reçue",
         "sourcing": "Sourcing",
         "validation": "Validation"
       },
@@ -641,7 +665,7 @@
       "sales7": "Plus vendus 7 j"
     },
     "simpleStage": {
-      "brief": "Brief",
+      "brief": "Demande reçue",
       "sourcing": "Sourcing",
       "validation": "Validation"
     },
