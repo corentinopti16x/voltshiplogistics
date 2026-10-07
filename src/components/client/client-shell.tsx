@@ -11,22 +11,30 @@ import { getActiveShopId, listClientShops } from "@/lib/shops/active";
 import { isClientEccangEnabled } from "@/lib/eccang/queries";
 import { getMailbox } from "@/lib/support/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { countOpenOrderAlerts, hasOrderAlerts } from "@/lib/orders/alerts-queries";
 
 /** Hide the menu entries a client cannot use yet (no warehouse link, no mailbox). */
 async function loadNavVisibility(clientId: string) {
   try {
     const admin = createAdminClient();
-    const [eccang, mailbox, inbound] = await Promise.all([
+    const [eccang, mailbox, inbound, anyAlert, openAlerts] = await Promise.all([
       isClientEccangEnabled(clientId).catch(() => false),
       getMailbox(clientId).catch(() => null),
       admin
         .from("inbound_cache")
         .select("id", { count: "exact", head: true })
         .eq("client_id", clientId),
+      hasOrderAlerts(clientId).catch(() => false),
+      countOpenOrderAlerts(clientId).catch(() => 0),
     ]);
-    return { showInbound: eccang || (inbound.count ?? 0) > 0, showSupport: Boolean(mailbox) };
+    return {
+      showInbound: eccang || (inbound.count ?? 0) > 0,
+      showSupport: Boolean(mailbox),
+      showAlerts: anyAlert,
+      openAlerts,
+    };
   } catch {
-    return { showInbound: true, showSupport: true };
+    return { showInbound: true, showSupport: true, showAlerts: false, openAlerts: 0 };
   }
 }
 
@@ -38,7 +46,7 @@ export async function ClientShell({ children }: { children: ReactNode }) {
   const activeShop = ctx?.clientId && shops.length > 1 ? await getActiveShopId(ctx.clientId) : null;
   const nav = ctx?.clientId
     ? await loadNavVisibility(ctx.clientId)
-    : { showInbound: true, showSupport: true };
+    : { showInbound: true, showSupport: true, showAlerts: false, openAlerts: 0 };
 
   return (
     <div className="relative isolate min-h-screen bg-[var(--bg)]">
@@ -49,6 +57,8 @@ export async function ClientShell({ children }: { children: ReactNode }) {
             showSettings={ctx?.role !== "staff"}
             showInbound={nav.showInbound}
             showSupport={nav.showSupport}
+            showAlerts={nav.showAlerts}
+            openAlerts={nav.openAlerts}
           />
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             {shops.length > 1 ? (
