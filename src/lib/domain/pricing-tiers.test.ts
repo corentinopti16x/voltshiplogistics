@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { PRICING_TIER_PRESETS, inferPricingTier, parsePricingTier } from "./pricing-tiers";
+import {
+  PRICING_TIER_PRESETS,
+  inferPricingTier,
+  parsePricingTier,
+  resolveClientPricing,
+} from "./pricing-tiers";
 
 describe("pricing tiers", () => {
   it("presets follow the validated rule", () => {
@@ -20,5 +25,15 @@ describe("pricing tiers", () => {
   it("parses only known paliers", () => {
     expect(parsePricingTier("vip")).toBe("vip");
     expect(parsePricingTier("bronze")).toBeNull();
+  });
+
+  it("fills unset tariffs with the palier, keeps explicit values", () => {
+    expect(resolveClientPricing({ pricing_tier: "gold", commission_pct: null, handling_fee: null, logistics_discount_pct: null }))
+      .toEqual({ commissionPct: 10, handlingFee: 1, logisticsDiscountPct: 0 });
+    expect(resolveClientPricing({ pricing_tier: "vip", commission_pct: "5.000", handling_fee: "1.0000", logistics_discount_pct: "5.000" }))
+      .toEqual({ commissionPct: 5, handlingFee: 1, logisticsDiscountPct: 5 });
+    expect(resolveClientPricing({ pricing_tier: "vip", commission_pct: 0, handling_fee: 1.7, logistics_discount_pct: 5 }))
+      .toEqual({ commissionPct: 0, handlingFee: 1.7, logisticsDiscountPct: 5 });
+    expect(resolveClientPricing(null)).toEqual({ commissionPct: 10, handlingFee: 1, logisticsDiscountPct: 0 });
   });
 });
