@@ -48,11 +48,6 @@ export function LifecycleBanner({
     );
   } else if (status === "testing") {
     message = t("testing");
-    actions = (
-      <a href="#research" className={buttonClass("primary", "sm")}>
-        {t("generate")}
-      </a>
-    );
   } else if (status === "declining") {
     message =
       daysLeft == null
