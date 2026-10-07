@@ -6,6 +6,8 @@ import { loadProductInsights, type ProductInsight } from "@/lib/products/overvie
 import { ProductCard } from "@/components/client/product-card";
 import { ProductFilters } from "@/components/client/product-filters";
 import { SIMPLE_PIPELINE, isMigratedProduct, simpleStage } from "@/lib/products/types";
+import { parseDashboardPeriod } from "@/lib/products/periods";
+import { PeriodTabs } from "@/components/client/period-tabs";
 import { Bolt, ButtonLink, EmptyState, PageTitle } from "@/components/ui";
 
 export default async function ProductsPage({
@@ -17,6 +19,7 @@ export default async function ProductsPage({
     sourcing?: string;
     sort?: string;
     min?: string;
+    period?: string;
   }>;
 }) {
   const t = await getTranslations("products");
@@ -25,8 +28,14 @@ export default async function ProductsPage({
   const q = (filters.q ?? "").trim().toLowerCase();
   const lifecycle = filters.lifecycle ?? "";
   const sourcing = filters.sourcing ?? "";
-  const legacySort: Record<string, string> = { sales: "sales30", sales90: "sales30" };
-  const sort = legacySort[filters.sort ?? ""] ?? filters.sort ?? "sales30";
+  const period = parseDashboardPeriod(filters.period);
+  const legacySort: Record<string, string> = {
+    sales90: "sales",
+    sales30: "sales",
+    sales7: "sales",
+    sales24h: "sales",
+  };
+  const sort = legacySort[filters.sort ?? ""] ?? filters.sort ?? "sales";
   const minSalesRaw = filters.min ?? "";
   const minSales = Math.max(0, Number(minSalesRaw) || 0);
 
@@ -47,11 +56,8 @@ export default async function ProductsPage({
     }
   }
 
-  const unitsOf = (row: ProductInsight, key: "units24h" | "units7" | "units30" = "units30") => {
-    const m = row.metrics;
-    if (!m || m.units90 == null) return null;
-    return m[key];
-  };
+  const unitsOf = (row: ProductInsight) => row.metrics?.windows[period].units ?? null;
+  const revenueOf = (row: ProductInsight) => row.metrics?.windows[period].revenue ?? null;
 
   const visible = insights.filter(({ product, sourcingOpen }) => {
     if (q && !product.title.toLowerCase().includes(q)) return false;
@@ -68,10 +74,8 @@ export default async function ProductsPage({
     value == null || !Number.isFinite(value) ? empty : value;
   visible.sort((a, b) => {
     switch (sort) {
-      case "sales24h":
-        return num(unitsOf(b, "units24h"), -1) - num(unitsOf(a, "units24h"), -1);
-      case "sales7":
-        return num(unitsOf(b, "units7"), -1) - num(unitsOf(a, "units7"), -1);
+      case "revenue":
+        return num(revenueOf(b), -1) - num(revenueOf(a), -1);
       case "salesLow":
         return num(unitsOf(a), 0) - num(unitsOf(b), 0);
       case "profit":
@@ -115,8 +119,21 @@ export default async function ProductsPage({
         sourcing={sourcing}
         sort={sort}
         minSales={minSalesRaw}
+        period={period}
         counts={counts}
       />
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[13px] text-[var(--muted)]">{t("periodHint")}</p>
+        <PeriodTabs
+          basePath="/products"
+          period={period}
+          label={t("periodLabel")}
+          params={Object.fromEntries(
+            Object.entries({ q, lifecycle, sourcing, sort, min: minSalesRaw }).filter(([, v]) => v),
+          )}
+        />
+      </div>
 
       {loadError ? (
         <p className="rounded-xl border border-[#f0d9b5] bg-[var(--gold-soft)] px-4 py-3 text-sm text-[var(--gold-ink)]">
@@ -131,6 +148,7 @@ export default async function ProductsPage({
               key={insight.product.id}
               insight={insight}
               stockAlert={alertIds.has(insight.product.id)}
+              period={period}
             />
           ))}
         </div>
