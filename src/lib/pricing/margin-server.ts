@@ -1,4 +1,5 @@
 import "server-only";
+import { resolveClientPricing } from "@/lib/domain/pricing-tiers";
 import { loadProductSkus } from "@/lib/products/skus";
 
 /**
@@ -455,7 +456,7 @@ async function buildOrderPricingContext(clientIds: string[]): Promise<OrderPrici
   const [settings, activeGridVersion, clientsResult] = await Promise.all([
     readPricingSettings(admin),
     getActiveGridVersion(),
-    admin.from("clients").select("id, name, commission_pct, handling_fee, logistics_discount_pct").order("name"),
+    admin.from("clients").select("id, name, pricing_tier, commission_pct, handling_fee, logistics_discount_pct").order("name"),
   ]);
   const relevant = clientIds.length > 0 ? await loadAdminProducts({ clientIds, includeArchived: true }) : [];
   const factoryPrices = await loadFactoryPrices(relevant.map((product) => product.id));
@@ -476,11 +477,7 @@ async function buildOrderPricingContext(clientIds: string[]): Promise<OrderPrici
   const names = new Map<string, string>();
   for (const client of clientsResult.data ?? []) {
     names.set(client.id, client.name);
-    profiles.set(client.id, {
-      commissionPct: Number(client.commission_pct) || 0,
-      handlingFee: Number(client.handling_fee) || 0,
-      logisticsDiscountPct: Number(client.logistics_discount_pct) || 0,
-    });
+    profiles.set(client.id, resolveClientPricing(client));
   }
   return { settings, activeGridVersion, cells, factoryPrices, productsByClient, profiles, names };
 }
