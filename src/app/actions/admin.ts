@@ -9,6 +9,8 @@ import { generateInvitePassword, slugifyCode } from "@/lib/auth/passwords";
 import { sendInviteEmail, sendPasswordResetEmail } from "@/lib/auth/password-emails";
 import { parseLineKey, type CarrierRules } from "@/lib/domain/carrier-rules";
 import { normalizeDestination } from "@/lib/domain/pricing";
+import { PRICING_TIER_PRESETS, parsePricingTier } from "@/lib/domain/pricing-tiers";
+import { isMissingPricingTierColumn } from "@/lib/clients/pricing-tier";
 import {
   CLIENT_ROLES,
   IMPERSONATE_COOKIE,
@@ -45,7 +47,8 @@ export async function createClientAction(
 
   const name = String(formData.get("name") ?? "").trim();
   const language = String(formData.get("language") ?? "en");
-  const planTier = String(formData.get("plan_tier") ?? "bronze");
+  const pricingTier = parsePricingTier(String(formData.get("pricing_tier") ?? "gold")) ?? "gold";
+  const planTier = "bronze";
   const timezone = String(formData.get("timezone") ?? "Europe/Paris").trim();
   let code = String(formData.get("code") ?? "")
     .trim()
@@ -55,10 +58,6 @@ export async function createClientAction(
   if (!LOCALES.includes(language as (typeof LOCALES)[number])) {
     return { ok: false, error: "Language must be EN or FR." };
   }
-  if (!PLAN_TIERS.includes(planTier as PlanTier)) {
-    return { ok: false, error: "Invalid plan tier." };
-  }
-
   const admin = createAdminClient();
   if (!code) code = slugifyCode(name);
 
@@ -72,17 +71,26 @@ export async function createClientAction(
     code = `${code}-${Math.random().toString(36).slice(2, 6)}`;
   }
 
-  const { data, error: insertError } = await admin
+  const preset = PRICING_TIER_PRESETS[pricingTier];
+  const baseRow = {
+    name,
+    code,
+    language,
+    plan_tier: planTier,
+    timezone: timezone || "Europe/Paris",
+    commission_pct: preset.commissionPct,
+    handling_fee: preset.handlingFee,
+    logistics_discount_pct: preset.logisticsDiscountPct,
+  };
+  let { data, error: insertError } = await admin
     .from("clients")
-    .insert({
-      name,
-      code,
-      language,
-      plan_tier: planTier,
-      timezone: timezone || "Europe/Paris",
-    })
+    .insert({ ...baseRow, pricing_tier: pricingTier })
     .select("id")
     .single();
+  if (insertError && isMissingPricingTierColumn(insertError)) {
+    // Migration 00016 not run yet: the palier is inferred from the preset prices.
+    ({ data, error: insertError } = await admin.from("clients").insert(baseRow).select("id").single());
+  }
 
   if (insertError || !data) {
     return { ok: false, error: insertError?.message ?? "Could not create client." };
@@ -93,7 +101,7 @@ export async function createClientAction(
     clientId: data.id,
     action: "client.create",
     entity: "clients",
-    diff: { name, code, language, plan_tier: planTier },
+    diff: { name, code, language, pricing_tier: pricingTier },
   });
 
   revalidatePath("/admin");

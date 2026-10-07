@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { ActionResult } from "@/app/actions/admin";
 import {
   createRateGridAction,
@@ -10,6 +10,12 @@ import {
 } from "@/app/actions/pricing";
 import { RATE_GRID_CSV_TEMPLATE } from "@/lib/domain/rate-grid-csv";
 import type { ShippingChannel } from "@/lib/domain/pricing";
+import {
+  PRICING_TIERS,
+  PRICING_TIER_LABELS,
+  PRICING_TIER_PRESETS,
+  type PricingTier,
+} from "@/lib/domain/pricing-tiers";
 
 const initial: ActionResult = { ok: false };
 const channels: ShippingChannel[] = [
@@ -41,7 +47,7 @@ function SubmitState({
         disabled={pending}
         className="cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
       >
-        {pending ? "Saving…" : idle}
+        {pending ? (idle === "Enregistrer" ? "Enregistrement…" : "Saving…") : idle}
       </button>
     </>
   );
@@ -169,47 +175,91 @@ export function RateGridCsvForm({ versions }: { versions: string[] }) {
 
 export function ClientPricingForm({
   clientId,
+  pricingTier,
   commissionPct,
   handlingFee,
   logisticsDiscountPct,
 }: {
   clientId: string;
+  pricingTier: PricingTier;
   commissionPct: number;
   handlingFee: number;
   logisticsDiscountPct: number;
 }) {
   const [state, action, pending] = useActionState(updateClientPricingAction, initial);
+  const [tier, setTier] = useState<PricingTier>(pricingTier);
+  const [commission, setCommission] = useState(String(commissionPct));
+  const [handling, setHandling] = useState(String(handlingFee));
+  const [discount, setDiscount] = useState(String(logisticsDiscountPct));
+
+  function pickTier(next: PricingTier) {
+    setTier(next);
+    const preset = PRICING_TIER_PRESETS[next];
+    setCommission(String(preset.commissionPct));
+    setHandling(String(preset.handlingFee));
+    setDiscount(String(preset.logisticsDiscountPct));
+  }
+
+  const preset = PRICING_TIER_PRESETS[tier];
+  const custom =
+    Number(commission) !== preset.commissionPct ||
+    Number(handling) !== preset.handlingFee ||
+    Number(discount) !== preset.logisticsDiscountPct;
+
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-4">
       <input type="hidden" name="client_id" value={clientId} />
-      <Input
-        name="commission_pct"
-        label="Product commission %"
-        type="number"
-        min="0"
-        step="0.001"
-        defaultValue={commissionPct}
-      />
-      <Input
-        name="handling_fee"
-        label="Handling / unit"
-        type="number"
-        min="0"
-        step="0.0001"
-        defaultValue={handlingFee}
-      />
+      <label className="flex flex-col gap-1 text-sm sm:col-span-4 sm:max-w-xs">
+        <span className="text-[var(--muted)]">Palier</span>
+        <select
+          name="pricing_tier"
+          value={tier}
+          onChange={(event) => pickTier(event.target.value as PricingTier)}
+          className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
+        >
+          {PRICING_TIERS.map((value) => (
+            <option key={value} value={value}>
+              {PRICING_TIER_LABELS[value]}
+            </option>
+          ))}
+        </select>
+      </label>
       <Input
         name="logistics_discount_pct"
-        label="Shipping discount %"
+        label="Remise transport %"
         type="number"
         min="0"
         max="100"
         step="0.001"
-        defaultValue={logisticsDiscountPct}
+        value={discount}
+        onChange={(event) => setDiscount(event.target.value)}
       />
-      <div className="flex items-end">
-        <SubmitState state={state} pending={pending} idle="Save pricing" />
+      <Input
+        name="commission_pct"
+        label="Commission produit %"
+        type="number"
+        min="0"
+        step="0.001"
+        value={commission}
+        onChange={(event) => setCommission(event.target.value)}
+      />
+      <Input
+        name="handling_fee"
+        label="Handling € / colis"
+        type="number"
+        min="0"
+        step="0.0001"
+        value={handling}
+        onChange={(event) => setHandling(event.target.value)}
+      />
+      <div className="flex items-end gap-3">
+        <SubmitState state={state} pending={pending} idle="Enregistrer" saved="Enregistré." />
       </div>
+      <p className="text-xs text-[var(--muted)] sm:col-span-4">
+        {custom
+          ? `Tarifs ajustés à la main pour ce client (le palier ${PRICING_TIER_LABELS[tier]} prévoit ${preset.logisticsDiscountPct} % de remise, ${preset.commissionPct} % de commission, ${preset.handlingFee} € de handling).`
+          : `Tarifs standard du palier ${PRICING_TIER_LABELS[tier]}. Changer de palier remplit les valeurs ; tu peux encore les ajuster avant d'enregistrer.`}
+      </p>
     </form>
   );
 }

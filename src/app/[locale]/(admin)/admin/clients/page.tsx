@@ -2,6 +2,8 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Client } from "@/lib/auth/types";
+import { loadPricingTiers } from "@/lib/clients/pricing-tier";
+import { pricingTierLabel } from "@/lib/domain/pricing-tiers";
 
 export default async function AdminClientsPage() {
   const t = await getTranslations("admin");
@@ -23,6 +25,7 @@ export default async function AdminClientsPage() {
   }
 
   const rows = clients ?? [];
+  const tiers = await loadPricingTiers(rows.map((client) => client.id));
 
   return (
     <div>
@@ -53,7 +56,7 @@ export default async function AdminClientsPage() {
               <tr>
                 <th className="px-4 py-3">{t("fields.name")}</th>
                 <th className="px-4 py-3">{t("fields.code")}</th>
-                <th className="px-4 py-3">{t("fields.plan")}</th>
+                <th className="px-4 py-3">Palier</th>
                 <th className="px-4 py-3">{t("fields.language")}</th>
                 <th className="px-4 py-3">{t("fields.users")}</th>
               </tr>
@@ -70,7 +73,7 @@ export default async function AdminClientsPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-[var(--muted)]">{client.code ?? "—"}</td>
-                  <td className="px-4 py-3 capitalize">{client.plan_tier}</td>
+                  <td className="px-4 py-3">{pricingTierLabel(tiers.get(client.id))}</td>
                   <td className="px-4 py-3 uppercase">{client.language}</td>
                   <td className="px-4 py-3">{counts.get(client.id) ?? 0}</td>
                 </tr>

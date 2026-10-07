@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { parsePricingTier } from "@/lib/domain/pricing-tiers";
+import { isMissingPricingTierColumn } from "@/lib/clients/pricing-tier";
 import { getAuthContext } from "@/lib/auth/context";
 import { writeAudit } from "@/lib/auth/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -273,18 +275,27 @@ export async function updateClientPricingAction(
     logisticsDiscountPct < 0 ||
     logisticsDiscountPct > 100
   ) {
-    return { ok: false, error: "Pricing values must be positive; discount is 0–100%." };
+    return { ok: false, error: "Les valeurs doivent être positives ; remise entre 0 et 100 %." };
   }
 
+  const rawTier = formData.get("pricing_tier");
+  const pricingTier = rawTier == null ? null : parsePricingTier(String(rawTier));
+  if (rawTier != null && !pricingTier) return { ok: false, error: "Palier inconnu." };
+
   const admin = createAdminClient();
-  const { error: updateError } = await admin
+  const values = {
+    commission_pct: commissionPct,
+    handling_fee: handlingFee,
+    logistics_discount_pct: logisticsDiscountPct,
+  };
+  let { error: updateError } = await admin
     .from("clients")
-    .update({
-      commission_pct: commissionPct,
-      handling_fee: handlingFee,
-      logistics_discount_pct: logisticsDiscountPct,
-    })
+    .update(pricingTier ? { ...values, pricing_tier: pricingTier } : values)
     .eq("id", clientId);
+  if (updateError && pricingTier && isMissingPricingTierColumn(updateError)) {
+    // Migration 00016 not run yet: save the prices, the palier is then inferred from them.
+    ({ error: updateError } = await admin.from("clients").update(values).eq("id", clientId));
+  }
   if (updateError) return { ok: false, error: updateError.message };
 
   await writeAudit({
@@ -293,6 +304,7 @@ export async function updateClientPricingAction(
     action: "pricing.client.update",
     entity: "clients",
     diff: {
+      pricing_tier: pricingTier,
       commission_pct: commissionPct,
       handling_fee: handlingFee,
       logistics_discount_pct: logisticsDiscountPct,
