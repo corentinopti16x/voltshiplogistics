@@ -297,7 +297,8 @@
       "menu": "Menu",
       "close": "Close",
       "label": "Main navigation",
-      "support": "Support"
+      "support": "Support",
+      "alerts": "To check"
     },
     "greeting": "Hello {name}",
     "summary": "{decisions, plural, =0 {No decision pending} =1 {1 decision waiting} other {# decisions waiting}}",
@@ -759,7 +760,8 @@
         "lifecycle_changed": "Lifecycle change",
         "restock_requested": "Restock requested",
         "ops_request": "Request to Voltship",
-        "carrier_line_unavailable": "Carrier line unavailable"
+        "carrier_line_unavailable": "Carrier line unavailable",
+        "order_alert": "Order to check"
       }
     },
     "fields": {
@@ -965,7 +967,8 @@
       "close": "Close",
       "admin": "Staff",
       "margin": "Margin",
-      "finance": "Finances"
+      "finance": "Finances",
+      "alerts": "Alerts"
     },
     "rateImport": {
       "kicker": "Voltship admin",

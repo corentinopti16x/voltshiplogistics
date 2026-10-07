@@ -297,7 +297,8 @@
       "menu": "Menu",
       "close": "Fermer",
       "label": "Navigation principale",
-      "support": "SAV"
+      "support": "SAV",
+      "alerts": "À vérifier"
     },
     "greeting": "Bonjour {name}",
     "summary": "{decisions, plural, =0 {Aucune décision en attente} =1 {1 décision t'attend} other {# décisions t'attendent}}",
@@ -759,7 +760,8 @@
         "lifecycle_changed": "Changement de cycle",
         "restock_requested": "Réassort demandé",
         "ops_request": "Demande à Voltship",
-        "carrier_line_unavailable": "Ligne transporteur indisponible"
+        "carrier_line_unavailable": "Ligne transporteur indisponible",
+        "order_alert": "Commande à vérifier"
       }
     },
     "fields": {
@@ -965,7 +967,8 @@
       "close": "Fermer",
       "admin": "Équipe",
       "margin": "Marge",
-      "finance": "Finances"
+      "finance": "Finances",
+      "alerts": "Alertes"
     },
     "rateImport": {
       "kicker": "Admin Voltship",
