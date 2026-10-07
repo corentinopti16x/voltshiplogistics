@@ -90,6 +90,83 @@ export async function sumOrdersShipped(clientId: string, shopId?: string | null)
   };
 }
 
+export type DashboardPeriod = "24h" | "7d" | "30d";
+export const DASHBOARD_PERIODS: DashboardPeriod[] = ["24h", "7d", "30d"];
+const PERIOD_MS: Record<DashboardPeriod, number> = {
+  "24h": 86400000,
+  "7d": 7 * 86400000,
+  "30d": 30 * 86400000,
+};
+
+export type SalesWindow = {
+  orders: number;
+  units: number;
+  /** Sum of Shopify order totals; null when no order in the window carries a total yet. */
+  revenue: number | null;
+  /** Orders already marked shipped in Shopify. */
+  shipped: number;
+};
+
+/**
+ * Rolling sales summary for the dashboard (last 24 h / 7 d / 30 d, to the minute, from the
+ * Shopify orders cache) plus the previous window of the same length for the trend.
+ */
+export async function getSalesSummary(
+  clientId: string,
+  shopId: string | null | undefined,
+  period: DashboardPeriod,
+) {
+  const admin = createAdminClient();
+  const span = PERIOD_MS[period];
+  const now = Date.now();
+  const since = new Date(now - 2 * span);
+  const rows: Array<{
+    placed_at: string | null;
+    order_date: string;
+    cancelled: boolean;
+    line_items_json: unknown;
+  }> = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data: page, error } = await admin
+      .from("shopify_orders_cache")
+      .select("placed_at, order_date, cancelled, line_items_json")
+      .eq("client_id", clientId)
+      .match(shopId ? { shop_id: shopId } : {})
+      .gte("order_date", since.toISOString().slice(0, 10))
+      .order("order_date", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(page ?? []));
+    if (!page || page.length < pageSize) break;
+  }
+  const empty = (): SalesWindow => ({ orders: 0, units: 0, revenue: null, shipped: 0 });
+  const current = empty();
+  const previous = empty();
+  let currency: string | null = null;
+  for (const row of rows) {
+    if (row.cancelled) continue;
+    const at = Date.parse(row.placed_at ?? `${row.order_date}T00:00:00Z`);
+    if (!Number.isFinite(at)) continue;
+    const age = now - at;
+    const bucket = age <= span ? current : age <= 2 * span ? previous : null;
+    if (!bucket) continue;
+    const order = unpackOrderLines(row.line_items_json);
+    bucket.orders += 1;
+    bucket.units += order.lines.reduce((sum, line) => sum + line.quantity, 0);
+    if (order.total != null) bucket.revenue = (bucket.revenue ?? 0) + order.total;
+    if (order.fulfilled) bucket.shipped += 1;
+    currency ??= order.currency;
+  }
+  return {
+    period,
+    current,
+    previous,
+    currency: currency === "USD" ? ("USD" as const) : ("EUR" as const),
+  };
+}
+
 export type RestockAlert = {
   product: ProductRow;
   clientName?: string;
