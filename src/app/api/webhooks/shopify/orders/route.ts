@@ -8,7 +8,7 @@ import {
   customerKeyForOrder,
   hashCustomerEmail,
   orderNumberOf,
-  isSuspiciousOrder,
+  isExcludedOrder,
   packOrderLines,
   resolveShopifyFulfillment,
   unpackOrderLines,
@@ -18,6 +18,8 @@ import {
   persistWebhookEvent,
 } from "@/lib/integrations/webhook-events";
 import { pushOrderIfEnabled } from "@/lib/eccang/sync";
+import { detectShopifyOrder, recordOrderAlerts } from "@/lib/orders/alerts-server";
+import type { OrderReview } from "@/lib/shopify/order-cache";
 
 type CachedLine = { sku: string; quantity: number };
 
@@ -103,7 +105,9 @@ export async function POST(request: Request) {
     const date = order.created_at.slice(0, 10);
     const lines = cacheOrderLines(order.line_items);
     const orderUnits = order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
-    if (!order.cancelled_at && !isSuspiciousOrder(order.total_price, orderUnits)) {
+    // Decision already taken on this order's alert (vraie commande / abus) wins over the rule.
+    const review: OrderReview | null = previousOrder.review;
+    if (!order.cancelled_at && !isExcludedOrder(order.total_price, orderUnits, review)) {
       await applyLines({
         clientId: shop.client_id,
         shopId: shop.id,
@@ -130,6 +134,7 @@ export async function POST(request: Request) {
             amount: order.total_price,
             currency: order.currency,
             units: order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0),
+            review,
           },
         ),
         updated_at: new Date().toISOString(),
@@ -137,6 +142,20 @@ export async function POST(request: Request) {
       { onConflict: "shop_id,shopify_order_id" },
     );
     if (error) throw error;
+
+    // Commandes à vérifier: promo abuse, 0 €, odd price or quantity (never blocks the webhook).
+    const anomalies = detectShopifyOrder(order);
+    if (anomalies.reasons.length > 0) {
+      await recordOrderAlerts(admin, [
+        {
+          clientId: shop.client_id,
+          shopId: shop.id,
+          order,
+          reasons: anomalies.reasons,
+          details: anomalies.details,
+        },
+      ]);
+    }
 
     // ECCANG: push new orders to the warehouse when the client is enabled (no-op otherwise).
     // Flag-gated and never throws — the cache above is the source of truth for sales.
