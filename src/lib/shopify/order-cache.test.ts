@@ -14,13 +14,25 @@ describe("shopify order cache", () => {
     expect(unpackOrderLines(packed)).toEqual({
       fulfilled: true,
       lines: [{ sku: "A", quantity: 2 }],
+      total: null,
+      currency: null,
     });
+  });
+
+  it("keeps the order total and currency for the dashboard revenue", () => {
+    const packed = packOrderLines([{ sku: "A", quantity: 1 }], false, {
+      amount: "34.98",
+      currency: "EUR",
+    });
+    expect(unpackOrderLines(packed)).toMatchObject({ total: 34.98, currency: "EUR" });
   });
 
   it("treats older rows without a marker as unknown", () => {
     expect(unpackOrderLines([{ sku: "A", quantity: 1 }])).toEqual({
       fulfilled: null,
       lines: [{ sku: "A", quantity: 1 }],
+      total: null,
+      currency: null,
     });
   });
 

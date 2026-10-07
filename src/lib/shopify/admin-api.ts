@@ -37,6 +37,8 @@ export type ShopifyOrder = {
   order_number?: number | string | null;
   name?: string | null;
   phone?: string | null;
+  /** Amount paid by the customer (products + shipping + taxes − discounts) and its currency;
+   * cached with the order for the dashboard revenue, and sent to the warehouse. */
   currency?: string | null;
   total_price?: string | number | null;
   shipping_address?: import("@/lib/eccang/mapping").ShopifyAddress | null;
@@ -420,7 +422,7 @@ export async function backfillShopifyOrders(input: {
   const fulfillment = await loadShopifyFulfillmentMap(input.shop, input.accessToken, since);
   let path =
     `orders.json?status=any&limit=250&created_at_min=${encodeURIComponent(since.toISOString())}` +
-    "&fields=id,order_number,name,created_at,cancelled_at,fulfillment_status,line_items,customer,email,contact_email";
+    "&fields=id,order_number,name,created_at,cancelled_at,fulfillment_status,total_price,currency,line_items,customer,email,contact_email";
   const counts = new Map<string, number>();
   const orderRows: Array<Record<string, unknown>> = [];
   do {
@@ -445,6 +447,7 @@ export async function backfillShopifyOrders(input: {
         line_items_json: packOrderLines(
           normalizedLines,
           fulfillment.get(String(order.id)) ?? isShopifyFulfilled(order.fulfillment_status),
+          { amount: order.total_price, currency: order.currency },
         ),
         updated_at: new Date().toISOString(),
       });
