@@ -101,11 +101,12 @@ export function LoginForm({
           <label htmlFor={`${portal}-password`} className="text-[var(--muted)]">
             {t("password")}
           </label>
-          {portal === "staff" ? (
-            <Link href="/staff/forgot-password" className="text-xs font-medium text-[var(--ink)] underline">
-              {t("forgotPassword")}
-            </Link>
-          ) : null}
+          <Link
+            href={portal === "staff" ? "/staff/forgot-password" : "/forgot-password"}
+            className="text-xs font-medium text-[var(--ink)] underline"
+          >
+            {t("forgotPassword")}
+          </Link>
         </div>
         <input
           id={`${portal}-password`}
