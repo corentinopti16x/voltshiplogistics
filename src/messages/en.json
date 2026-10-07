@@ -544,7 +544,14 @@
       "via": "via {line}",
       "cogsEarly": "Est. COGS",
       "cogsEarlyNote": "to be confirmed by sourcing",
-      "roasEarly": "Est. ROAS BE · target"
+      "roasEarly": "Est. ROAS BE · target",
+      "simpleStage": {
+        "brief": "Brief",
+        "sourcing": "Sourcing",
+        "validation": "Validation"
+      },
+      "live": "Live",
+      "salesPeriod": "Sales {days}d"
     },
     "howItWorks": {
       "title": "How it works",
@@ -626,8 +633,18 @@
       "profit": "Profit / order",
       "price": "Selling price",
       "newest": "Newest",
-      "name": "Name (A→Z)"
-    }
+      "name": "Name (A→Z)",
+      "sales": "Best sellers"
+    },
+    "simpleStage": {
+      "brief": "Brief",
+      "sourcing": "Sourcing",
+      "validation": "Validation"
+    },
+    "live": "Live",
+    "liveNote": "Already selling on your store — nothing to source, all good.",
+    "periodLabel": "Sales over",
+    "periodDays": "{days} days"
   },
   "economics": {
     "title": "Unit economics",

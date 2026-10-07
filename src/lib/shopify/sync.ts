@@ -118,7 +118,7 @@ export async function classifyAllProducts() {
     for (const row of sales ?? []) {
       byDate.set(row.date, (byDate.get(row.date) ?? 0) + Number(row.units_sold));
     }
-    const status = classifyLifecycle({
+    const classified = classifyLifecycle({
       current: product.lifecycle_status,
       createdDate: product.created_date,
       sales: [...byDate.entries()].map(
@@ -126,6 +126,10 @@ export async function classifyAllProducts() {
       ),
       thresholds: parseLifecycleThresholds(thresholdMap.get(product.client_id)),
     });
+    // Migrated products were already selling on the client's store: they are winners
+    // unless sales actually drop (declining/dead), never back to testing.
+    const migrated = (product.migration_state ?? "").startsWith("imported");
+    const status = migrated && classified === "testing" ? "winning" : classified;
     if (status === product.lifecycle_status) continue;
 
     if (

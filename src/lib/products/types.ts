@@ -70,6 +70,32 @@ export const SOURCING_PIPELINE: SourcingStatus[] = [
   "in_stock",
 ];
 
+/** Simplified client-facing pipeline for new products: Brief → Sourcing → Validation. */
+export const SIMPLE_PIPELINE = ["brief", "sourcing", "validation"] as const;
+export type SimpleStage = (typeof SIMPLE_PIPELINE)[number];
+
+/** Products migrated from an existing Shopify store are already live: no sourcing to follow. */
+export function isMigratedProduct(product: { migration_state: string | null }) {
+  return (product.migration_state ?? "").startsWith("imported");
+}
+
+export function simpleStage(status: SourcingStatus | null | undefined): SimpleStage {
+  switch (status) {
+    case "validated":
+    case "in_production":
+    case "in_stock":
+      return "validation";
+    case "factories":
+    case "samples":
+    case "negotiation":
+    case "quote_sent":
+    case "flagged":
+      return "sourcing";
+    default:
+      return "brief";
+  }
+}
+
 export type ProductQuestion = {
   text: string;
   at: string;

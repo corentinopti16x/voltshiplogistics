@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { LifecycleStatus, SourcingStatus } from "@/lib/products/types";
+import { SIMPLE_PIPELINE, type LifecycleStatus } from "@/lib/products/types";
 
 const LIFECYCLES: Array<LifecycleStatus | ""> = ["", "winning", "testing", "declining", "dead"];
 const dotClass: Record<string, string> = {
@@ -18,6 +18,7 @@ export function ProductFilters({
   sourcing,
   sort,
   minSales,
+  period,
   counts,
 }: {
   q: string;
@@ -25,6 +26,7 @@ export function ProductFilters({
   sourcing: string;
   sort: string;
   minSales: string;
+  period: number;
   counts: Record<"all" | LifecycleStatus, number> | Record<string, number>;
 }) {
   const t = useTranslations("products");
@@ -94,21 +96,24 @@ export function ProductFilters({
           >
             <option value="">{t("sourcingAny")}</option>
             <option value="open">{t("sourcingOpen")}</option>
-            {(
-              [
-                "brief_received",
-                "factories",
-                "samples",
-                "negotiation",
-                "quote_sent",
-                "validated",
-                "in_production",
-                "in_stock",
-                "flagged",
-              ] as SourcingStatus[]
-            ).map((status) => (
-              <option key={status} value={status}>
-                {t(`sourcing.${status}`)}
+            {SIMPLE_PIPELINE.map((stage) => (
+              <option key={stage} value={stage}>
+                {t(`simpleStage.${stage}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-[12px] font-semibold text-white/80">
+          {t("periodLabel")}
+          <select
+            name="period"
+            defaultValue={String(period)}
+            onChange={(event) => event.currentTarget.form?.requestSubmit()}
+            className="vs-input cursor-pointer !py-1.5 text-[13px]"
+          >
+            {[7, 30, 90].map((days) => (
+              <option key={days} value={days}>
+                {t("periodDays", { days })}
               </option>
             ))}
           </select>
@@ -121,7 +126,7 @@ export function ProductFilters({
             onChange={(event) => event.currentTarget.form?.requestSubmit()}
             className="vs-input cursor-pointer !py-1.5 text-[13px]"
           >
-            {(["sales90", "sales30", "salesLow", "profit", "price", "newest", "name"] as const).map(
+            {(["sales", "salesLow", "profit", "price", "newest", "name"] as const).map(
               (key) => (
                 <option key={key} value={key}>
                   {t(`sort.${key}`)}

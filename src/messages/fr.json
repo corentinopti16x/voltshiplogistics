@@ -544,7 +544,14 @@
       "via": "via {line}",
       "cogsEarly": "COGS estimé",
       "cogsEarlyNote": "à confirmer par le sourcing",
-      "roasEarly": "ROAS estimé BE · cible"
+      "roasEarly": "ROAS estimé BE · cible",
+      "simpleStage": {
+        "brief": "Brief",
+        "sourcing": "Sourcing",
+        "validation": "Validation"
+      },
+      "live": "En place",
+      "salesPeriod": "Ventes {days} j"
     },
     "howItWorks": {
       "title": "Comment ça se passe",
@@ -626,8 +633,18 @@
       "profit": "Profit / commande",
       "price": "Prix de vente",
       "newest": "Plus récents",
-      "name": "Nom (A→Z)"
-    }
+      "name": "Nom (A→Z)",
+      "sales": "Plus vendus"
+    },
+    "simpleStage": {
+      "brief": "Brief",
+      "sourcing": "Sourcing",
+      "validation": "Validation"
+    },
+    "live": "En place",
+    "liveNote": "Produit déjà en vente sur ta boutique — rien à sourcer, tout est OK.",
+    "periodLabel": "Ventes sur",
+    "periodDays": "{days} jours"
   },
   "economics": {
     "title": "Économie unitaire",
