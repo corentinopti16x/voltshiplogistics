@@ -575,9 +575,14 @@
         "validation": "Validation"
       },
       "live": "En place",
-      "sales24h": "Ventes 24 h",
-      "sales7d": "Ventes 7 j",
-      "sales30d": "Ventes 30 j"
+      "period": {
+        "24h": "24 h",
+        "7d": "7 j",
+        "30d": "30 j"
+      },
+      "periodUnits": "Ventes {period}",
+      "periodOrders": "Commandes {period}",
+      "periodRevenue": "CA {period}"
     },
     "howItWorks": {
       "title": "Comment ça se passe",
@@ -651,18 +656,15 @@
       "readOnly": "Seuls les membres de votre espace peuvent changer la ligne."
     },
     "sortLabel": "Trier par",
-    "minSalesLabel": "Ventes 30 j min.",
+    "minSalesLabel": "Ventes min. (période)",
     "sort": {
-      "sales90": "Ventes 90 j (plus vendus)",
-      "sales30": "Plus vendus 30 j",
       "salesLow": "Moins vendus",
       "profit": "Profit / commande",
       "price": "Prix de vente",
       "newest": "Plus récents",
       "name": "Nom (A→Z)",
       "sales": "Plus vendus",
-      "sales24h": "Plus vendus 24 h",
-      "sales7": "Plus vendus 7 j"
+      "revenue": "Plus gros CA"
     },
     "simpleStage": {
       "brief": "Demande reçue",
@@ -670,7 +672,9 @@
       "validation": "Validation"
     },
     "live": "En place",
-    "liveNote": "Produit déjà en vente sur ta boutique — rien à sourcer, tout est OK."
+    "liveNote": "Produit déjà en vente sur ta boutique — rien à sourcer, tout est OK.",
+    "periodHint": "Ventes, commandes et CA de chaque produit sur la période choisie (glissant).",
+    "periodLabel": "Période"
   },
   "economics": {
     "title": "Économie unitaire",
@@ -1348,5 +1352,10 @@
       "items": "Articles",
       "viewTracking": "Ouvrir le suivi"
     }
+  },
+  "periods": {
+    "24h": "24 h",
+    "7d": "7 jours",
+    "30d": "30 jours"
   }
 }
