@@ -12,10 +12,25 @@ const items = [
   { href: "/settings", key: "settings" },
 ] as const;
 
-export function ClientNavLinks({ showSettings = true }: { showSettings?: boolean }) {
+export function ClientNavLinks({
+  showSettings = true,
+  showInbound = true,
+  showSupport = true,
+}: {
+  showSettings?: boolean;
+  /** Réceptions only once the warehouse (ECCANG) is live for the client. */
+  showInbound?: boolean;
+  /** SAV only once the client has connected a mailbox. */
+  showSupport?: boolean;
+}) {
   const t = useTranslations("dashboard.nav");
   const pathname = usePathname();
-  const links = showSettings ? items : items.filter((item) => item.key !== "settings");
+  const links = items.filter(
+    (item) =>
+      (showSettings || item.key !== "settings") &&
+      (showInbound || item.key !== "inbound") &&
+      (showSupport || item.key !== "support"),
+  );
 
   return (
     <nav

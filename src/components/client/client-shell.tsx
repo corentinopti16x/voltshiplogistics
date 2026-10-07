@@ -8,6 +8,27 @@ import { getAuthContext } from "@/lib/auth/context";
 import { Bolt } from "@/components/ui";
 import { ShopSwitcher } from "@/components/client/shop-switcher";
 import { getActiveShopId, listClientShops } from "@/lib/shops/active";
+import { isClientEccangEnabled } from "@/lib/eccang/queries";
+import { getMailbox } from "@/lib/support/queries";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+/** Hide the menu entries a client cannot use yet (no warehouse link, no mailbox). */
+async function loadNavVisibility(clientId: string) {
+  try {
+    const admin = createAdminClient();
+    const [eccang, mailbox, inbound] = await Promise.all([
+      isClientEccangEnabled(clientId).catch(() => false),
+      getMailbox(clientId).catch(() => null),
+      admin
+        .from("inbound_cache")
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", clientId),
+    ]);
+    return { showInbound: eccang || (inbound.count ?? 0) > 0, showSupport: Boolean(mailbox) };
+  } catch {
+    return { showInbound: true, showSupport: true };
+  }
+}
 
 export async function ClientShell({ children }: { children: ReactNode }) {
   const t = await getTranslations("dashboard");
@@ -15,13 +36,20 @@ export async function ClientShell({ children }: { children: ReactNode }) {
   const initials = (ctx?.email ?? "").slice(0, 2).toUpperCase() || "CL";
   const shops = ctx?.clientId ? await listClientShops(ctx.clientId) : [];
   const activeShop = ctx?.clientId && shops.length > 1 ? await getActiveShopId(ctx.clientId) : null;
+  const nav = ctx?.clientId
+    ? await loadNavVisibility(ctx.clientId)
+    : { showInbound: true, showSupport: true };
 
   return (
     <div className="relative isolate min-h-screen bg-[var(--bg)]">
       <header className="border-b border-white/10 bg-[var(--navy)]">
         <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3.5 sm:px-6">
           <BrandMark href="/dashboard" inverted compact />
-          <ClientNavLinks showSettings={ctx?.role !== "staff"} />
+          <ClientNavLinks
+            showSettings={ctx?.role !== "staff"}
+            showInbound={nav.showInbound}
+            showSupport={nav.showSupport}
+          />
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             {shops.length > 1 ? (
               <ShopSwitcher shops={shops} active={activeShop} allLabel={t("allShops")} />
