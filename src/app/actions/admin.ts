@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { writeAudit } from "@/lib/auth/audit";
 import { getAuthContext } from "@/lib/auth/context";
 import { generateInvitePassword, slugifyCode } from "@/lib/auth/passwords";
+import { sendInviteEmail, sendPasswordResetEmail } from "@/lib/auth/password-emails";
 import { parseLineKey, type CarrierRules } from "@/lib/domain/carrier-rules";
 import { normalizeDestination } from "@/lib/domain/pricing";
 import {
@@ -23,6 +24,8 @@ export type ActionResult = {
   error?: string;
   clientId?: string;
   password?: string;
+  /** Invitation e-mail sent (the user chooses their own password). */
+  emailed?: boolean;
 };
 
 async function requireAdmin() {
@@ -295,22 +298,45 @@ export async function inviteUserAction(
     };
   }
 
-  const password = suppliedPassword || generateInvitePassword();
-  const generated = !suppliedPassword;
-
-  const { data: created, error: createError } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    app_metadata: { role, client_id: clientId },
-  });
-
-  if (createError || !created.user) {
-    return { ok: false, error: createError?.message ?? "Could not invite user." };
+  // Default: the client receives an e-mail and chooses their own password. If the e-mail
+  // cannot be sent (SMTP not configured yet) or a password was typed, the account is created
+  // with a password shown once to the admin, as before.
+  let userId: string | null = null;
+  let password: string | undefined;
+  let emailed = false;
+  if (!suppliedPassword) {
+    const { data: clientRow } = await admin
+      .from("clients")
+      .select("language")
+      .eq("id", clientId)
+      .maybeSingle();
+    try {
+      const user = await sendInviteEmail(email, clientRow?.language ?? "fr", {
+        role,
+        client_id: clientId,
+      });
+      userId = user.id;
+      emailed = true;
+    } catch {
+      userId = null;
+    }
+  }
+  if (!userId) {
+    password = suppliedPassword || generateInvitePassword();
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      app_metadata: { role, client_id: clientId },
+    });
+    if (createError || !created.user) {
+      return { ok: false, error: createError?.message ?? "Could not invite user." };
+    }
+    userId = created.user.id;
   }
 
   const { error: profileError } = await admin.from("profiles").upsert({
-    id: created.user.id,
+    id: userId,
     email,
     role,
     client_id: clientId,
@@ -333,8 +359,46 @@ export async function inviteUserAction(
   return {
     ok: true,
     clientId,
-    password: generated ? password : undefined,
+    password: suppliedPassword ? undefined : password,
+    emailed,
   };
+}
+
+/** Admin button: e-mails a "choose a new password" link to one user of a client. */
+export async function sendPasswordResetAction(
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { ctx, error } = await requireAdmin();
+  if (!ctx) return { ok: false, error };
+  const userId = String(formData.get("user_id") ?? "");
+  const admin = createAdminClient();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("email, role, client_id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!profile?.email) return { ok: false, error: "User not found." };
+  const { data: clientRow } = profile.client_id
+    ? await admin.from("clients").select("language").eq("id", profile.client_id).maybeSingle()
+    : { data: null };
+  const portal = profile.role === "sourcer" || profile.role === "voltship_admin" ? "staff" : "client";
+  try {
+    await sendPasswordResetEmail(profile.email, portal, clientRow?.language ?? "fr");
+  } catch (sendError) {
+    return {
+      ok: false,
+      error: sendError instanceof Error ? sendError.message : "Could not send the e-mail.",
+    };
+  }
+  await writeAudit({
+    actorUserId: ctx.userId,
+    clientId: profile.client_id ?? undefined,
+    action: "user.password_reset_sent",
+    entity: "profiles",
+    diff: { email: profile.email },
+  });
+  return { ok: true };
 }
 
 export async function startImpersonationAction(clientId: string): Promise<ActionResult> {
