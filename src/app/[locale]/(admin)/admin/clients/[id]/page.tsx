@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { InviteUserForm } from "@/components/admin/invite-user-form";
 import { SendResetButton } from "@/components/admin/send-reset-button";
 import { WhatsappNumberForm } from "@/components/admin/whatsapp-number-form";
-import { PlanTierForm } from "@/components/admin/plan-tier-form";
+import { loadPricingTiers } from "@/lib/clients/pricing-tier";
 import { ImpersonateButton } from "@/components/admin/impersonate-button";
 import { ClientPricingForm } from "@/components/admin/pricing-forms";
 import { LifecycleThresholdForm } from "@/components/admin/lifecycle-threshold-form";
@@ -66,6 +66,7 @@ export default async function AdminClientDetailPage({
     .eq("id", id)
     .maybeSingle<{ whatsapp_number: string | null }>();
   const whatsappNumber = whatsappRow?.whatsapp_number ?? null;
+  const pricingTier = (await loadPricingTiers([id])).get(id) ?? "gold";
 
   const { data: users } = await admin
     .from("profiles")
@@ -161,18 +162,14 @@ export default async function AdminClientDetailPage({
       </section>
 
       <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">{t("planTitle")}</h2>
-        <p className="mt-1 mb-4 text-sm text-[var(--muted)]">{t("planHelp")}</p>
-        <PlanTierForm clientId={client.id} current={client.plan_tier} />
-      </section>
-
-      <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">Client pricing</h2>
+        <h2 className="text-sm font-semibold">Palier & tarifs</h2>
         <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
-          These values are applied to the active shipping grid on every live COGS calculation.
+          Appliqués à la grille transport active dans chaque calcul de COGS (les devis déjà acceptés
+          restent figés).
         </p>
         <ClientPricingForm
           clientId={client.id}
+          pricingTier={pricingTier}
           commissionPct={Number(client.commission_pct) || 0}
           handlingFee={Number(client.handling_fee) || 0}
           logisticsDiscountPct={Number(client.logistics_discount_pct) || 0}
@@ -182,9 +179,9 @@ export default async function AdminClientDetailPage({
       {clientMargin ? <ClientMarginCard data={clientMargin} /> : null}
 
       <section id="lifecycle" className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">Lifecycle rules</h2>
+        <h2 className="text-sm font-semibold">Règles Winning / Declining</h2>
         <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
-          These thresholds classify this client’s products on the next Shopify sync.
+          Seuils utilisés pour classer les produits de ce client à chaque synchro Shopify.
         </p>
         <LifecycleThresholdForm
           clientId={client.id}
@@ -193,11 +190,11 @@ export default async function AdminClientDetailPage({
       </section>
 
       <section id="carriers" className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">Carrier lines</h2>
+        <h2 className="text-sm font-semibold">Lignes transport</h2>
         <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
-          Lines this client may pick per product and market (unchecked = hidden and never used), plus an
-          optional forced line per market. Applied to every live COGS and to ECCANG order pushes; accepted
-          quotes stay frozen.
+          Lignes que ce client peut utiliser par produit et par marché (décochée = masquée et jamais
+          utilisée), avec une ligne imposée par marché si besoin. Appliqué à chaque COGS et aux commandes
+          envoyées à ECCANG ; les devis acceptés restent figés.
         </p>
         <CarrierRulesForm
           clientId={client.id}
