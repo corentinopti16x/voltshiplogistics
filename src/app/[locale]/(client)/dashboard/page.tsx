@@ -4,6 +4,7 @@ import { Link } from "@/i18n/routing";
 import { getAuthContext } from "@/lib/auth/context";
 import { SIMPLE_PIPELINE, simpleStage } from "@/lib/products/types";
 import { getSalesSummary, listRestockAlerts } from "@/lib/products/queries";
+import { countOpenOrderAlerts } from "@/lib/orders/alerts-queries";
 import { parseDashboardPeriod } from "@/lib/products/periods";
 import { PeriodTabs } from "@/components/client/period-tabs";
 import { loadProductInsights, type ProductInsight } from "@/lib/products/overview";
@@ -97,6 +98,7 @@ export default async function DashboardPage({
     }
   }
 
+  const openOrderAlerts = clientId ? await countOpenOrderAlerts(clientId).catch(() => 0) : 0;
   const products = insights.map((row) => row.product);
   const activeProducts = insights.filter((row) => row.product.lifecycle_status !== "dead");
   const quotesPending = insights.filter((row) => row.quotePending);
@@ -146,6 +148,21 @@ export default async function DashboardPage({
         <p className="rounded-xl border border-[#f0d9b5] bg-[var(--gold-soft)] px-4 py-3 text-sm text-[var(--gold-ink)]">
           {t("migrationHint")}
         </p>
+      ) : null}
+
+      {openOrderAlerts > 0 ? (
+        <Link
+          href="/alerts"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#f0d9b5] bg-[var(--gold-soft)] px-4 py-3 text-sm text-[var(--gold-ink)] hover:border-[var(--gold)]"
+        >
+          <span>
+            <strong>
+              {openOrderAlerts} commande{openOrderAlerts > 1 ? "s" : ""} à vérifier
+            </strong>{" "}
+            — code promo abusé, commande à 0 €, prix ou quantité inhabituelle.
+          </span>
+          <span className="font-semibold">Voir →</span>
+        </Link>
       ) : null}
 
       {/* Ventes — getSalesSummary: rolling window from shopify_orders_cache (placed_at, total) */}
