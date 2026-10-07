@@ -184,7 +184,13 @@ export default async function DashboardPage({
                   ? formatAmount(sales.current.revenue / sales.current.orders, locale, sales.currency)
                   : "—"
               }
-              sub={t("sales.basketSub")}
+              sub={
+                sales && sales.current.orders > 0
+                  ? t("sales.basketQty", {
+                      qty: formatNumber(sales.current.units / sales.current.orders, locale, 2),
+                    })
+                  : t("sales.basketSub")
+              }
             />
           </Card>
           <Card padding="sm" className="px-5 py-4">
