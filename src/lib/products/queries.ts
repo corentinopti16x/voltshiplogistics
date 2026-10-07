@@ -5,6 +5,12 @@ import { calculateSafetyStock, type StockStatus } from "@/lib/domain/safety-stoc
 import { unpackOrderLines } from "@/lib/shopify/order-cache";
 import { loadProductSkus } from "@/lib/products/skus";
 import {
+  DASHBOARD_PERIODS,
+  PERIOD_MS,
+  type DashboardPeriod,
+  type PeriodStats,
+} from "@/lib/products/periods";
+import {
   CLIENT_PRODUCT_SELECT,
   serializeClientProduct,
 } from "@/lib/products/visibility";
@@ -90,13 +96,27 @@ export async function sumOrdersShipped(clientId: string, shopId?: string | null)
   };
 }
 
-export type DashboardPeriod = "24h" | "7d" | "30d";
-export const DASHBOARD_PERIODS: DashboardPeriod[] = ["24h", "7d", "30d"];
-const PERIOD_MS: Record<DashboardPeriod, number> = {
-  "24h": 86400000,
-  "7d": 7 * 86400000,
-  "30d": 30 * 86400000,
-};
+/** Non-cancelled orders since a date, paginated (PostgREST caps a page at 1 000 rows). */
+async function loadRecentOrders(clientId: string, sinceDate: string) {
+  const admin = createAdminClient();
+  const rows: Array<{ placed_at: string | null; order_date: string; line_items_json: unknown }> = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data: page, error } = await admin
+      .from("shopify_orders_cache")
+      .select("placed_at, order_date, line_items_json")
+      .eq("client_id", clientId)
+      .eq("cancelled", false)
+      .gte("order_date", sinceDate.slice(0, 10))
+      .order("order_date", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(page ?? []));
+    if (!page || page.length < pageSize) break;
+  }
+  return rows;
+}
 
 export type SalesWindow = {
   orders: number;
@@ -154,7 +174,7 @@ export async function getSalesSummary(
     if (!bucket) continue;
     const order = unpackOrderLines(row.line_items_json);
     bucket.orders += 1;
-    bucket.units += order.lines.reduce((sum, line) => sum + line.quantity, 0);
+    bucket.units += order.units ?? order.lines.reduce((sum, line) => sum + line.quantity, 0);
     if (order.total != null) bucket.revenue = (bucket.revenue ?? 0) + order.total;
     if (order.fulfilled) bucket.shipped += 1;
     currency ??= order.currency;
@@ -320,6 +340,8 @@ export async function listStaffRestockAlerts() {
 }
 
 export type ProductMetrics = {
+  /** Rolling 24 h / 7 d / 30 d per product: units, orders and revenue (Shopify line prices). */
+  windows: Record<DashboardPeriod, PeriodStats>;
   salesDay: number;
   /** Units sold over the last 24 hours (rolling, from Shopify order timestamps). */
   units24h: number;
@@ -346,8 +368,7 @@ export async function getTenantProductMetrics(
   const since7 = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
   const since30 = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
   const since90 = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
-  const since30At = new Date(Date.now() - 30 * 86400000).toISOString();
-  const [{ data: sales }, { data: stock }, { data: orders }] = await Promise.all([
+  const [{ data: sales }, { data: stock }, orders] = await Promise.all([
     admin
       .from("sales_cache")
       .select("sku, units_sold, date")
@@ -359,32 +380,44 @@ export async function getTenantProductMetrics(
       .select("sku, qty_available, inbound_qty")
       .eq("client_id", clientId)
       .in("sku", skus),
-    admin
-      .from("shopify_orders_cache")
-      .select("placed_at, order_date, cancelled, line_items_json")
-      .eq("client_id", clientId)
-      .gte("order_date", since30.slice(0, 10))
-      .eq("cancelled", false),
+    loadRecentOrders(clientId, since30),
   ]);
   // Rolling windows (24 h / 7 d / 30 d) from the exact order time; orders without a
   // timestamp fall back to their order date at midnight UTC.
-  const skuSet = new Set(skus);
+  const skuToProduct = new Map<string, string>();
+  for (const product of products) {
+    for (const sku of productSkus.get(product.id) ?? []) skuToProduct.set(sku, product.id);
+  }
   const now = Date.now();
-  const rolling24 = new Map<string, number>();
-  const rolling7 = new Map<string, number>();
-  const rolling30 = new Map<string, number>();
+  const windows = new Map<string, Record<DashboardPeriod, PeriodStats>>();
+  const blank = () =>
+    Object.fromEntries(
+      DASHBOARD_PERIODS.map((key) => [key, { units: 0, orders: 0, revenue: null }]),
+    ) as Record<DashboardPeriod, PeriodStats>;
   let hasOrders = false;
-  for (const order of orders ?? []) {
-    const at = new Date(order.placed_at ?? `${order.order_date}T00:00:00Z`).getTime();
-    if (!Number.isFinite(at) || at < Date.parse(since30At)) continue;
+  for (const order of orders) {
+    const at = Date.parse(order.placed_at ?? `${order.order_date}T00:00:00Z`);
+    if (!Number.isFinite(at)) continue;
     const age = now - at;
+    if (age > PERIOD_MS["30d"]) continue;
+    const touched = new Set<string>();
     for (const line of unpackOrderLines(order.line_items_json).lines) {
-      if (!skuSet.has(line.sku)) continue;
+      const productId = skuToProduct.get(line.sku);
+      if (!productId) continue;
       hasOrders = true;
+      const stats = windows.get(productId) ?? blank();
+      windows.set(productId, stats);
       const qty = Number(line.quantity) || 0;
-      rolling30.set(line.sku, (rolling30.get(line.sku) ?? 0) + qty);
-      if (age <= 7 * 86400000) rolling7.set(line.sku, (rolling7.get(line.sku) ?? 0) + qty);
-      if (age <= 86400000) rolling24.set(line.sku, (rolling24.get(line.sku) ?? 0) + qty);
+      for (const key of DASHBOARD_PERIODS) {
+        if (age > PERIOD_MS[key]) continue;
+        const bucket = stats[key];
+        bucket.units += qty;
+        if (line.price != null) bucket.revenue = (bucket.revenue ?? 0) + qty * line.price;
+        if (!touched.has(`${productId}:${key}`)) {
+          touched.add(`${productId}:${key}`);
+          bucket.orders += 1;
+        }
+      }
     }
   }
   const units7BySku = new Map<string, number>();
@@ -416,12 +449,12 @@ export async function getTenantProductMetrics(
     const salesDay = units30 / 30;
     const cached = own.map((sku) => stockBySku.get(sku)).find(Boolean);
     const available = cached?.available ?? product.stock_manual ?? 0;
-    const sumOwn = (map: Map<string, number>) =>
-      own.reduce((sum, sku) => sum + (map.get(sku) ?? 0), 0);
+    const own_ = windows.get(product.id) ?? blank();
     metrics.set(product.id, {
-      units24h: sumOwn(rolling24),
-      units7: hasOrders ? sumOwn(rolling7) : units7,
-      units30: hasOrders ? sumOwn(rolling30) : units30,
+      windows: own_,
+      units24h: own_["24h"].units,
+      units7: hasOrders ? own_["7d"].units : units7,
+      units30: hasOrders ? own_["30d"].units : units30,
       units90: hasSales ? units90 : null,
       salesDay,
       daysLeft: salesDay > 0 ? available / salesDay : null,
