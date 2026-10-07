@@ -5,7 +5,7 @@ import { useRouter } from "@/i18n/routing";
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { createClientAction, type ActionResult } from "@/app/actions/admin";
-import { PLAN_TIERS } from "@/lib/auth/types";
+import { PRICING_TIERS, PRICING_TIER_LABELS } from "@/lib/domain/pricing-tiers";
 
 const initial: ActionResult = { ok: false };
 
@@ -52,15 +52,15 @@ export function CreateClientForm() {
           </select>
         </label>
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="text-[var(--muted)]">{t("fields.plan")}</span>
+          <span className="text-[var(--muted)]">Palier</span>
           <select
-            name="plan_tier"
-            defaultValue="bronze"
-            className="rounded-md border border-[var(--line)] bg-white px-3 py-2 capitalize"
+            name="pricing_tier"
+            defaultValue="gold"
+            className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
           >
-            {PLAN_TIERS.map((tier) => (
+            {PRICING_TIERS.map((tier) => (
               <option key={tier} value={tier}>
-                {tier}
+                {PRICING_TIER_LABELS[tier]}
               </option>
             ))}
           </select>
