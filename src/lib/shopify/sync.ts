@@ -85,7 +85,7 @@ export async function classifyAllProducts() {
   const { data: products } = await admin
     .from("products_cache")
     .select("*")
-    .not("sku", "is", null);
+    .neq("lifecycle_status", "archived");
   const clientIds = [...new Set((products ?? []).map((row) => row.client_id))];
   const thresholdMap = new Map<string, unknown>();
   if (clientIds.length > 0) {
@@ -101,14 +101,21 @@ export async function classifyAllProducts() {
   let changed = 0;
   for (const raw of products ?? []) {
     const product = raw as ProductRow;
-    if (!product.sku) continue;
-    // A product imported from Shopify maps every variant SKU to it: count them all.
+    // A product imported from Shopify has no SKU of its own: every variant SKU is mapped to
+    // it in sku_maps. Count them all; skip products with no SKU at all (new requests).
     const { data: mapped } = await admin
       .from("sku_maps")
       .select("shopify_sku")
       .eq("client_id", product.client_id)
       .eq("airtable_record_id", product.airtable_record_id);
-    const skus = [...new Set([product.sku, ...(mapped ?? []).map((row) => row.shopify_sku)])];
+    const skus = [
+      ...new Set(
+        [product.sku, ...(mapped ?? []).map((row) => row.shopify_sku)].filter(
+          (sku): sku is string => Boolean(sku),
+        ),
+      ),
+    ];
+    if (skus.length === 0) continue;
     const { data: sales } = await admin
       .from("sales_cache")
       .select("date, units_sold")
@@ -137,9 +144,10 @@ export async function classifyAllProducts() {
       getAirtableConfig().configured &&
       !product.airtable_record_id.startsWith("pending:")
     ) {
+      // Airtable is only a mirror: a failed push must not stop the classification.
       await patchAirtableProduct(product.airtable_record_id, {
         lifecycleStatus: status,
-      });
+      }).catch(() => null);
     }
     await admin
       .from("products_cache")
