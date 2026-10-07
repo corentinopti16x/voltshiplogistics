@@ -104,10 +104,25 @@ export function isSuspiciousOrder(total: unknown, units: number) {
   return amount / units < 1;
 }
 
+/** Decision taken on an order alert: "legit" puts the order back in the sales, "abuse" keeps it out. */
+export type OrderReview = "legit" | "abuse";
+
+/** Whether an order is left out of every sales figure, after any review on its alert. */
+export function isExcludedOrder(total: unknown, units: number, review?: OrderReview | null) {
+  if (review === "abuse") return true;
+  if (review === "legit") return false;
+  return isSuspiciousOrder(total, units);
+}
+
 export function packOrderLines(
   lines: OrderLine[],
   fulfilled: boolean,
-  total?: { amount: unknown; currency?: string | null; units?: number } | null,
+  total?: {
+    amount: unknown;
+    currency?: string | null;
+    units?: number;
+    review?: OrderReview | null;
+  } | null,
 ) {
   const amount = Number(total?.amount);
   const meta: Record<string, unknown> = { fulfilled };
@@ -116,7 +131,8 @@ export function packOrderLines(
     meta.currency = total.currency ?? null;
   }
   if (total?.units != null && Number.isFinite(total.units)) meta.units = total.units;
-  if (total && isSuspiciousOrder(total.amount, total.units ?? 0)) meta.suspicious = true;
+  if (total?.review) meta.review = total.review;
+  if (total && isExcludedOrder(total.amount, total.units ?? 0, total.review)) meta.suspicious = true;
   return [{ _order: meta }, ...lines];
 }
 
@@ -130,11 +146,22 @@ export function unpackOrderLines(value: unknown): {
   units: number | null;
   /** Flagged as not a real sale (see isSuspiciousOrder): excluded from sales figures. */
   suspicious: boolean;
+  /** Decision taken on the order alert, if any. */
+  review: OrderReview | null;
 } {
   if (!Array.isArray(value)) {
-    return { fulfilled: null, lines: [], total: null, currency: null, units: null, suspicious: false };
+    return {
+      fulfilled: null,
+      lines: [],
+      total: null,
+      currency: null,
+      units: null,
+      suspicious: false,
+      review: null,
+    };
   }
   let suspicious = false;
+  let review: OrderReview | null = null;
   let units: number | null = null;
   let fulfilled: boolean | null = null;
   let total: number | null = null;
@@ -153,6 +180,7 @@ export function unpackOrderLines(value: unknown): {
         currency?: unknown;
         units?: unknown;
         suspicious?: unknown;
+        review?: unknown;
       };
     };
     if (row._order && typeof row._order === "object") {
@@ -161,6 +189,7 @@ export function unpackOrderLines(value: unknown): {
       if (row._order.total != null && Number.isFinite(amount)) total = amount;
       if (typeof row._order.currency === "string") currency = row._order.currency;
       if (row._order.suspicious === true) suspicious = true;
+      if (row._order.review === "legit" || row._order.review === "abuse") review = row._order.review;
       if (row._order.units != null && Number.isFinite(Number(row._order.units))) {
         units = Number(row._order.units);
       }
@@ -172,7 +201,7 @@ export function unpackOrderLines(value: unknown): {
     if (row.price != null && Number.isFinite(Number(row.price))) line.price = Number(row.price);
     lines.push(line);
   }
-  return { fulfilled, lines, total, currency, units, suspicious };
+  return { fulfilled, lines, total, currency, units, suspicious, review };
 }
 
 export function isShopifyFulfilled(status: string | null | undefined) {
