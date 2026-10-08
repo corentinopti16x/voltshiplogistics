@@ -32,8 +32,6 @@ create index if not exists purchase_orders_product_idx
 
 alter table public.purchase_orders enable row level security;
 
+-- Pas de policy : aucune lecture directe avec la clé publique (la colonne notes_internal est
+-- confidentielle). Les pages client lisent côté serveur, colonnes filtrées, après contrôle du client.
 drop policy if exists "tenant_select" on public.purchase_orders;
-create policy "tenant_select"
-  on public.purchase_orders for select to authenticated
-  using (client_id = public.current_client_id());
--- Écritures : uniquement côté serveur (service role), réservé à l'équipe Voltship.
