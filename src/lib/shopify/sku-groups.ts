@@ -9,7 +9,8 @@
  *     different item of the same store (no identifying word in common in the titles) and it
  *     is not the oldest listing —
  *     then `SHOPIFY-P<oldest product id of that item>`, shared by that item's listings.
- *  2. Shopify listings (shop + product) that share an effective SKU are one Voltship product.
+ *  2. Shopify listings of the same store that share an effective SKU are one Voltship product.
+ *     Stores are independent markets (destination, carrier, COGS): they never share a product.
  */
 
 import { FALLBACK_SKU_PREFIX, fallbackVariantSku } from "./sku";
@@ -158,8 +159,9 @@ export function resolveEffectiveSkus(variants: SkuVariant[]) {
 }
 
 /**
- * Listings (shop:productId) that are the same Voltship product: connected through any shared
- * effective SKU. Returns one array of listing keys per product.
+ * Listings (shop:productId) of ONE store that are the same Voltship product: connected through
+ * any shared effective SKU. Two stores never share a product (different market and COGS).
+ * Returns one array of listing keys per product.
  */
 export function groupListings(variants: Array<Pick<SkuVariant, "shopId" | "shopifyProductId"> & { sku: string | null }>) {
   const uf = new UnionFind();
@@ -169,7 +171,8 @@ export function groupListings(variants: Array<Pick<SkuVariant, "shopId" | "shopi
     const listing = listingKey(variant);
     listings.add(listing);
     uf.find(listing);
-    const sku = normSku(variant.sku);
+    // Stores never share products: each one is its own market (destination, carrier, COGS).
+    const sku = normSku(variant.sku) ? `${variant.shopId}|${normSku(variant.sku)}` : "";
     if (!sku) continue;
     const first = firstBySku.get(sku);
     if (first) uf.union(first, listing);

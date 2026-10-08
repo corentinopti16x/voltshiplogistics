@@ -1367,9 +1367,9 @@
       "create": "Create the sheet and complete it →",
       "linkPlaceholder": "…or link to an already quoted product",
       "link": "Link",
-      "footnote": "★ = title close to a product already quoted for this client. Shopify pages sharing a SKU (duplicates, A/B tests, other stores) are grouped into one product; \"Split\" when a page is actually another item. Link / merge = orders of these pages use the chosen product. Refreshed at every Shopify sync (10 min).",
+      "footnote": "★ = title close to a product already quoted for this client. Within one store, Shopify pages sharing a SKU (duplicates, A/B tests) are grouped into one product; each store keeps its own products (different market and COGS). \"Split\" when a page is actually another item. Refreshed at every Shopify sync (10 min).",
       "pages": "{count} Shopify pages",
-      "pagesDetail": "Show the grouped Shopify pages (same SKU)",
+      "pagesDetail": "Show the grouped Shopify pages (same SKU, same store)",
       "split": "Split",
       "splitHint": "This page is a different item reusing the same SKU: it gets its own Voltship SKU and its own product.",
       "relinkPlaceholder": "…or merge with another product"

@@ -53,14 +53,15 @@ describe("resolveEffectiveSkus", () => {
 });
 
 describe("groupListings", () => {
-  it("joins listings through any shared SKU, across shops", () => {
+  it("joins listings of one store through any shared SKU, never across stores", () => {
     const groups = groupListings([
       { shopId: "s1", shopifyProductId: "1", sku: "A" },
       { shopId: "s1", shopifyProductId: "1", sku: "B" },
+      { shopId: "s1", shopifyProductId: "5", sku: "b" },
       { shopId: "s2", shopifyProductId: "7", sku: "b" },
       { shopId: "s1", shopifyProductId: "3", sku: "C" },
     ]);
-    expect(groups.map((g) => g.sort())).toEqual([["s1:1", "s2:7"], ["s1:3"]]);
+    expect(groups.map((g) => g.sort())).toEqual([["s1:1", "s1:5"], ["s2:7"], ["s1:3"]]);
   });
 });
 

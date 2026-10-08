@@ -93,7 +93,7 @@ export async function linkShopifyProductAction(formData: FormData): Promise<void
       );
     }
   }
-  // The whole item follows: every Shopify page (other shops, duplicates) of the product it
+  // The whole item follows: every Shopify page of this store (duplicates, A/B tests) of the product it
   // was on moves to the chosen product; the product created automatically is then archived.
   const fromProductId = String(formData.get("from_product_id") ?? "");
   if (fromProductId && fromProductId !== product.id) {
@@ -107,11 +107,13 @@ export async function linkShopifyProductAction(formData: FormData): Promise<void
         .from("shopify_products_cache")
         .update({ imported_product_id: product.id })
         .eq("client_id", product.client_id)
+        .eq("shop_id", shopId)
         .eq("imported_product_id", from.id);
       await admin
         .from("sku_maps")
         .update({ airtable_record_id: product.airtable_record_id })
         .eq("client_id", product.client_id)
+        .eq("shop_id", shopId)
         .eq("airtable_record_id", from.airtable_record_id);
     }
   }

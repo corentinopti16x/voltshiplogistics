@@ -120,6 +120,15 @@ export async function loadProductTodo(options: { clientId?: string } = {}): Prom
   }));
 
   const todo = buildTodo(activeVariants, lite);
+  // Stores never share products: link targets are products of the same store, or quoted
+  // products not used by any store yet.
+  const productShops = new Map<string, Set<string>>();
+  for (const variant of variants) {
+    if (!variant.imported_product_id) continue;
+    const set = productShops.get(variant.imported_product_id) ?? new Set<string>();
+    set.add(variant.shop_id);
+    productShops.set(variant.imported_product_id, set);
+  }
   const shopById = new Map(shopRows.map((shop) => [shop.id as string, shop]));
   const items = todo.map((item) => {
     const shop = shopById.get(item.shopId);
@@ -132,7 +141,12 @@ export async function loadProductTodo(options: { clientId?: string } = {}): Prom
         : rankLinkCandidates(
             item.title,
             products
-              .filter((product) => product.client_id === item.clientId && product.id !== item.productId)
+              .filter(
+                (product) =>
+                  product.client_id === item.clientId &&
+                  product.id !== item.productId &&
+                  (!productShops.has(product.id) || productShops.get(product.id)!.has(item.shopId)),
+              )
               .map((product) => ({ id: product.id, title: product.title, sku: product.sku })),
           ).slice(0, 30);
     return {
