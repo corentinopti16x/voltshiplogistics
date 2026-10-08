@@ -1,4 +1,4 @@
-import { effectiveSku } from "./sku";
+import { lineSku, type SkuResolver } from "./sku";
 import { createHash } from "crypto";
 
 export type OrderLine = { sku: string; quantity: number; title?: string; price?: number };
@@ -53,12 +53,13 @@ export function cacheOrderLines(
     name?: string | null;
     price?: string | number | null;
   }>,
+  resolver?: SkuResolver | null,
 ): OrderLine[] {
   return lines
-    .filter((line) => effectiveSku(line.sku, line.variant_id))
+    .filter((line) => lineSku(line, resolver))
     .map((line) => {
       const title = (line.title ?? line.name ?? "").trim();
-      const out: OrderLine = { sku: effectiveSku(line.sku, line.variant_id)!, quantity: line.quantity };
+      const out: OrderLine = { sku: lineSku(line, resolver)!, quantity: line.quantity };
       if (title) out.title = title.slice(0, 200);
       const price = Number(line.price);
       if (line.price != null && Number.isFinite(price)) out.price = price;

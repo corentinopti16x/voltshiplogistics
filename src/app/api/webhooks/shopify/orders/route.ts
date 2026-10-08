@@ -1,3 +1,4 @@
+import { loadVariantSkuResolver } from "@/lib/shopify/sku-resolve";
 import { randomUUID } from "crypto";
 import { verifyShopifyWebhookHmac } from "@/lib/shopify/auth";
 import { shopifyAppCredentialsFor } from "@/lib/shopify/app-credentials";
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
     }
 
     const date = order.created_at.slice(0, 10);
-    const lines = cacheOrderLines(order.line_items);
+    const lines = cacheOrderLines(order.line_items, await loadVariantSkuResolver(shop.id));
     const orderUnits = order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
     // Decision already taken on this order's alert (vraie commande / abus) wins over the rule.
     const review: OrderReview | null = previousOrder.review;

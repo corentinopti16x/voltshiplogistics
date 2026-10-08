@@ -4,7 +4,12 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthContext } from "@/lib/auth/context";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { importShopifyVariantGroup, type ShopifyCacheVariant } from "@/lib/shopify/import-product";
+import {
+  importShopifyVariantGroup,
+  reconcileClientProducts,
+  type ShopifyCacheVariant,
+} from "@/lib/shopify/import-product";
+import { refreshClientEffectiveSkus } from "@/lib/shopify/sku-resolve";
 
 async function requireAdmin() {
   const ctx = await getAuthContext();
@@ -88,10 +93,57 @@ export async function linkShopifyProductAction(formData: FormData): Promise<void
       );
     }
   }
+  // The whole item follows: every Shopify page (other shops, duplicates) of the product it
+  // was on moves to the chosen product; the product created automatically is then archived.
+  const fromProductId = String(formData.get("from_product_id") ?? "");
+  if (fromProductId && fromProductId !== product.id) {
+    const { data: from } = await admin
+      .from("products_cache")
+      .select("id, client_id, airtable_record_id")
+      .eq("id", fromProductId)
+      .maybeSingle();
+    if (from && from.client_id === product.client_id) {
+      await admin
+        .from("shopify_products_cache")
+        .update({ imported_product_id: product.id })
+        .eq("client_id", product.client_id)
+        .eq("imported_product_id", from.id);
+      await admin
+        .from("sku_maps")
+        .update({ airtable_record_id: product.airtable_record_id })
+        .eq("client_id", product.client_id)
+        .eq("airtable_record_id", from.airtable_record_id);
+    }
+  }
   const firstSku = variants.find((variant) => variant.sku)?.sku ?? null;
   if (!product.sku && firstSku) {
     await admin.from("products_cache").update({ sku: firstSku }).eq("id", product.id);
   }
+  await reconcileClientProducts({ clientId: product.client_id }).catch(() => null);
   revalidateTodo();
   revalidatePath(`/[locale]/products/${product.id}`, "page");
+}
+
+/**
+ * "Séparer": this Shopify page is a different item that only shares the SKU of the others.
+ * It gets its own Voltship SKU (orders, sales and warehouse included) and its own product.
+ */
+export async function splitShopifyListingAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const shopId = String(formData.get("shop_id") ?? "");
+  const shopifyProductId = String(formData.get("shopify_product_id") ?? "");
+  const variants = await loadVariants(shopId, shopifyProductId);
+  if (variants.length === 0) throw new Error("Produit Shopify introuvable.");
+  const clientId = variants[0].client_id;
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("shopify_products_cache")
+    .update({ sku_split: true, imported_product_id: null })
+    .eq("shop_id", shopId)
+    .eq("shopify_product_id", shopifyProductId)
+    .eq("client_id", clientId);
+  if (error) throw new Error(error.message);
+  await refreshClientEffectiveSkus(clientId);
+  await reconcileClientProducts({ clientId });
+  revalidateTodo();
 }

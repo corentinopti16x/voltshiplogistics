@@ -51,6 +51,20 @@ describe("todo", () => {
     expect(items[0].skus).toEqual(["BRA-1", "BRA-2"]);
   });
 
+  it("shows a product once for all its Shopify pages, counting shared SKU sales once", () => {
+    const items = buildTodo(
+      [
+        variant({ id: "a", shopify_product_id: "p1", title: "AI Translator", sku: "T", units_90d: 100, imported_product_id: "vp1" }),
+        variant({ id: "b", shopify_product_id: "p2", title: "ECDF AI Translator", sku: "T", units_90d: 100, imported_product_id: "vp1" }),
+        variant({ id: "c", shop_id: "s2", shopify_product_id: "p9", title: "AI Translator", sku: "T2", units_90d: 5, imported_product_id: "vp1" }),
+      ],
+      [product({ title: "AI Translator", client_price: null })],
+    );
+    expect(items).toHaveLength(1);
+    expect(items[0].units90d).toBe(105);
+    expect(items[0].listings.map((l) => l.shopifyProductId)).toEqual(["p1", "p2", "p9"]);
+  });
+
   it("does not link a SKU of another client", () => {
     const items = buildTodo([variant()], [product({ client_id: "other", sku: "BRA-1" })]);
     expect(items[0].productId).toBeNull();

@@ -8,13 +8,23 @@ import {
   rankLinkCandidates,
   type ShopifyVariantLite,
   type TodoItem,
+  type TodoListing,
   type VoltshipProductLite,
 } from "@/lib/products/todo-core";
 
 export type TodoLinkCandidate = { id: string; title: string; sku: string | null; score: number };
 
 export type ProductTodo = {
-  items: Array<TodoItem & { clientName: string; shopDomain: string; candidates: TodoLinkCandidate[] }>;
+  items: Array<
+    Omit<TodoItem, "listings"> & {
+      clientName: string;
+      shopDomain: string;
+      /** Created automatically from Shopify: can still be re-linked to a quoted product. */
+      auto: boolean;
+      listings: Array<TodoListing & { shopDomain: string }>;
+      candidates: TodoLinkCandidate[];
+    }
+  >;
   required: number;
   optional: number;
 };
@@ -51,7 +61,7 @@ export async function loadProductTodo(options: { clientId?: string } = {}): Prom
   );
   const activeVariants = variants.filter((variant) => !variant.status || variant.status === "active");
 
-  const products = await pageAll<{
+  const allProducts = await pageAll<{
     id: string;
     client_id: string;
     title: string;
@@ -60,14 +70,21 @@ export async function loadProductTodo(options: { clientId?: string } = {}): Prom
     weight_g: number | null;
     client_price: number | null;
     shipping_channel: string | null;
+    migration_state: string | null;
+    lifecycle_status: string | null;
   }>((from, to) =>
     admin
       .from("products_cache")
-      .select("id, client_id, title, sku, airtable_record_id, weight_g, client_price, shipping_channel")
+      .select("id, client_id, title, sku, airtable_record_id, weight_g, client_price, shipping_channel, migration_state, lifecycle_status")
       .in("client_id", clientIds)
       .order("id")
       .range(from, to),
   );
+  // Duplicates merged by the Shopify sync are archived: never offered nor matched.
+  const products = allProducts.filter(
+    (product) => product.migration_state !== "ignored" && product.lifecycle_status !== "archived",
+  );
+  const autoIds = new Set(products.filter((p) => p.migration_state === "imported_auto").map((p) => p.id));
   const productIds = products.map((product) => product.id);
   const factory = new Map<string, number | null>();
   for (let i = 0; i < productIds.length; i += 300) {
@@ -103,27 +120,30 @@ export async function loadProductTodo(options: { clientId?: string } = {}): Prom
   }));
 
   const todo = buildTodo(activeVariants, lite);
-  // Voltship products already linked to some Shopify product are not offered as link targets.
-  const linked = new Set<string>();
-  for (const item of buildTodo(activeVariants, lite.map((p) => ({ ...p, weight_g: null })))) {
-    if (item.productId) linked.add(item.productId);
-  }
   const shopById = new Map(shopRows.map((shop) => [shop.id as string, shop]));
   const items = todo.map((item) => {
     const shop = shopById.get(item.shopId);
     const client = shop ? (Array.isArray(shop.clients) ? shop.clients[0] : shop.clients) : null;
-    const candidates = item.productId
-      ? []
-      : rankLinkCandidates(
-          item.title,
-          products
-            .filter((product) => product.client_id === item.clientId && !linked.has(product.id))
-            .map((product) => ({ id: product.id, title: product.title, sku: product.sku })),
-        ).slice(0, 30);
+    const auto = item.productId ? autoIds.has(item.productId) : false;
+    // Not linked, or linked to a product created automatically: offer the quoted products.
+    const candidates =
+      item.productId && !auto
+        ? []
+        : rankLinkCandidates(
+            item.title,
+            products
+              .filter((product) => product.client_id === item.clientId && product.id !== item.productId)
+              .map((product) => ({ id: product.id, title: product.title, sku: product.sku })),
+          ).slice(0, 30);
     return {
       ...item,
       clientName: (client as { name?: string } | null)?.name ?? "?",
       shopDomain: (shop?.shopify_domain as string | undefined) ?? "",
+      auto,
+      listings: item.listings.map((listing) => ({
+        ...listing,
+        shopDomain: (shopById.get(listing.shopId)?.shopify_domain as string | undefined) ?? "",
+      })),
       candidates,
     };
   });

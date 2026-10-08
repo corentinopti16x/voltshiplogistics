@@ -21,3 +21,15 @@ export function effectiveSku(
 export function isFallbackSku(sku: string | null | undefined) {
   return (sku ?? "").startsWith(FALLBACK_SKU_PREFIX);
 }
+
+/** Shopify variant id → effective SKU decided from the catalogue (see sku-groups.ts). */
+export type SkuResolver = Map<string, string>;
+
+/** Effective SKU of an order line: the catalogue's decision for its variant, else its own SKU / fallback. */
+export function lineSku(
+  line: { sku: string | null; variant_id?: string | number | null },
+  resolver?: SkuResolver | null,
+) {
+  const variantId = line.variant_id == null ? "" : String(line.variant_id);
+  return (variantId && resolver?.get(variantId)) || effectiveSku(line.sku, line.variant_id);
+}

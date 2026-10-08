@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { loadVariantSkuResolver } from "@/lib/shopify/sku-resolve";
 import {
   callEccang,
   EccangApiError,
@@ -21,6 +22,7 @@ import {
   mapProductToEccang,
   mapShopifyOrderToEccang,
   orderLinesForEccang,
+  toWarehouseItems,
   orderLinesWithoutSku,
   orderNumberOf,
   orderReferenceNo,
@@ -213,9 +215,14 @@ async function skuKnown(clientId: string, skus: string[]) {
     admin.from("products_cache").select("sku").eq("client_id", clientId).in("sku", skus),
   ]);
   const known = new Set<string>();
-  for (const row of maps ?? []) if (row.shopify_sku) known.add(row.shopify_sku);
+  const warehouse = new Map<string, string>();
+  for (const row of maps ?? []) {
+    if (!row.shopify_sku) continue;
+    known.add(row.shopify_sku);
+    if (row.eccang_sku?.trim()) warehouse.set(row.shopify_sku, row.eccang_sku.trim());
+  }
   for (const row of products ?? []) if (row.sku) known.add(row.sku);
-  return { known, unknown: skus.filter((sku) => !known.has(sku)) };
+  return { known, unknown: skus.filter((sku) => !known.has(sku)), warehouse };
 }
 
 async function pickShippingMethod(clientId: string, order: ShopifyOrderForEccang, items: ReturnType<typeof orderLinesForEccang>) {
@@ -278,9 +285,13 @@ export async function pushOrder(
     return { referenceNo, skipped: "already_pushed" as const };
   }
 
-  const items = orderLinesForEccang(order);
-  const missing = orderLinesWithoutSku(order);
-  const { unknown } = items.length ? await skuKnown(clientId, items.map((item) => item.product_sku)) : { unknown: [] };
+  // Effective SKU per variant, as decided from the catalogue (shared SKUs split by Voltship).
+  const resolver = await loadVariantSkuResolver(shop.id);
+  const items = orderLinesForEccang(order, resolver);
+  const missing = orderLinesWithoutSku(order, resolver);
+  const { unknown, warehouse } = items.length
+    ? await skuKnown(clientId, items.map((item) => item.product_sku))
+    : { unknown: [], warehouse: new Map<string, string>() };
   if (items.length === 0 || unknown.length > 0 || missing.length > 0) {
     const detail = [...unknown, ...missing].join(", ") || "—";
     await notify(clientId, "eccang_order_blocked", {
@@ -320,6 +331,7 @@ export async function pushOrder(
     warehouseCode,
     shippingMethod: method.code,
     shopDomain: shop.domain,
+    items: toWarehouseItems(items, warehouse),
   });
   const now = new Date().toISOString();
   try {

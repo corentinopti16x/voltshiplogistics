@@ -32,6 +32,8 @@ export type VoltshipProductLite = {
   mapped_skus: string[];
 };
 
+export type TodoListing = { shopId: string; shopifyProductId: string; title: string };
+
 export type TodoItem = {
   key: string;
   clientId: string;
@@ -44,6 +46,8 @@ export type TodoItem = {
   priority: "required" | "optional";
   productId: string | null;
   missing: TodoField[];
+  /** Every Shopify page (all shops) behind this item — duplicates, A/B tests, other stores. */
+  listings: TodoListing[];
 };
 
 export function missingFields(product: VoltshipProductLite | null): TodoField[] {
@@ -60,7 +64,11 @@ function norm(sku: string | null | undefined) {
   return (sku ?? "").trim().toLowerCase();
 }
 
-/** Groups variants per Shopify product and resolves the Voltship product (import link, then SKU). */
+/**
+ * Groups variants per Shopify product, resolves the Voltship product (import link, then SKU)
+ * and shows each Voltship product once, with all its Shopify pages. Sales are counted once
+ * per SKU: two pages selling the same SKU share the same sales.
+ */
 export function buildTodo(variants: ShopifyVariantLite[], products: VoltshipProductLite[]): TodoItem[] {
   const byId = new Map(products.map((product) => [product.id, product]));
   const bySku = new Map<string, VoltshipProductLite>();
@@ -75,7 +83,10 @@ export function buildTodo(variants: ShopifyVariantLite[], products: VoltshipProd
     const key = `${variant.shop_id}:${variant.shopify_product_id}`;
     groups.set(key, [...(groups.get(key) ?? []), variant]);
   }
-  const items: TodoItem[] = [];
+  const merged = new Map<
+    string,
+    { listingKey: string; product: VoltshipProductLite | null; variants: ShopifyVariantLite[]; listings: TodoListing[] }
+  >();
   for (const [key, group] of groups) {
     const first = group[0];
     let product: VoltshipProductLite | null = null;
@@ -86,21 +97,38 @@ export function buildTodo(variants: ShopifyVariantLite[], products: VoltshipProd
         null;
       if (product) break;
     }
+    const itemKey = product ? `product:${product.id}` : key;
+    const entry = merged.get(itemKey) ?? { listingKey: key, product, variants: [], listings: [] };
+    entry.variants.push(...group);
+    entry.listings.push({ shopId: first.shop_id, shopifyProductId: first.shopify_product_id, title: first.title });
+    merged.set(itemKey, entry);
+  }
+  const items: TodoItem[] = [];
+  for (const [key, entry] of merged) {
+    const { product, variants: group } = entry;
     const missing = missingFields(product);
     if (missing.length === 0) continue;
-    const units = group.reduce((sum, variant) => sum + Math.max(0, Number(variant.units_90d) || 0), 0);
+    const first = group[0];
+    const unitsBySku = new Map<string, number>();
+    for (const variant of group) {
+      const units = Math.max(0, Number(variant.units_90d) || 0);
+      const sku = norm(variant.sku) || `variant:${variant.id}`;
+      unitsBySku.set(sku, Math.max(unitsBySku.get(sku) ?? 0, units));
+    }
+    const units = [...unitsBySku.values()].reduce((sum, value) => sum + value, 0);
     items.push({
       key,
       clientId: first.client_id,
       shopId: first.shop_id,
       shopifyProductId: first.shopify_product_id,
-      title: first.title,
+      title: product?.title || first.title,
       photoUrl: group.find((variant) => variant.photo_url)?.photo_url ?? null,
       skus: [...new Set(group.map((variant) => variant.sku?.trim()).filter((sku): sku is string => Boolean(sku)))],
       units90d: units,
       priority: units > 0 ? "required" : "optional",
       productId: product?.id ?? null,
       missing,
+      listings: entry.listings,
     });
   }
   return items.sort(

@@ -1367,7 +1367,12 @@
       "create": "Créer la fiche et la compléter →",
       "linkPlaceholder": "…ou relier à un produit déjà coté",
       "link": "Relier",
-      "footnote": "★ = nom proche d'un produit déjà coté pour ce client. Relier = les commandes Shopify de ce produit utilisent la cotation existante. La liste se met à jour à chaque synchro Shopify (toutes les 10 min)."
+      "footnote": "★ = nom proche d'un produit déjà coté pour ce client. Les pages Shopify qui ont le même SKU (doublons, tests A/B, autres boutiques) sont regroupées en un seul produit ; « Séparer » si une page est en fait un autre article. Relier / regrouper = les commandes de ces pages utilisent la fiche choisie. Mise à jour à chaque synchro Shopify (10 min).",
+      "pages": "{count} pages Shopify",
+      "pagesDetail": "Voir les pages Shopify regroupées (même SKU)",
+      "split": "Séparer",
+      "splitHint": "Cette page est un autre article qui réutilise le même SKU : elle aura son propre SKU Voltship et sa propre fiche.",
+      "relinkPlaceholder": "…ou regrouper avec un autre produit"
     },
     "orders": {
       "kicker": "Opérations Voltship",
