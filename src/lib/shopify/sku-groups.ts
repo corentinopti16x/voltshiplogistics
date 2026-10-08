@@ -163,20 +163,30 @@ export function resolveEffectiveSkus(variants: SkuVariant[]) {
  * any shared effective SKU. Two stores never share a product (different market and COGS).
  * Returns one array of listing keys per product.
  */
-export function groupListings(variants: Array<Pick<SkuVariant, "shopId" | "shopifyProductId"> & { sku: string | null }>) {
+export function groupListings(
+  variants: Array<Pick<SkuVariant, "shopId" | "shopifyProductId"> & { sku: string | null; title?: string | null }>,
+) {
   const uf = new UnionFind();
-  const firstBySku = new Map<string, string>();
+  const firstByKey = new Map<string, string>();
   const listings = new Set<string>();
+  const join = (key: string, listing: string) => {
+    const first = firstByKey.get(key);
+    if (first) uf.union(first, listing);
+    else firstByKey.set(key, listing);
+  };
   for (const variant of variants) {
     const listing = listingKey(variant);
     listings.add(listing);
     uf.find(listing);
     // Stores never share products: each one is its own market (destination, carrier, COGS).
-    const sku = normSku(variant.sku) ? `${variant.shopId}|${normSku(variant.sku)}` : "";
-    if (!sku) continue;
-    const first = firstBySku.get(sku);
-    if (first) uf.union(first, listing);
-    else firstBySku.set(sku, listing);
+    const sku = normSku(variant.sku);
+    if (sku) join(`${variant.shopId}|sku|${sku}`, listing);
+    // Pages without any SKU (A/B tests) are recognised by their title: same store + same
+    // title (case, accents and punctuation aside) = same product.
+    if (isVariantIdFallback(variant.sku) && variant.title) {
+      const title = normTitle(variant.title);
+      if (title) join(`${variant.shopId}|title|${title}`, listing);
+    }
   }
   const groups = new Map<string, string[]>();
   for (const listing of listings) {
@@ -184,6 +194,25 @@ export function groupListings(variants: Array<Pick<SkuVariant, "shopId" | "shopi
     groups.set(root, [...(groups.get(root) ?? []), listing]);
   }
   return [...groups.values()];
+}
+
+/** `SHOPIFY-<variant id>`: the variant has no SKU at all on Shopify. */
+export function isVariantIdFallback(sku: string | null | undefined) {
+  return /^SHOPIFY-\d+$/.test((sku ?? "").trim());
+}
+
+/** `SHOPIFY-P…`: SKU given by Voltship to an item that reused another item's SKU. */
+export function isSplitSku(sku: string | null | undefined) {
+  return /^SHOPIFY-P\d+$/.test((sku ?? "").trim());
+}
+
+export function normTitle(title: string) {
+  return title
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\u4e00-\u9fff]+/g, " ")
+    .trim();
 }
 
 export type ProductCandidate = {

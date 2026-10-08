@@ -4,7 +4,8 @@ import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAirtableConfig } from "@/lib/airtable/config";
 import { createAirtableProduct } from "@/lib/airtable/products";
-import { groupListings, normSku, pickKeeper } from "@/lib/shopify/sku-groups";
+import { groupListings, isSplitSku, normSku, pickKeeper } from "@/lib/shopify/sku-groups";
+import { isFallbackSku } from "@/lib/shopify/sku";
 
 export type ShopifyCacheVariant = {
   id: string;
@@ -271,15 +272,24 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
     }
   };
 
-  for (const listingKeys of groupListings(active.map((v) => ({ shopId: v.shop_id, shopifyProductId: v.shopify_product_id, sku: v.sku })))) {
+  for (const listingKeys of groupListings(active.map((v) => ({ shopId: v.shop_id, shopifyProductId: v.shopify_product_id, sku: v.sku, title: v.title })))) {
     // Oldest listing first: its title names a new product.
     const group = listingKeys
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
       .flatMap((key) => byListing.get(key) ?? []);
     if (group.length === 0) continue;
     const shopId = group[0].shop_id;
+    // An item Voltship split off (it reused another item's SKU) never goes back to the product
+    // of that other item, even if older imports linked it there.
+    const groupSkus = new Set(group.map((variant) => normSku(variant.sku)).filter(Boolean));
+    const splitOff = group.every((variant) => isSplitSku(variant.sku));
+    const ownedElsewhere = (product: ReconcileProduct) =>
+      splitOff && Boolean(product.sku) && !isFallbackSku(product.sku) && !groupSkus.has(normSku(product.sku));
     const ofThisShop = (product: ReconcileProduct | undefined): product is ReconcileProduct =>
-      Boolean(product) && !archived.has(product!.id) && (home.get(product!.id) ?? shopId) === shopId;
+      Boolean(product) &&
+      !archived.has(product!.id) &&
+      (home.get(product!.id) ?? shopId) === shopId &&
+      !ownedElsewhere(product!);
 
     // Products of another store this listing was linked to are not reused (other market).
     const candidates = [
@@ -295,7 +305,7 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
       // before the client created it on Shopify).
       for (const variant of group) {
         const product = variant.sku ? ownerFor(shopId, variant.sku) : undefined;
-        if (product && !archived.has(product.id) && !candidates.some((c) => c.id === product.id)) candidates.push(product);
+        if (ofThisShop(product) && !candidates.some((c) => c.id === product.id)) candidates.push(product);
       }
     }
     if (candidates.length === 0) {
@@ -326,7 +336,7 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
         live.has(current) &&
         !loserIds.has(current) &&
         !archived.has(current) &&
-        (home.get(current) ?? shopId) === shopId;
+        ofThisShop(live.get(current));
       if (keep) continue; // linked by hand to another product of this store: respected
       if (current !== keeper.id) {
         await admin

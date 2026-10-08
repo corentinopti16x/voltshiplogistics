@@ -65,6 +65,19 @@ describe("groupListings", () => {
   });
 });
 
+describe("groupListings without SKU", () => {
+  it("joins pages without SKU of one store that have the same title", () => {
+    const groups = groupListings([
+      { shopId: "s1", shopifyProductId: "1", sku: "SHOPIFY-11", title: "Magnesium Complex" },
+      { shopId: "s1", shopifyProductId: "2", sku: "SHOPIFY-22", title: "Magnesium complex." },
+      { shopId: "s1", shopifyProductId: "3", sku: "SHOPIFY-33", title: "Magnésium Complex" },
+      { shopId: "s2", shopifyProductId: "4", sku: "SHOPIFY-44", title: "Magnesium Complex" },
+      { shopId: "s1", shopifyProductId: "5", sku: "SHOPIFY-55", title: "Collagène" },
+    ]);
+    expect(groups.map((g) => g.sort())).toEqual([["s1:1", "s1:2", "s1:3"], ["s2:4"], ["s1:5"]]);
+  });
+});
+
 describe("pickKeeper", () => {
   it("prefers a hand-made product, then the most complete, then the oldest", () => {
     const keeper = pickKeeper([
