@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "@/i18n/routing";
 import {
   flagSourcingAction,
@@ -60,11 +60,24 @@ type WorkRow = {
 export function SourcingWorkForm({
   product,
   work,
+  fxRmbPerEur,
 }: {
   product: ProductRow;
   work: WorkRow;
+  /** Pricing settings rate (RMB per €), used to show the factory price in €. */
+  fxRmbPerEur: number;
 }) {
   const router = useRouter();
+  const [factoryRmb, setFactoryRmb] = useState<string>(
+    work?.factory_purchase_price != null ? String(work.factory_purchase_price) : "",
+  );
+  const [clientPrice, setClientPrice] = useState<string>(
+    product.client_price != null ? String(product.client_price) : "",
+  );
+  const factoryEur =
+    factoryRmb.trim() && Number.isFinite(Number(factoryRmb)) && fxRmbPerEur > 0
+      ? Math.round((Number(factoryRmb) / fxRmbPerEur) * 100) / 100
+      : null;
   const [saveState, saveAction, saving] = useActionState(saveSourcingDraftAction, initial);
   const [sendState, sendAction, sending] = useActionState(sendQuoteAction, initial);
   const [flagState, flagAction, flagging] = useActionState(flagSourcingAction, initial);
@@ -93,14 +106,18 @@ export function SourcingWorkForm({
             <Input
               name="client_price"
               label="Client product price"
+              unit="€ EUR"
+              hint="Per unit, before the tier commission (added automatically)."
               type="number"
               min="0"
               step="0.0001"
-              defaultValue={product.client_price ?? ""}
+              value={clientPrice}
+              onChange={(event) => setClientPrice(event.target.value)}
             />
             <Input
               name="weight_g"
-              label="Unit weight (g)"
+              label="Unit weight"
+              unit="g"
               type="number"
               min="1"
               defaultValue={product.weight_g ?? ""}
@@ -133,7 +150,8 @@ export function SourcingWorkForm({
             </label>
             <Input
               name="production_lead_days"
-              label="Production lead (days)"
+              label="Production lead"
+              unit="days"
               type="number"
               min="0"
               defaultValue={product.production_lead_days ?? ""}
@@ -141,6 +159,7 @@ export function SourcingWorkForm({
             <Input
               name="moq"
               label="MOQ"
+              unit="units"
               type="number"
               min="0"
               defaultValue={product.moq ?? ""}
@@ -168,14 +187,35 @@ export function SourcingWorkForm({
             Never shown to clients.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <Input
-              name="factory_purchase_price"
-              label="Factory purchase price"
-              type="number"
-              min="0"
-              step="0.0001"
-              defaultValue={work?.factory_purchase_price ?? ""}
-            />
+            <div className="flex flex-col gap-1">
+              <Input
+                name="factory_purchase_price"
+                label="Factory purchase price"
+                unit="¥ RMB"
+                type="number"
+                min="0"
+                step="0.0001"
+                value={factoryRmb}
+                onChange={(event) => setFactoryRmb(event.target.value)}
+              />
+              {factoryEur != null ? (
+                <p className="text-xs text-amber-900">
+                  = {factoryEur.toFixed(2)} € at {fxRmbPerEur} ¥/€
+                  {String(factoryEur) !== clientPrice ? (
+                    <>
+                      {" · "}
+                      <button
+                        type="button"
+                        onClick={() => setClientPrice(String(factoryEur))}
+                        className="cursor-pointer font-semibold underline"
+                      >
+                        Use as client product price
+                      </button>
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
+            </div>
             <Input
               name="sourcing_location"
               label="Sourcing location"
@@ -259,15 +299,25 @@ export function SourcingWorkForm({
 
 function Input({
   label,
+  unit,
+  hint,
   ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+}: React.InputHTMLAttributes<HTMLInputElement> & { label: string; unit?: string; hint?: string }) {
   return (
     <label className="flex flex-col gap-1 text-sm">
-      <span className="text-[var(--muted)]">{label}</span>
-      <input
-        {...props}
-        className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
-      />
+      <span className="text-[var(--muted)]">
+        {label}
+        {unit ? <span className="font-semibold text-[var(--ink)]"> ({unit})</span> : null}
+      </span>
+      <span className="flex items-stretch overflow-hidden rounded-md border border-[var(--line)] bg-white">
+        <input {...props} className="min-w-0 flex-1 px-3 py-2 outline-none" />
+        {unit ? (
+          <span className="flex items-center border-l border-[var(--line)] bg-[var(--card-soft)] px-2.5 text-xs font-semibold whitespace-nowrap text-[var(--muted)]">
+            {unit}
+          </span>
+        ) : null}
+      </span>
+      {hint ? <span className="text-xs text-[var(--muted)]">{hint}</span> : null}
     </label>
   );
 }
