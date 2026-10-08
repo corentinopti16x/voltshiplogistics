@@ -5,7 +5,7 @@ import { computeVoltshipMargin, extractCarrierCostRmb, rmbToEur, sumMargins } fr
 
 // fx 7.5, handling cost 0.5, market fx 7.8; the per-parcel supplement defaults to 0 since the
 // grid is all-inclusive — these tests keep the legacy 3 € to exercise the pass-through.
-const settings = { ...DEFAULT_PRICING_SETTINGS, eu_parcel_tax_eur: 3 };
+const settings = { ...DEFAULT_PRICING_SETTINGS, eu_parcel_tax_eur: 3, handling_cost_eur: 0.5 };
 
 const cells: RateCell[] = [
   {
@@ -104,7 +104,7 @@ describe("computeVoltshipMargin", () => {
     expect(result.costs.taxPassThrough).toBe(0);
     expect(result.margin.transport).toBe(3); // 9 − 6
     expect(result.margin.sourcing).toBe(15); // 33 − 18
-    expect(result.margin.perUnit).toBeCloseTo((15 + 3 + 0.5) / 3, 4);
+    expect(result.margin.perUnit).toBeCloseTo((15 + 3 + 1) / 3, 4); // handling 1,50 € for 3 units − 0,50 € cost
   });
 
   it("returns null sourcing margin and flags a missing factory price", () => {

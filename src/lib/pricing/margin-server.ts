@@ -14,6 +14,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   COGS_MATRIX_QUANTITIES,
   calculateCogs,
+  discountedShipping,
+  handlingForQuantity,
   findRateCell,
   parseParcelDimensions,
   type RateCell,
@@ -25,7 +27,7 @@ import {
   getProductMarkets,
   type ClientPricingProfile,
 } from "@/lib/pricing/server";
-import { readPricingSettings, type PricingSettings } from "@/lib/pricing/settings";
+import { handlingLadderFrom, readPricingSettings, type PricingSettings } from "@/lib/pricing/settings";
 import { CLIENT_PRODUCT_SELECT, serializeClientProduct } from "@/lib/products/visibility";
 import type { ProductRow } from "@/lib/products/types";
 import { unpackOrderLines } from "@/lib/shopify/order-cache";
@@ -167,6 +169,8 @@ function marginForParcel(
         quantity,
         dimensionsCm,
         volumetricDivisors: settings.volumetric_divisors,
+        handlingLadder: handlingLadderFrom(settings),
+        fxRmbPerEur: settings.fx_rmb_per_eur,
         ...profile,
       })
     : null;
@@ -415,8 +419,8 @@ function marginForOrder(
     ? {
         product: productTotal,
         commission,
-        shipping: cell.price - cell.price * discount,
-        handling: Math.max(0, profile.handlingFee),
+        shipping: discountedShipping(cell.price, discount, cell.carrierCostRmb, settings.fx_rmb_per_eur),
+        handling: handlingForQuantity(profile.handlingFee, units, handlingLadderFrom(settings)),
       }
     : null;
   let factoryCostRmb: number | null = 0;

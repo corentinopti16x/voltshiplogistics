@@ -337,6 +337,13 @@ export async function savePricingSettingsAction(
     eu_parcel_tax_eur: numberField(formData, "eu_parcel_tax_eur", DEFAULT_PRICING_SETTINGS.eu_parcel_tax_eur),
     handling_cost_eur: numberField(formData, "handling_cost_eur", DEFAULT_PRICING_SETTINGS.handling_cost_eur),
     fx_market_rate: numberField(formData, "fx_market_rate", DEFAULT_PRICING_SETTINGS.fx_market_rate),
+    handling_step2_eur: numberField(formData, "handling_step2_eur", DEFAULT_PRICING_SETTINGS.handling_step2_eur),
+    handling_step3_eur: numberField(formData, "handling_step3_eur", DEFAULT_PRICING_SETTINGS.handling_step3_eur),
+    handling_extra_unit_eur: numberField(
+      formData,
+      "handling_extra_unit_eur",
+      DEFAULT_PRICING_SETTINGS.handling_extra_unit_eur,
+    ),
   });
   const admin = createAdminClient();
   const { error: writeError } = await writePricingSettings(admin, settings);
@@ -564,6 +571,9 @@ function sanitizeOverrides(raw: unknown): ImportOverrides {
       "eu_parcel_tax_eur",
       "handling_cost_eur",
       "fx_market_rate",
+      "handling_step2_eur",
+      "handling_step3_eur",
+      "handling_extra_unit_eur",
     ] as const) {
       const value = Number(settings[key]);
       if (Number.isFinite(value)) cleanSettings[key] = value;

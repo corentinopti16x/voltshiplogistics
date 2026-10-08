@@ -25,7 +25,7 @@ import {
   type CarrierRules,
 } from "@/lib/domain/carrier-rules";
 import { getProductRequest, type ProductRow } from "@/lib/products/types";
-import { readPricingSettings } from "./settings";
+import { handlingLadderFrom, readPricingSettings } from "./settings";
 
 export type ClientPricingProfile = {
   commissionPct: number;
@@ -127,7 +127,7 @@ export async function loadRateCells(
   const { data } = await admin
     .from("rate_grid_cells")
     .select(
-      "grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, ioss_required",
+      "grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, ioss_required, carrier_cost_rmb",
     )
     .eq("grid_version", gridVersion)
     .in("destination", destinations)
@@ -143,6 +143,8 @@ export async function loadRateCells(
     deliveryRange: cell.delivery_range,
     lineName: cell.line_name || null,
     iossRequired: cell.ioss_required === true,
+    // Internal: only used so the palier discount never prices transport below cost.
+    carrierCostRmb: cell.carrier_cost_rmb == null ? null : Number(cell.carrier_cost_rmb),
   }));
 }
 
@@ -260,6 +262,8 @@ export async function calculateProductCogsMatrix(
         volumetricDivisors: settings.volumetric_divisors,
         carrierPreference: selection.preference,
         allowedLines,
+        handlingLadder: handlingLadderFrom(settings),
+        fxRmbPerEur: settings.fx_rmb_per_eur,
       };
       return {
         destination,

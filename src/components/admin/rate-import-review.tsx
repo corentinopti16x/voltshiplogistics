@@ -25,6 +25,9 @@ const SETTING_KEYS: NumericPricingSetting[] = [
   "eu_parcel_tax_eur",
   "handling_cost_eur",
   "fx_market_rate",
+  "handling_step2_eur",
+  "handling_step3_eur",
+  "handling_extra_unit_eur",
 ];
 
 function pricingLabel(line: ParsedLine, t: ReturnType<typeof useTranslations>) {
@@ -334,6 +337,9 @@ export function RateImportReviewPanel({ initial }: { initial: RateImportReview }
                 ["eu_parcel_tax_eur", t("step2.settings.euTax"), "0.05"],
                 ["handling_cost_eur", t("step2.settings.handlingCost"), "0.05"],
                 ["fx_market_rate", t("step2.settings.fxMarket"), "0.01"],
+                ["handling_step2_eur", t("step2.settings.handlingStep2"), "0.05"],
+                ["handling_step3_eur", t("step2.settings.handlingStep3"), "0.05"],
+                ["handling_extra_unit_eur", t("step2.settings.handlingExtraUnit"), "0.05"],
               ] as const
             ).map(([key, label, step]) => (
               <label key={key} className="flex flex-col gap-1 text-sm">
