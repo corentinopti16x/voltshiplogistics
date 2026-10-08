@@ -1,5 +1,6 @@
 import "server-only";
 
+import { autoImportShopProducts } from "@/lib/shopify/import-product";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptShopifyToken, encryptShopifyToken } from "./crypto";
 import { unpackOrderLines } from "./order-cache";
@@ -81,6 +82,7 @@ export async function syncConnectedShopifyShops(options: { days?: number } = {})
         shop: shop.shopify_domain,
         accessToken,
       });
+      await autoImportShopProducts({ clientId: shop.client_id, shopId: shop.id }).catch(() => null);
       await admin
         .from("shops")
         .update({ last_synced_at: new Date().toISOString(), sync_error: null })
@@ -154,7 +156,9 @@ export async function classifyAllProducts() {
     });
     // Migrated products were already selling on the client's store: they are winners
     // unless sales actually drop (declining/dead), never back to testing.
-    const migrated = (product.migration_state ?? "").startsWith("imported");
+    // Manual imports were chosen because they sell; automatic ones follow their real sales.
+    const autoImported = product.migration_state === "imported_auto";
+    const migrated = (product.migration_state ?? "").startsWith("imported") && !autoImported;
     const status = migrated && classified === "testing" ? "winning" : classified;
     if (status === product.lifecycle_status) continue;
 
@@ -172,6 +176,13 @@ export async function classifyAllProducts() {
       .update({ lifecycle_status: status })
       .eq("id", product.id)
       .eq("client_id", product.client_id);
+    // No notification for the first classification of a freshly auto-imported product
+    // (a store connection would otherwise send one message per product).
+    const fresh = autoImported && Date.now() - Date.parse(product.created_at) < 3 * 86400000;
+    if (fresh) {
+      changed += 1;
+      continue;
+    }
     await createNotification({
       clientId: product.client_id,
       type: "lifecycle_changed",

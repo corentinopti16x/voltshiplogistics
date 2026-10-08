@@ -4,6 +4,7 @@
  */
 
 import type { ProductRow } from "@/lib/products/types";
+import { effectiveSku } from "../shopify/sku";
 
 // --- Reference numbers ---------------------------------------------------------------
 
@@ -235,6 +236,7 @@ export type ShopifyOrderForEccang = {
   shipping_address?: ShopifyAddress | null;
   line_items: Array<{
     sku: string | null;
+    variant_id?: number | string | null;
     quantity: number;
     title?: string | null;
     name?: string | null;
@@ -284,7 +286,7 @@ export function orderLinesForEccang(order: ShopifyOrderForEccang) {
   const merged = new Map<string, EccangOrderItem>();
   for (const line of order.line_items) {
     if (line.requires_shipping === false) continue;
-    const sku = line.sku?.trim();
+    const sku = effectiveSku(line.sku, line.variant_id);
     if (!sku || !(line.quantity > 0)) continue;
     const current = merged.get(sku);
     if (current) {
@@ -304,7 +306,7 @@ export function orderLinesForEccang(order: ShopifyOrderForEccang) {
 /** Lines without a SKU (cannot be pushed) — used for the "SKU inconnu" notification. */
 export function orderLinesWithoutSku(order: ShopifyOrderForEccang) {
   return order.line_items
-    .filter((line) => line.requires_shipping !== false && !line.sku?.trim())
+    .filter((line) => line.requires_shipping !== false && !effectiveSku(line.sku, line.variant_id))
     .map((line) => (line.title ?? line.name ?? "?").trim());
 }
 

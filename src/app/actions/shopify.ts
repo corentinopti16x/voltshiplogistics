@@ -1,5 +1,6 @@
 "use server";
 
+import { autoImportShopProducts } from "@/lib/shopify/import-product";
 import { revalidatePath } from "next/cache";
 import { getAuthContext } from "@/lib/auth/context";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -43,6 +44,7 @@ export async function syncShopAction(shopId: string): Promise<void> {
       shop: shop.shopify_domain,
       accessToken,
     });
+    await autoImportShopProducts({ clientId: shop.client_id, shopId: shop.id }).catch(() => null);
     await admin
       .from("shops")
       .update({ last_synced_at: new Date().toISOString(), sync_error: null })

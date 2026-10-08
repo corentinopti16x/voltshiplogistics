@@ -5,6 +5,7 @@ import {
   verifyShopifyQueryHmac,
   type OAuthState,
 } from "@/lib/shopify/auth";
+import { autoImportShopProducts } from "@/lib/shopify/import-product";
 import {
   backfillShopifyOrders,
   exchangeShopifyCode,
@@ -88,6 +89,7 @@ export async function GET(request: Request) {
         shop,
         accessToken: token.access_token,
       });
+      await autoImportShopProducts({ clientId: state.clientId, shopId: saved.id }).catch(() => null);
     } catch (syncFailure) {
       syncError = syncFailure instanceof Error ? syncFailure.message : "Initial sync failed.";
     }
