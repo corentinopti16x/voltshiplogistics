@@ -6,7 +6,8 @@
  *
  *  1. Every Shopify variant gets an *effective SKU* — its own SKU, or `SHOPIFY-<variant id>`
  *     when it has none, when the admin split it, or when its SKU is also used by a clearly
- *     different item (different words in the titles) and it is not the oldest listing —
+ *     different item of the same store (no identifying word in common in the titles) and it
+ *     is not the oldest listing —
  *     then `SHOPIFY-P<oldest product id of that item>`, shared by that item's listings.
  *  2. Shopify listings (shop + product) that share an effective SKU are one Voltship product.
  */
@@ -105,7 +106,9 @@ export function resolveEffectiveSkus(variants: SkuVariant[]) {
       continue;
     }
     result.set(variant.key, raw);
-    const key = normSku(raw);
+    // Compared inside one store only: the same SKU in two stores is the same item, even when
+    // the titles are in two languages ("Collier Maman" / "Mom Necklace").
+    const key = `${variant.shopId}|${normSku(raw)}`;
     bySku.set(key, [...(bySku.get(key) ?? []), variant]);
   }
 

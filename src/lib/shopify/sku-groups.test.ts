@@ -26,6 +26,14 @@ describe("resolveEffectiveSkus", () => {
     expect(skus.get("case2")).toBe("SHOPIFY-P200");
   });
 
+  it("never splits a SKU across stores (translated titles)", () => {
+    const skus = resolveEffectiveSkus([
+      v("fr", "100", "Collier Maman — prénoms gravés", "COL-1"),
+      v("us", "200", "Mom Necklace — engraved names", "COL-1", { shopId: "s2" }),
+    ]);
+    expect([...skus.values()]).toEqual(["COL-1", "COL-1"]);
+  });
+
   it("falls back to the variant id without SKU or when split by the admin", () => {
     const skus = resolveEffectiveSkus([v("a", "1", "Mug", null), v("b", "2", "Mug", "MUG", { split: true })]);
     expect(skus.get("a")).toBe("SHOPIFY-9a");
