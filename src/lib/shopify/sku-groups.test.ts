@@ -26,6 +26,14 @@ describe("resolveEffectiveSkus", () => {
     expect(skus.get("case2")).toBe("SHOPIFY-P200");
   });
 
+  it("never splits a SKU across stores (translated titles)", () => {
+    const skus = resolveEffectiveSkus([
+      v("fr", "100", "Collier Maman — prénoms gravés", "COL-1"),
+      v("us", "200", "Mom Necklace — engraved names", "COL-1", { shopId: "s2" }),
+    ]);
+    expect([...skus.values()]).toEqual(["COL-1", "COL-1"]);
+  });
+
   it("falls back to the variant id without SKU or when split by the admin", () => {
     const skus = resolveEffectiveSkus([v("a", "1", "Mug", null), v("b", "2", "Mug", "MUG", { split: true })]);
     expect(skus.get("a")).toBe("SHOPIFY-9a");
@@ -45,14 +53,15 @@ describe("resolveEffectiveSkus", () => {
 });
 
 describe("groupListings", () => {
-  it("joins listings through any shared SKU, across shops", () => {
+  it("joins listings of one store through any shared SKU, never across stores", () => {
     const groups = groupListings([
       { shopId: "s1", shopifyProductId: "1", sku: "A" },
       { shopId: "s1", shopifyProductId: "1", sku: "B" },
+      { shopId: "s1", shopifyProductId: "5", sku: "b" },
       { shopId: "s2", shopifyProductId: "7", sku: "b" },
       { shopId: "s1", shopifyProductId: "3", sku: "C" },
     ]);
-    expect(groups.map((g) => g.sort())).toEqual([["s1:1", "s2:7"], ["s1:3"]]);
+    expect(groups.map((g) => g.sort())).toEqual([["s1:1", "s1:5"], ["s2:7"], ["s1:3"]]);
   });
 });
 

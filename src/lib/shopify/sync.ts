@@ -96,10 +96,6 @@ export async function syncConnectedShopifyShops(options: { days?: number } = {})
         .eq("id", shop.id);
     }
   }
-  // One product per real item, across all the shops of each client.
-  for (const clientId of new Set((shops ?? []).map((shop) => shop.client_id as string))) {
-    await reconcileClientProducts({ clientId }).catch(() => null);
-  }
   return { scanned: (shops ?? []).length, synced, errors };
 }
 
@@ -201,4 +197,22 @@ export async function classifyAllProducts() {
     changed += 1;
   }
   return { scanned: (products ?? []).length, changed };
+}
+
+/**
+ * One Voltship product per real item, across all the shops of each client (own cron, so a
+ * long Shopify sync can never cut it off).
+ */
+export async function reconcileAllClients() {
+  const admin = createAdminClient();
+  const { data: shops } = await admin.from("shops").select("client_id").eq("status", "active");
+  const results: Record<string, unknown> = {};
+  for (const clientId of new Set((shops ?? []).map((shop) => shop.client_id as string))) {
+    try {
+      results[clientId] = await reconcileClientProducts({ clientId });
+    } catch (error) {
+      results[clientId] = { error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+  return results;
 }

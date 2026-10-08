@@ -125,14 +125,33 @@ async function pageRows<T>(fetchPage: (from: number, to: number) => PromiseLike<
   return rows;
 }
 
+/** Store each product belongs to: the one most of its linked Shopify variants come from. */
+function productHomes(variants: Array<{ shop_id: string; imported_product_id: string | null }>) {
+  const counts = new Map<string, Map<string, number>>();
+  for (const variant of variants) {
+    if (!variant.imported_product_id) continue;
+    const perShop = counts.get(variant.imported_product_id) ?? new Map<string, number>();
+    perShop.set(variant.shop_id, (perShop.get(variant.shop_id) ?? 0) + 1);
+    counts.set(variant.imported_product_id, perShop);
+  }
+  const home = new Map<string, string>();
+  for (const [productId, perShop] of counts) {
+    const best = [...perShop.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+    home.set(productId, best[0]);
+  }
+  return home;
+}
+
 function isLive(product: Pick<ReconcileProduct, "migration_state" | "lifecycle_status">) {
   return product.migration_state !== "ignored" && product.lifecycle_status !== "archived";
 }
 
 /**
- * One Voltship product per real item, for the whole client (every shop at once):
- *  - Shopify listings sharing an (effective) SKU — duplicate pages, A/B tests, the same item
- *    in several stores — are one product; new listings / variants join it automatically;
+ * One Voltship product per real item and per store (each store is its own market: destination,
+ * carrier, COGS — two stores never share a product):
+ *  - Shopify listings of a store sharing an (effective) SKU — duplicate pages, A/B tests —
+ *    are one product; new listings / variants join it automatically;
+ *  - a listing linked to another store's product (older imports) gets its own product;
  *  - a listing whose SKU is unknown becomes a new product ("à compléter");
  *  - duplicates created automatically and still empty are merged into the kept product
  *    (archived, never deleted); products filled by hand are never touched;
@@ -191,13 +210,25 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
   const isAuto = (product: ReconcileProduct) => product.migration_state === "imported_auto";
   const disposable = (product: ReconcileProduct) => isAuto(product) && !hasData(product) && !referenced.has(product.id);
 
+  // Each store is its own market (destination, carrier, COGS): a product belongs to ONE store —
+  // the one most of its Shopify variants come from.
+  const home = productHomes(variants);
   const byRecord = new Map([...live.values()].map((product) => [product.airtable_record_id, product]));
-  const owner = new Map<string, ReconcileProduct>();
-  for (const product of live.values()) if (product.sku) owner.set(normSku(product.sku), product);
+  const ownerByShop = new Map<string, ReconcileProduct>();
   for (const map of maps) {
     const product = map.airtable_record_id ? byRecord.get(map.airtable_record_id) : undefined;
-    if (product && map.shopify_sku) owner.set(normSku(map.shopify_sku), product);
+    if (product && map.shopify_sku && map.shop_id) ownerByShop.set(`${map.shop_id}|${normSku(map.shopify_sku)}`, product);
   }
+  const ownerBySku = new Map<string, ReconcileProduct>();
+  for (const product of live.values()) if (product.sku) ownerBySku.set(normSku(product.sku), product);
+  /** Product already owning this SKU in this store (or quoted and not used by any store yet). */
+  const ownerFor = (shopId: string, sku: string) => {
+    const mapped = ownerByShop.get(`${shopId}|${normSku(sku)}`);
+    if (mapped && (home.get(mapped.id) ?? shopId) === shopId) return mapped;
+    const own = ownerBySku.get(normSku(sku));
+    if (own && (home.get(own.id) ?? shopId) === shopId) return own;
+    return undefined;
+  };
   const mapKey = (shopId: string | null, sku: string) => `${shopId ?? ""}|${sku}`;
   const currentMap = new Map(
     maps
@@ -217,7 +248,7 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
   let linked = 0;
   let merged = 0;
 
-  const archive = async (loser: ReconcileProduct, keeper: ReconcileProduct | null) => {
+  const archive = async (loser: ReconcileProduct, keeper: ReconcileProduct | null, shopId: string | null) => {
     if (archived.has(loser.id)) return;
     archived.add(loser.id);
     // Its SKU is released so a SKU always resolves to one live product (kept in the request notes).
@@ -230,11 +261,12 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
       keeper.sku = loser.sku;
       await admin.from("products_cache").update({ sku: loser.sku }).eq("id", keeper.id).is("sku", null);
     }
-    if (keeper) {
+    if (keeper && shopId) {
       await admin
         .from("sku_maps")
         .update({ airtable_record_id: keeper.airtable_record_id })
         .eq("client_id", clientId)
+        .eq("shop_id", shopId)
         .eq("airtable_record_id", loser.airtable_record_id);
     }
   };
@@ -245,19 +277,24 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
       .flatMap((key) => byListing.get(key) ?? []);
     if (group.length === 0) continue;
+    const shopId = group[0].shop_id;
+    const ofThisShop = (product: ReconcileProduct | undefined): product is ReconcileProduct =>
+      Boolean(product) && !archived.has(product!.id) && (home.get(product!.id) ?? shopId) === shopId;
 
+    // Products of another store this listing was linked to are not reused (other market).
     const candidates = [
       ...new Map(
         group
           .map((variant) => (variant.imported_product_id ? live.get(variant.imported_product_id) : undefined))
-          .filter((product): product is ReconcileProduct => Boolean(product) && !archived.has(product!.id))
+          .filter(ofThisShop)
           .map((product) => [product.id, product]),
       ).values(),
     ];
     if (candidates.length === 0) {
-      // Not linked yet: a product already owning one of the SKUs (quoted before the client created it on Shopify).
+      // Not linked yet: a product already owning one of the SKUs in this store (or quoted
+      // before the client created it on Shopify).
       for (const variant of group) {
-        const product = variant.sku ? owner.get(normSku(variant.sku)) : undefined;
+        const product = variant.sku ? ownerFor(shopId, variant.sku) : undefined;
         if (product && !archived.has(product.id) && !candidates.some((c) => c.id === product.id)) candidates.push(product);
       }
     }
@@ -283,8 +320,14 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
     const loserIds = new Set(losers.map((product) => product.id));
     for (const variant of group) {
       const current = variant.imported_product_id;
-      const keep = current && current !== keeper.id && live.has(current) && !loserIds.has(current) && !archived.has(current);
-      if (keep) continue; // linked by hand to another product: respected
+      const keep =
+        current &&
+        current !== keeper.id &&
+        live.has(current) &&
+        !loserIds.has(current) &&
+        !archived.has(current) &&
+        (home.get(current) ?? shopId) === shopId;
+      if (keep) continue; // linked by hand to another product of this store: respected
       if (current !== keeper.id) {
         await admin
           .from("shopify_products_cache")
@@ -308,7 +351,7 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
       }
     }
     for (const loser of losers) {
-      await archive(loser, keeper);
+      await archive(loser, keeper, shopId);
       merged += 1;
     }
   }
@@ -317,7 +360,7 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
   const stillLinked = new Set([...finalLink.values()].filter(Boolean));
   for (const product of live.values()) {
     if (archived.has(product.id) || stillLinked.has(product.id) || !disposable(product)) continue;
-    await archive(product, null);
+    await archive(product, null, null);
     merged += 1;
   }
   return { created, linked, merged };
