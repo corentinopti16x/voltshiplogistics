@@ -66,7 +66,12 @@ export async function createProductAction(
     magnetic: formData.get("attr_magnetic") === "on",
   };
 
-  if (title.length < 2) return { ok: false, error: "Product name is required." };
+  if (title.length < 2) return { ok: false, error: "Indique le nom du produit." };
+  const hasPhoto = photo instanceof File && photo.size > 0;
+  if (!hasPhoto && !sourceUrl) {
+    return { ok: false, error: "Ajoute une photo ou un lien du produit (au moins l'un des deux)." };
+  }
+  if (!destinations) return { ok: false, error: "Indique au moins un marché de destination (ex. FR)." };
 
   const admin = createAdminClient();
   const id = randomUUID();
