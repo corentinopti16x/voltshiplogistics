@@ -44,7 +44,11 @@ export default async function AdminClientDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [t, ctx] = await Promise.all([getTranslations("admin"), getAuthContext()]);
+  const [t, tPage, ctx] = await Promise.all([
+    getTranslations("admin"),
+    getTranslations("admin.clientPage"),
+    getAuthContext(),
+  ]);
   const admin = createAdminClient();
   // Confidential margin card: voltship_admin only (the layout already redirects others).
   const isVoltshipAdmin = ctx?.role === "voltship_admin" && !ctx.impersonating;
@@ -123,7 +127,7 @@ export default async function AdminClientDetailPage({
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.voltshiplogistics.com").replace(/\/$/, "");
   // Shown to voltship_admin only (server-rendered): this is what gets pasted into the ECCANG OMS.
   const callbackUrl = `${appUrl}/api/webhooks/eccang?token=${
-    process.env.ECCANG_WEBHOOK_SECRET ?? "<définir ECCANG_WEBHOOK_SECRET>"
+    process.env.ECCANG_WEBHOOK_SECRET ?? tPage("webhookSecretMissing")
   }`;
 
   return (
@@ -154,19 +158,13 @@ export default async function AdminClientDetailPage({
 
       <section className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
         <h2 className="text-sm font-semibold">WhatsApp</h2>
-        <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
-          Numéro qui reçoit les notifications WhatsApp (devis prêt avec COGS 1 à 5, alertes stock,
-          passage en Winning / Declining). Vide = pas de WhatsApp.
-        </p>
+        <p className="mt-1 mb-4 text-sm text-[var(--muted)]">{tPage("whatsappLead")}</p>
         <WhatsappNumberForm clientId={client.id} current={whatsappNumber} />
       </section>
 
       <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">Palier & tarifs</h2>
-        <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
-          Appliqués à la grille transport active dans chaque calcul de COGS (les devis déjà acceptés
-          restent figés).
-        </p>
+        <h2 className="text-sm font-semibold">{tPage("pricingTitle")}</h2>
+        <p className="mt-1 mb-4 text-sm text-[var(--muted)]">{tPage("pricingLead")}</p>
         <ClientPricingForm
           clientId={client.id}
           pricingTier={pricingTier}
@@ -179,10 +177,8 @@ export default async function AdminClientDetailPage({
       {clientMargin ? <ClientMarginCard data={clientMargin} /> : null}
 
       <section id="lifecycle" className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">Règles Winning / Declining</h2>
-        <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
-          Seuils utilisés pour classer les produits de ce client à chaque synchro Shopify.
-        </p>
+        <h2 className="text-sm font-semibold">{tPage("lifecycleTitle")}</h2>
+        <p className="mt-1 mb-4 text-sm text-[var(--muted)]">{tPage("lifecycleLead")}</p>
         <LifecycleThresholdForm
           clientId={client.id}
           thresholds={parseLifecycleThresholds(client.lifecycle_thresholds_json)}
@@ -190,12 +186,8 @@ export default async function AdminClientDetailPage({
       </section>
 
       <section id="carriers" className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">Lignes transport</h2>
-        <p className="mt-1 mb-4 text-sm text-[var(--muted)]">
-          Lignes que ce client peut utiliser par produit et par marché (décochée = masquée et jamais
-          utilisée), avec une ligne imposée par marché si besoin. Appliqué à chaque COGS et aux commandes
-          envoyées à ECCANG ; les devis acceptés restent figés.
-        </p>
+        <h2 className="text-sm font-semibold">{tPage("carriersTitle")}</h2>
+        <p className="mt-1 mb-4 text-sm text-[var(--muted)]">{tPage("carriersLead")}</p>
         <CarrierRulesForm
           clientId={client.id}
           lines={carrierLines}
@@ -235,7 +227,9 @@ export default async function AdminClientDetailPage({
                 <li key={user.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
                   <span className="min-w-0 truncate">
                     {user.email}
-                    <span className="ml-2 capitalize text-[var(--muted)]">{user.role}</span>
+                    <span className="ml-2 capitalize text-[var(--muted)]">
+                      {user.role === "owner" || user.role === "staff" ? t(`roles.${user.role}`) : user.role}
+                    </span>
                   </span>
                   <SendResetButton userId={user.id} />
                 </li>

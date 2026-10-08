@@ -135,6 +135,7 @@ export async function POST(request: Request) {
             currency: order.currency,
             units: order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0),
             review,
+            name: order.name ?? null,
           },
         ),
         updated_at: new Date().toISOString(),

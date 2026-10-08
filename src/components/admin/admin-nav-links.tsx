@@ -10,12 +10,14 @@ const items = [
   { href: "/admin/pricing", key: "pricing" },
   { href: "/admin/margin", key: "margin" },
   { href: "/admin/finance", key: "finance" },
+  { href: "/admin/todo", key: "todo" },
+  { href: "/admin/orders", key: "orders" },
   { href: "/admin/shops", key: "shopify" },
   { href: "/admin/alerts", key: "alerts" },
   { href: "/sourcer", key: "sourcing" },
 ] as const;
 
-export function AdminNavLinks() {
+export function AdminNavLinks({ todoCount = 0 }: { todoCount?: number }) {
   const t = useTranslations("admin.nav");
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -24,7 +26,7 @@ export function AdminNavLinks() {
     <>
       <nav className="hidden items-center gap-4 text-sm md:flex">
         {items.map((item) => (
-          <NavItem key={item.key} item={item} pathname={pathname} label={t(item.key)} />
+          <NavItem key={item.key} item={item} pathname={pathname} label={t(item.key)} count={item.key === "todo" ? todoCount : 0} />
         ))}
       </nav>
       <button
@@ -43,6 +45,7 @@ export function AdminNavLinks() {
               item={item}
               pathname={pathname}
               label={t(item.key)}
+              count={item.key === "todo" ? todoCount : 0}
               onNavigate={() => setOpen(false)}
             />
           ))}
@@ -56,11 +59,13 @@ function NavItem({
   item,
   pathname,
   label,
+  count = 0,
   onNavigate,
 }: {
   item: (typeof items)[number];
   pathname: string;
   label: string;
+  count?: number;
   onNavigate?: () => void;
 }) {
   const active =
@@ -74,6 +79,11 @@ function NavItem({
       className={active ? "font-medium text-[var(--ink)]" : "text-[var(--muted)] hover:text-[var(--ink)]"}
     >
       {label}
+      {count > 0 ? (
+        <span className="ml-1 rounded-full bg-[var(--rust-soft)] px-1.5 text-[11px] font-bold text-[var(--rust-ink)]">
+          {count}
+        </span>
+      ) : null}
     </Link>
   );
 }

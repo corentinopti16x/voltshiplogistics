@@ -22,7 +22,7 @@ function isStaffPath(pathname: string) {
 
 function isPublicPath(pathname: string) {
   const path = pathname.replace(/\/$/, "") || "/";
-  if (path === "/" || path === "/en" || path === "/fr") return true;
+  if (path === "/" || path === "/en" || path === "/fr" || path === "/zh") return true;
   return (
     path.endsWith("/login") ||
     path.endsWith("/forgot-password") ||

@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { listClientPurchaseOrders } from "@/lib/purchase-orders/queries";
+import { PurchaseOrderCard } from "@/components/orders/purchase-order-card";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { getAuthContext, isTenantUser } from "@/lib/auth/context";
@@ -59,12 +61,13 @@ export default async function ProductDetailPage({
   if (!product) notFound();
 
   const request = getProductRequest(product);
-  const [matrix, stock, shopifyImages, recurrence, warehouseLive] = await Promise.all([
+  const [matrix, stock, shopifyImages, recurrence, warehouseLive, purchaseOrders] = await Promise.all([
     calculateProductCogsMatrix(product),
     getProductStockSnapshot(product),
     loadShopifyImagesForProducts(ctx.clientId, [product]).catch(() => new Map<string, string[]>()),
     loadClientRecurrence(ctx.clientId, product.sku ? [product.sku] : []).catch(() => null),
     isClientEccangEnabled(ctx.clientId),
+    listClientPurchaseOrders(ctx.clientId, { productId: product.id, limit: 5 }).catch(() => []),
   ]);
   const liveQuote = liveQuoteFromMatrix(matrix);
   const acceptedSnapshot = parseAcceptedQuoteSnapshot(product.accepted_quote_snapshot_json);
@@ -219,6 +222,11 @@ export default async function ProductDetailPage({
 
       <Card as="section" padding="md">
         <SourcingPipeline step={step} migrated={isMigratedProduct(product)} />
+      {product.sku?.toUpperCase().startsWith("VS-") && !isMigratedProduct(product) ? (
+        <p className="rounded-xl border border-[var(--blue-soft)] bg-[var(--blue-soft)]/40 px-4 py-3 text-[13px]">
+          {t.rich("skuNotice", { sku: product.sku, b: (chunks) => <strong className="font-mono">{chunks}</strong> })}
+        </p>
+      ) : null}
       </Card>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
@@ -408,6 +416,13 @@ export default async function ProductDetailPage({
         </div>
 
         <div className="flex min-w-0 flex-col gap-5">
+          {purchaseOrders.length > 0 ? (
+            <div className="flex flex-col gap-3" id="orders">
+              {purchaseOrders.map((order) => (
+                <PurchaseOrderCard key={order.id} order={order} locale={locale === "fr" ? "fr" : "en"} />
+              ))}
+            </div>
+          ) : null}
           {/* Stock — getProductStockSnapshot (stock_cache + sales_cache + safety stock) */}
           <Card as="section" padding="md" id="stock">
             <SectionTitle

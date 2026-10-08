@@ -6,7 +6,7 @@ import { loadPricingTiers } from "@/lib/clients/pricing-tier";
 import { pricingTierLabel } from "@/lib/domain/pricing-tiers";
 
 export default async function AdminClientsPage() {
-  const t = await getTranslations("admin");
+  const [t, tForms] = await Promise.all([getTranslations("admin"), getTranslations("admin.clientForms")]);
   const admin = createAdminClient();
 
   const [{ data: clients }, { data: profiles }] = await Promise.all([
@@ -56,7 +56,7 @@ export default async function AdminClientsPage() {
               <tr>
                 <th className="px-4 py-3">{t("fields.name")}</th>
                 <th className="px-4 py-3">{t("fields.code")}</th>
-                <th className="px-4 py-3">Palier</th>
+                <th className="px-4 py-3">{tForms("tier")}</th>
                 <th className="px-4 py-3">{t("fields.language")}</th>
                 <th className="px-4 py-3">{t("fields.users")}</th>
               </tr>

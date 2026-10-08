@@ -9,6 +9,7 @@ export const NOTIFICATION_EVENTS = [
   "ops_request",
   "carrier_line_unavailable",
   "order_alert",
+  "purchase_order",
 ] as const;
 
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];

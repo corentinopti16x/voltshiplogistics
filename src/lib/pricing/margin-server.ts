@@ -317,6 +317,10 @@ export type OrderMargin = {
   orderId: string;
   clientId: string;
   referenceNo: string;
+  /** Display label: Shopify order name (#1042) when known, else the warehouse reference. */
+  label: string;
+  /** "eccang" = shipped parcel (real), "shopify" = estimate from a Shopify order. */
+  basis: "eccang" | "shopify";
   shippedAt: string | null;
   billedWeightG: number | null;
   /** Products matched by SKU on the Shopify order lines. */
@@ -356,6 +360,9 @@ type EccangOrderLite = {
   billed_weight_g: number | null;
   fee_json: unknown;
   shipped_at: string | null;
+  /** External ECCANG orders (created by the client himself): lines come from ECCANG. */
+  items_json?: Array<{ sku: string; quantity: number }> | null;
+  label?: string | null;
 };
 
 /**
@@ -385,6 +392,8 @@ function marginForOrder(
     orderId: order.id,
     clientId: order.client_id,
     referenceNo: order.reference_no,
+    label: order.label ?? order.reference_no,
+    basis: order.reference_no.startsWith("shopify:") ? ("shopify" as const) : ("eccang" as const),
     shippedAt: order.shipped_at,
     billedWeightG: order.billed_weight_g,
     lines: matched.map((line) => ({ sku: line.sku, quantity: line.quantity, productId: line.product?.id ?? null })),
@@ -508,7 +517,8 @@ function priceOrders(
   return orders.map((order) =>
     marginForOrder(
       order,
-      lineMap.get(`${order.shop_id}:${order.shopify_order_id}`) ?? [],
+      lineMap.get(`${order.shop_id}:${order.shopify_order_id}`) ??
+        (Array.isArray(order.items_json) ? order.items_json : []),
       ctx.productsByClient.get(order.client_id) ?? new Map(),
       ctx.factoryPrices,
       ctx.profiles.get(order.client_id) ?? { commissionPct: 0, handlingFee: 0, logisticsDiscountPct: 0 },
@@ -535,7 +545,7 @@ export async function loadShippedOrderMargins(range: { sinceIso: string; untilIs
   const admin = createAdminClient();
   let query = admin
     .from("eccang_orders")
-    .select("id, client_id, shop_id, shopify_order_id, reference_no, billed_weight_g, fee_json, shipped_at")
+    .select("id, client_id, shop_id, shopify_order_id, reference_no, billed_weight_g, fee_json, shipped_at, items_json")
     .eq("status", "D")
     .gte("shipped_at", range.sinceIso);
   if (range.untilIso) query = query.lt("shipped_at", range.untilIso);
@@ -578,8 +588,10 @@ export async function loadEstimatedShopifyOrderMargins(range: {
   const ctx = await buildOrderPricingContext(clientIds);
   const lineMap = new Map<string, Array<{ sku: string; quantity: number }>>();
   const orders: EccangOrderLite[] = rows.map((row) => {
-    lineMap.set(`${row.shop_id}:${row.shopify_order_id}`, unpackOrderLines(row.line_items_json).lines);
+    const unpacked = unpackOrderLines(row.line_items_json);
+    lineMap.set(`${row.shop_id}:${row.shopify_order_id}`, unpacked.lines);
     return {
+      label: unpacked.name ?? `Shopify ${row.shopify_order_id}`,
       id: row.id,
       client_id: row.client_id,
       shop_id: row.shop_id,

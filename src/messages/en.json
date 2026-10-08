@@ -298,7 +298,8 @@
       "close": "Close",
       "label": "Main navigation",
       "support": "Support",
-      "alerts": "To check"
+      "alerts": "To check",
+      "orders": "Orders"
     },
     "greeting": "Hello {name}",
     "summary": "{decisions, plural, =0 {No decision pending} =1 {1 decision waiting} other {# decisions waiting}}",
@@ -326,7 +327,7 @@
     },
     "warehouse": {
       "title": "Warehouse orders",
-      "lead": "Latest orders pushed to the ECCANG warehouse: status, carrier, tracking and billed weight.",
+      "lead": "Latest ECCANG warehouse orders (pushed from Shopify or created with your API key): status, carrier, tracking and billed weight.",
       "live": "Live · ECCANG",
       "empty": "No order pushed to the warehouse yet.",
       "noTracking": "Awaiting tracking",
@@ -340,7 +341,8 @@
         "N": "Abnormal",
         "P": "Problem",
         "X": "Cancelled"
-      }
+      },
+      "external": "Created in ECCANG"
     },
     "allShops": "All stores",
     "sales": {
@@ -362,6 +364,11 @@
       "toShip": "{count, plural, =0 {Nothing waiting to ship} =1 {1 order to ship} other {# orders to ship}}",
       "trend": "{pct} vs previous period",
       "basketQty": "{qty} items / order on average"
+    },
+    "purchaseOrders": {
+      "title": "Orders in progress",
+      "lead": "Production and restocks launched by Voltship for you.",
+      "all": "All my orders"
     }
   },
   "products": {
@@ -687,7 +694,8 @@
     "live": "Live",
     "liveNote": "Already selling on your store — nothing to source, all good.",
     "periodHint": "Units, orders and revenue per product over the chosen rolling period.",
-    "periodLabel": "Period"
+    "periodLabel": "Period",
+    "skuNotice": "Your Voltship SKU: <b>{sku}</b>. Put it in the SKU field of your Shopify product (every variant): your orders will link to this quote automatically."
   },
   "economics": {
     "title": "Unit economics",
@@ -763,7 +771,8 @@
         "restock_requested": "Restock requested",
         "ops_request": "Request to Voltship",
         "carrier_line_unavailable": "Carrier line unavailable",
-        "order_alert": "Order to check"
+        "order_alert": "Order to check",
+        "purchase_order": "Supplier order"
       }
     },
     "fields": {
@@ -970,7 +979,9 @@
       "admin": "Staff",
       "margin": "Margin",
       "finance": "Finances",
-      "alerts": "Alerts"
+      "alerts": "Alerts",
+      "todo": "To complete",
+      "orders": "Supplier orders"
     },
     "rateImport": {
       "kicker": "Voltship admin",
@@ -1189,7 +1200,24 @@
         "grid": "Grid {version}",
         "notFound": "Product not found."
       },
-      "settingsNote": "Handling cost {handling} · FX {fx} RMB/€ · market rate {fxMarket} — editable in Pricing › Update rates › Margin rule."
+      "settingsNote": "Handling cost {handling} · FX {fx} RMB/€ · market rate {fxMarket} — editable in Pricing › Update rates › Margin rule.",
+      "byOrder": {
+        "title": "Per order",
+        "lead": "Parcels shipped through ECCANG in the last {days} days: what the client pays, what it costs Voltship and what we make on each order.",
+        "leadEstimated": "No ECCANG parcels yet: estimate on the Shopify orders of the last {days} days (one parcel per order, computed weight, grid carrier cost).",
+        "avg": "Average margin / order",
+        "count": "{priced} priced out of {total}",
+        "empty": "No orders in this period.",
+        "date": "Date",
+        "client": "Client",
+        "order": "Order",
+        "units": "Units",
+        "clientPays": "Client pays",
+        "cost": "Voltship cost",
+        "margin": "Margin",
+        "unpriced": "Not priced (incomplete product sheet or unknown SKU).",
+        "toComplete": "To complete →"
+      }
     },
     "finance": {
       "kicker": "Voltship finances",
@@ -1313,7 +1341,318 @@
     "resetSending": "Sending…",
     "resetSent": "Link sent ✓",
     "resetFailed": "Could not send (SMTP?)",
-    "inviteEmailed": "Invitation e-mailed: the client chooses their password."
+    "inviteEmailed": "Invitation e-mailed: the client chooses their password.",
+    "todo": {
+      "kicker": "Voltship operations",
+      "title": "Products to complete",
+      "lead": "Every Shopify product of the connected stores that lacks Voltship data (product sheet, weight, client price, carrier, factory price). Mandatory = sold in the last 90 days: its orders are not priced until the sheet is complete. Optional = no sales yet, do it when you have time.",
+      "countRequired": "{count} mandatory",
+      "countOptional": "{count} optional",
+      "showOptional": "Show optional",
+      "hideOptional": "Hide optional",
+      "allClients": "All clients",
+      "empty": "Nothing to complete 🎉",
+      "required": "Mandatory",
+      "optional": "Optional",
+      "sales90": "{count} sold in 90 days",
+      "noSku": "no SKU on Shopify",
+      "missing": {
+        "link": "No Voltship sheet",
+        "weight": "Weight",
+        "client_price": "Client price",
+        "channel": "Carrier",
+        "factory_price": "Factory price"
+      },
+      "complete": "Complete the sheet →",
+      "create": "Create the sheet and complete it →",
+      "linkPlaceholder": "…or link to an already quoted product",
+      "link": "Link",
+      "footnote": "★ = name close to a product already quoted for this client. Link = this product's Shopify orders use the existing quote. The list refreshes with every Shopify sync (every 10 min)."
+    },
+    "orders": {
+      "kicker": "Voltship operations",
+      "title": "Supplier orders",
+      "lead": "Every production or restock order we place for a client. The client sees it in his space (Orders) with the progress bar and is notified on every status change (app + email/WhatsApp). 🔒 internal notes are never shown to the client.",
+      "missingTable": "The purchase_orders table does not exist yet: run migration 00019_purchase_orders.sql in Supabase.",
+      "restocks": {
+        "title": "Restock requests to process ({count})",
+        "lead": "Sent by clients from the app (last 90 days). Turn them into an order so they can follow the progress.",
+        "convert": "Create the order →"
+      },
+      "form": {
+        "heading": "New order",
+        "lead": "The client is notified as soon as it is created.",
+        "client": "Client",
+        "product": "Product",
+        "noProduct": "— Not in catalogue —",
+        "title": "Name (if no product)",
+        "titlePlaceholder": "e.g. 2026 gift box",
+        "quantity": "Quantity",
+        "unitPrice": "Client unit price",
+        "unitHint": "Empty = client price from the product sheet.",
+        "total": "Total billed",
+        "totalHint": "Empty = quantity × unit price.",
+        "status": "Status",
+        "eta": "Expected arrival",
+        "tracking": "Tracking / ASN no.",
+        "notesClient": "Message visible to the client",
+        "notesClientHint": "e.g. Sample approved, production started, departure planned 20/10.",
+        "notesInternal": "Internal notes (never shown to the client)",
+        "notesInternalHint": "Factory, purchase price, contact…",
+        "create": "Create the order",
+        "creating": "Creating…",
+        "created": "Order created, the client has been notified."
+      },
+      "list": {
+        "open": "Orders in progress",
+        "all": "All orders",
+        "showAll": "Show full history",
+        "showOpen": "Show in progress only",
+        "empty": "No orders.",
+        "save": "Save"
+      },
+      "step": {
+        "to_pay": "Payment",
+        "in_production": "Production",
+        "quality_check": "Inspection",
+        "to_warehouse": "To warehouse",
+        "received": "Received"
+      },
+      "status": {
+        "to_pay": "Awaiting payment",
+        "in_production": "In production",
+        "quality_check": "Quality inspection",
+        "to_warehouse": "On the way to the warehouse",
+        "received": "Received at the warehouse",
+        "cancelled": "Cancelled"
+      }
+    },
+    "shopsPage": {
+      "kicker": "Voltship admin",
+      "title": "Shopify migration",
+      "lead": "Connect sends you to Shopify’s install screen for the chosen store (OAuth). Once the merchant approves, the shop is saved and 90 days of orders plus the catalogue are imported. Clients can also connect their own store from Settings.",
+      "connected": "Shop connected. Review the imported products below.",
+      "appsTitle": "Shopify apps per store",
+      "appsHelp": "One “Custom distribution” app per client store (Dev Dashboard of the Voltship Partner organisation). Pick the client, paste the client ID and secret (leave them empty to only change the client): on install, the store is automatically linked to that client. The “Connect my store” button will use this app for this domain automatically.",
+      "client": "Client",
+      "choose": "Choose…",
+      "shopDomain": "Shop domain",
+      "shopDomainPlaceholder": "store.myshopify.com",
+      "apiKey": "Client ID (app)",
+      "apiSecret": "Client secret (app)",
+      "label": "Name (optional)",
+      "save": "Save",
+      "noClient": "no client",
+      "connectTitle": "Connect shop",
+      "connectButton": "Connect Shopify",
+      "connectedTitle": "Connected shops",
+      "noShops": "No Shopify shops connected.",
+      "lastSync": "Last sync {date}",
+      "never": "never",
+      "syncNow": "Sync now",
+      "importTitle": "Product import",
+      "importHelp": "Choose a store. Variants are grouped by product; products with 30 or more sales over 90 days (all variants combined) are pre-selected.",
+      "show": "Show"
+    },
+    "shopForms": {
+      "searchPlaceholder": "Search a product or SKU…",
+      "hideImported": "Hide already imported",
+      "selectAll": "Select all",
+      "selectNone": "Deselect all",
+      "counts": "{visible, plural, one {# product} other {# products}} · {selected, plural, one {# selected} other {# selected}}",
+      "colImport": "Import",
+      "colProduct": "Product",
+      "colVariants": "Variants",
+      "colSales90": "90-day sales ↓",
+      "colStatus": "Status",
+      "importAria": "Import {name}",
+      "statusImported": "Imported",
+      "statusPartial": "Partial",
+      "statusReady": "Ready",
+      "noSku": "No SKU",
+      "importDone": "{count, plural, =0 {No products imported.} one {# product imported.} other {# products imported.}}",
+      "importing": "Importing…",
+      "importButton": "{count, plural, =0 {Import 0 products} one {Import # product} other {Import # products}}",
+      "disconnect": "Disconnect",
+      "cancel": "Cancel",
+      "disconnectFailed": "Disconnect failed.",
+      "disconnecting": "Disconnecting…",
+      "confirmDisconnect": "Confirm disconnect",
+      "whatsappLabel": "WhatsApp number (with country code)",
+      "saving": "Saving…",
+      "save": "Save",
+      "saved": "Saved ✓"
+    },
+    "alertsPage": {
+      "kicker": "Voltship operations",
+      "title": "Orders to review",
+      "lead": "Unusual orders across all clients. The client sees the same alert and the same discussion thread in their space.",
+      "filterOpen": "To review",
+      "filterAll": "All",
+      "emptyAll": "No alerts yet.",
+      "emptyOpen": "Nothing to review."
+    },
+    "pricingPage": {
+      "kicker": "Voltship admin",
+      "title": "Pricing service",
+      "lead": "Versioned shipping rates. Activating a version updates live COGS; accepted quotes stay frozen.",
+      "newGrid": "New grid version",
+      "versions": "Versions",
+      "noVersions": "Create a grid before adding rates.",
+      "active": "Active",
+      "activate": "Activate",
+      "importTitle": "Import a rate sheet",
+      "importLead": "Upload every weight bracket for one grid version. Matching cells are updated.",
+      "addRateTitle": "Add or update a rate",
+      "cellsTitle": "Rate cells",
+      "taxNotIncluded": "Not tax-inclusive: EU parcel tax added",
+      "columns": {
+        "version": "Version",
+        "carrier": "Carrier",
+        "line": "Line",
+        "destination": "Destination",
+        "channel": "Channel",
+        "weight": "Weight",
+        "price": "Price (EUR)",
+        "delivery": "Delivery"
+      }
+    },
+    "pricingForms": {
+      "saved": "Saved.",
+      "saving": "Saving…",
+      "grid": {
+        "version": "Grid version",
+        "effectiveDate": "Effective date",
+        "source": "Source",
+        "create": "Create grid"
+      },
+      "cell": {
+        "grid": "Grid",
+        "carrier": "Carrier",
+        "destination": "Destination",
+        "channel": "Channel",
+        "weightMin": "Min weight (g)",
+        "weightMax": "Max weight (g)",
+        "price": "Shipping price (EUR)",
+        "deliveryRange": "Delivery range",
+        "deliveryRangePlaceholder": "8–12 days",
+        "save": "Save rate cell"
+      },
+      "channels": {
+        "standard": "standard",
+        "electronics_battery": "electronics / battery",
+        "cosmetics": "cosmetics",
+        "liquid_perfume": "liquid / perfume",
+        "magnetic": "magnetic",
+        "sensitive_other": "sensitive (other)"
+      },
+      "csv": {
+        "file": "CSV file",
+        "columns": "Columns: {columns}.",
+        "import": "Import rates",
+        "importedCount": "Imported {count} rates.",
+        "imported": "Imported.",
+        "downloadTemplate": "Download template"
+      },
+      "client": {
+        "tier": "Tier",
+        "logisticsDiscount": "Shipping discount %",
+        "commission": "Product commission %",
+        "handling": "Handling € / parcel",
+        "save": "Save",
+        "customHint": "Rates manually adjusted for this client (the {tier} tier sets a {discount}% discount, {commission}% commission and {handling} € handling).",
+        "standardHint": "Standard {tier} tier rates. Changing tier fills in the values; you can still adjust them before saving."
+      },
+      "carrierRules": {
+        "noActiveGrid": "No active grid — activate a rate grid first.",
+        "line": "Line",
+        "markets": "Markets",
+        "allowed": "Allowed",
+        "allowLine": "Allow {line}",
+        "forcedTitle": "Forced line per market (optional)",
+        "forcedLead": "Replaces the client’s choice on that market. Falls back to the cheapest allowed line when the forced line has no bracket at the parcel weight.",
+        "clientChoice": "Client choice (cheapest by default)",
+        "saved": "Carrier rules saved.",
+        "saving": "Saving…",
+        "save": "Save carrier rules"
+      },
+      "lifecycle": {
+        "testingMaxAge": "Testing max age (days)",
+        "winningOrders": "Winning orders / day (14 days)",
+        "decliningDrop": "Declining drop %",
+        "deadAfter": "Dead after days without sales",
+        "saved": "Lifecycle rules saved.",
+        "saving": "Saving…",
+        "save": "Save lifecycle rules"
+      }
+    },
+    "clientPage": {
+      "webhookSecretMissing": "'<'set ECCANG_WEBHOOK_SECRET'>'",
+      "whatsappLead": "Number that receives WhatsApp notifications (quote ready with COGS 1 to 5, stock alerts, switch to Winning / Declining). Empty = no WhatsApp.",
+      "pricingTitle": "Tier & pricing",
+      "pricingLead": "Applied to the active shipping grid in every COGS calculation (quotes already accepted stay frozen).",
+      "lifecycleTitle": "Winning / Declining rules",
+      "lifecycleLead": "Thresholds used to classify this client’s products on every Shopify sync.",
+      "carriersTitle": "Shipping lines",
+      "carriersLead": "Lines this client may use per product and per market (unchecked = hidden and never used), with a forced line per market if needed. Applied to every COGS and to orders sent to ECCANG; accepted quotes stay frozen."
+    },
+    "clientForms": {
+      "tier": "Tier",
+      "languages": {
+        "en": "English",
+        "fr": "French"
+      }
+    },
+    "eccangCard": {
+      "title": "Warehouse (ECCANG)",
+      "lead": "One appKey / appToken pair per client (created in the ECCANG OMS). The token is encrypted and never sent back to the browser. Go-live: 8 October 2026.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "notConfigured": "<code>ECCANG_API_HOST</code> is not set on the server: calls are disabled.",
+      "enableLabel": "Enable the ECCANG integration for this client",
+      "tokenSaved": "(saved — leave empty to keep it)",
+      "warehouseCode": "Warehouse code (warehouse_code)",
+      "warehousePlaceholder": "Test the connection to list warehouses",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved.",
+      "test": "Test connection",
+      "testing": "Testing…",
+      "sync": "Sync now",
+      "syncing": "Syncing…",
+      "push": "Push all validated products",
+      "pushing": "Sending…",
+      "warehouses": "Warehouses (getWarehouse)",
+      "shippingMethods": "Shipping methods (getShippingMethod)",
+      "lastSync": "Last sync",
+      "never": "Never",
+      "pushedProducts": "Products pushed",
+      "orders": "ECCANG orders",
+      "inbound": "Inbound receipts (ASN)",
+      "syncError": "Sync error: {error}",
+      "mapTitle": "Carrier → ECCANG method mapping",
+      "mapHelp": "Key = <code>Carrier</code> or <code>Carrier|Line</code> as written in the rate grid (e.g. <code>YunExpress|CHC</code>), or <code>default</code> / <code>default:FR</code>. Value = code returned by getShippingMethod. Global table (all clients). An order without a mapping is not pushed and triggers a notification.",
+      "codePlaceholder": "ECCANG code",
+      "removeRow": "Remove row",
+      "addRow": "+ Row",
+      "saveMap": "Save mapping",
+      "callbackTitle": "Callback URL to declare in the ECCANG OMS (订阅回调)",
+      "callbackHelp": "Types to subscribe: <code>order</code>, <code>receiving</code>, <code>stock</code>. ECCANG verifies the URL with <code>?random=…</code> (echoed back as is). Without a callback, the 15-minute cron does the same job."
+    },
+    "financeChart": {
+      "weekShort": "W{week}",
+      "weekValue": "W{week}: {value}",
+      "estimated": "(est.)"
+    },
+    "dashboardExtra": {
+      "unknownClient": "Unknown client",
+      "unassigned": "Unassigned"
+    },
+    "financeExtra": {
+      "weekShort": "W{week}",
+      "percent": "{value}%",
+      "openEnded": "∞"
+    }
   },
   "impersonate": {
     "banner": "Viewing as {client}. Writes are audit-logged as you.",
@@ -1321,7 +1660,122 @@
   },
   "sourcer": {
     "title": "Sourcing queue",
-    "soon": "Oldest requests first. Complete the quote fields and send the client-ready COGS."
+    "soon": "Oldest requests first. Complete the quote fields and send the client-ready COGS.",
+    "queue": {
+      "eyebrow": "Operations",
+      "title": "Sourcing queue",
+      "intro": "Oldest first. Fill the client-safe quote and keep supplier details internal.",
+      "openCount": "{count, plural, one {# open} other {# open}}",
+      "searchPlaceholder": "Product, SKU or client",
+      "allStatuses": "All open statuses",
+      "backfillOnly": "Backfill only",
+      "apply": "Apply",
+      "empty": "No sourcing work matches these filters.",
+      "columns": {
+        "photo": "Photo",
+        "product": "Product",
+        "client": "Client",
+        "status": "Status",
+        "missing": "Missing",
+        "created": "Created"
+      },
+      "noSku": "No SKU",
+      "ready": "Ready",
+      "missing": {
+        "price": "price",
+        "weight": "weight",
+        "channel": "channel"
+      },
+      "listSeparator": ", ",
+      "statuses": {
+        "brief_received": "Brief received",
+        "factories": "Finding factories",
+        "samples": "Samples",
+        "negotiation": "Negotiation",
+        "quote_sent": "Quote sent",
+        "validated": "Validated",
+        "in_production": "In production",
+        "in_stock": "In stock",
+        "flagged": "Flagged"
+      }
+    },
+    "product": {
+      "backToTodo": "← To complete",
+      "backToQueue": "← Sourcing queue",
+      "noSku": "No SKU",
+      "clientBrief": "Client brief",
+      "description": "Description",
+      "targetUnitPrice": "Target unit price (€)",
+      "approxWeight": "Approx. unit weight (g, client)",
+      "currentUnitCost": "Current unit cost at agent (€, client)",
+      "launchQty": "Launch quantity",
+      "destinationMarkets": "Destination markets",
+      "notes": "Notes",
+      "reference": "Reference",
+      "openSourceLink": "Open source link"
+    },
+    "shell": {
+      "queueLink": "Sourcing queue",
+      "staff": "Staff"
+    },
+    "form": {
+      "clientFieldsTitle": "Client-safe quote fields",
+      "clientFieldsIntro": "These values appear on the client product page.",
+      "clientPrice": "Client product price",
+      "clientPriceHint": "Per unit, before the tier commission (added automatically).",
+      "unitWeight": "Unit weight",
+      "gramsUnit": "g",
+      "sku": "SKU (Shopify / ECCANG)",
+      "skuHint": "Empty = a Voltship SKU (VS-CLIENT-001) is assigned when the quote is sent. The client puts this SKU on his Shopify product so orders link automatically.",
+      "shippingChannel": "Shipping channel",
+      "select": "Select",
+      "channels": {
+        "standard": "Standard",
+        "electronics_battery": "Electronics / battery",
+        "cosmetics": "Cosmetics",
+        "liquid_perfume": "Liquid / perfume",
+        "magnetic": "Magnetic",
+        "sensitive_other": "Sensitive (ingestible)"
+      },
+      "attributes": {
+        "electronics": "battery / electronics",
+        "liquid": "liquid / cream",
+        "alcohol": "perfume or alcohol",
+        "ingestible": "ingestible",
+        "magnetic": "magnet"
+      },
+      "suggestedByClient": "Suggested by the client: <strong>{channel}</strong>",
+      "tickedList": " (ticked: {list})",
+      "nothingTicked": " (nothing ticked)",
+      "listSeparator": ", ",
+      "yourValueWins": " — your value takes precedence",
+      "confirmOrCorrect": " — confirm or correct",
+      "productionLead": "Production lead",
+      "daysUnit": "days",
+      "moq": "MOQ",
+      "unitsUnit": "units",
+      "sourcingStatus": "Sourcing status",
+      "internalTitle": "Internal sourcing fields",
+      "internalIntro": "Never shown to clients.",
+      "factoryPrice": "Factory purchase price",
+      "fxConversion": "= {eur} € at {rate} ¥/€",
+      "useAsClientPrice": "Use as client product price",
+      "sourcingLocation": "Sourcing location",
+      "supplierName": "Supplier name",
+      "supplierContact": "Supplier contact",
+      "internalNotes": "Internal notes",
+      "draftSaved": "Draft saved.",
+      "quoteSent": "Quote sent.",
+      "saving": "Saving…",
+      "saveDraft": "Save draft",
+      "sending": "Sending…",
+      "sendQuote": "Send quote",
+      "flagTitle": "Flag a problem",
+      "reason": "Reason",
+      "flagging": "Flagging…",
+      "flagProblem": "Flag problem",
+      "productFlagged": "Product flagged."
+    }
   },
   "support": {
     "title": "Support",
@@ -1388,5 +1842,68 @@
     "24h": "24 h",
     "7d": "7 days",
     "30d": "30 days"
+  },
+  "orders": {
+    "title": "My orders",
+    "lead": "The production and restock orders Voltship places for you, with their progress.",
+    "leadOpen": "{count} order(s) in progress at our factories. Follow every step here until they reach the warehouse.",
+    "empty": "No orders yet. When Voltship launches a production run for you, it shows up here.",
+    "inProgress": "In progress",
+    "history": "History",
+    "placed": "Placed on {date}",
+    "total": "Total {amount}",
+    "eta": "expected {date}",
+    "tracking": "tracking {tracking}",
+    "step": {
+      "to_pay": "Payment",
+      "in_production": "Production",
+      "quality_check": "Inspection",
+      "to_warehouse": "To warehouse",
+      "received": "Received"
+    },
+    "status": {
+      "to_pay": "Awaiting payment",
+      "in_production": "In production",
+      "quality_check": "Quality inspection",
+      "to_warehouse": "On the way to the warehouse",
+      "received": "Received at the warehouse",
+      "cancelled": "Cancelled"
+    }
+  },
+  "orderAlerts": {
+    "statusOpen": "To review",
+    "statusLegit": "Genuine order",
+    "statusAbuse": "Abuse confirmed",
+    "orderTitle": "Order {number}",
+    "reasons": {
+      "price_anomaly": {
+        "title": "Abnormal price",
+        "help": "Many items for almost nothing paid (less than €1 per item). Order removed from sales in the meantime."
+      },
+      "zero_total": {
+        "title": "€0 order",
+        "help": "The customer paid nothing: gift, influencer, test… or a 100% discount code."
+      },
+      "discount_abuse": {
+        "title": "Large discount",
+        "help": "At least 60% off the products: discount code shared or misconfigured?"
+      },
+      "quantity_spike": {
+        "title": "Unusual quantity",
+        "help": "10 or more items in a single order."
+      }
+    },
+    "paid": "Paid",
+    "gross": "Product price",
+    "discount": "Discount",
+    "units": "Items",
+    "discountCode": "Discount code",
+    "authorClient": "Client",
+    "messagePlaceholder": "Write a message…",
+    "sending": "Sending…",
+    "send": "Send",
+    "markLegit": "Genuine order",
+    "markAbuse": "Abuse confirmed",
+    "reopen": "Reopen"
   }
 }

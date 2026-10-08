@@ -16,7 +16,7 @@ export default async function SourcerPage({
 }) {
   const { locale } = await params;
   const ctx = await getAuthContext();
-  const t = await getTranslations("sourcer");
+  const t = await getTranslations("sourcer.queue");
   const filters = await searchParams;
 
   if (!ctx) {
@@ -68,15 +68,15 @@ export default async function SourcerPage({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--gold)] uppercase">
-            Operations
+            {t("eyebrow")}
           </p>
           <h1 className="font-display mt-2 text-3xl">{t("title")}</h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Oldest first. Fill the client-safe quote and keep supplier details internal.
+            {t("intro")}
           </p>
         </div>
         <span className="rounded-full bg-[var(--card)] px-3 py-1 text-sm ring-1 ring-[var(--line)]">
-          {rows.length} open
+          {t("openCount", { count: rows.length })}
         </span>
       </div>
 
@@ -84,7 +84,7 @@ export default async function SourcerPage({
         <input
           name="q"
           defaultValue={filters.q}
-          placeholder="Product, SKU or client"
+          placeholder={t("searchPlaceholder")}
           className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
         />
         <select
@@ -92,11 +92,11 @@ export default async function SourcerPage({
           defaultValue={status}
           className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
         >
-          <option value="">All open statuses</option>
+          <option value="">{t("allStatuses")}</option>
           {["brief_received", "factories", "samples", "negotiation", "quote_sent", "flagged"].map(
             (item) => (
               <option key={item} value={item}>
-                {item.replaceAll("_", " ")}
+                {t(`statuses.${item}`)}
               </option>
             ),
           )}
@@ -108,28 +108,28 @@ export default async function SourcerPage({
             value="true"
             defaultChecked={filters.backfill === "true"}
           />
-          Backfill only
+          {t("backfillOnly")}
         </label>
         <button className="cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm text-white">
-          Apply
+          {t("apply")}
         </button>
       </form>
 
       {rows.length === 0 ? (
         <p className="mt-8 rounded-2xl border border-dashed border-[var(--line)] bg-[var(--card)] p-8 text-sm text-[var(--muted)]">
-          No sourcing work matches these filters.
+          {t("empty")}
         </p>
       ) : (
         <div className="mt-8 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--card)]">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-[var(--line)] text-xs text-[var(--muted)] uppercase">
               <tr>
-                <th className="px-4 py-3">Photo</th>
-                <th className="px-4 py-3">Product</th>
-                <th className="px-4 py-3">Client</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Missing</th>
-                <th className="px-4 py-3">Created</th>
+                <th className="px-4 py-3">{t("columns.photo")}</th>
+                <th className="px-4 py-3">{t("columns.product")}</th>
+                <th className="px-4 py-3">{t("columns.client")}</th>
+                <th className="px-4 py-3">{t("columns.status")}</th>
+                <th className="px-4 py-3">{t("columns.missing")}</th>
+                <th className="px-4 py-3">{t("columns.created")}</th>
               </tr>
             </thead>
             <tbody>
@@ -152,14 +152,16 @@ export default async function SourcerPage({
                       <Link href={`/sourcer/${row.id}`} className="font-medium hover:underline">
                         {row.title}
                       </Link>
-                      <p className="text-xs text-[var(--muted)]">{row.sku ?? "No SKU"}</p>
+                      <p className="text-xs text-[var(--muted)]">{row.sku ?? t("noSku")}</p>
                     </td>
                     <td className="px-4 py-3">{row.clients?.name ?? "—"}</td>
-                    <td className="px-4 py-3 capitalize">
-                      {(row.sourcing_status ?? "brief_received").replaceAll("_", " ")}
+                    <td className="px-4 py-3">
+                      {t(`statuses.${row.sourcing_status ?? "brief_received"}`)}
                     </td>
                     <td className="px-4 py-3 text-[var(--muted)]">
-                      {missing.length ? missing.join(", ") : "Ready"}
+                      {missing.length
+                        ? missing.map((item) => t(`missing.${item}`)).join(t("listSeparator"))
+                        : t("ready")}
                     </td>
                     <td className="px-4 py-3 text-[var(--muted)]">
                       {new Date(row.created_at).toLocaleDateString()}

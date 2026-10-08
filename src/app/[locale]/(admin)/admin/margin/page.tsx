@@ -1,7 +1,12 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link, redirect } from "@/i18n/routing";
 import { getAuthContext } from "@/lib/auth/context";
-import { loadMarginSummary, MarginAccessError } from "@/lib/pricing/margin-server";
+import {
+  loadEstimatedShopifyOrderMargins,
+  loadMarginSummary,
+  MarginAccessError,
+  type OrderMargin,
+} from "@/lib/pricing/margin-server";
 import { formatAmount } from "@/lib/format";
 import { ConfidentialTag, KpiTile, Pct, SignedAmount, SourceLabel } from "@/components/admin/margin-ui";
 
@@ -29,7 +34,33 @@ export default async function AdminMarginPage() {
     throw error;
   }
   const { totals, settings } = summary;
+  // Per-order view: shipped ECCANG parcels when there are some, otherwise an estimate
+  // from the Shopify orders of the same window (no billed weight yet).
+  let perOrder: OrderMargin[] = summary.orders;
+  let perOrderEstimated = false;
+  let estimatedNames = new Map<string, string>();
+  if (perOrder.length === 0) {
+    const today = new Date();
+    const from = new Date(today.getTime() - (WINDOW_DAYS - 1) * 86400000);
+    const estimated = await loadEstimatedShopifyOrderMargins({
+      fromDate: from.toISOString().slice(0, 10),
+      toDate: today.toISOString().slice(0, 10),
+    }).catch(() => null);
+    perOrder = estimated?.orders ?? [];
+    estimatedNames = estimated?.clientNames ?? new Map();
+    perOrderEstimated = true;
+  }
+  const perOrderRows = [...perOrder]
+    .sort((a, b) => String(b.shippedAt ?? "").localeCompare(String(a.shippedAt ?? "")))
+    .slice(0, 300);
+  const perOrderPriced = perOrder.filter((order) => order.margin != null);
+  const perOrderAvg =
+    perOrderPriced.length > 0
+      ? perOrderPriced.reduce((sum, order) => sum + (order.margin?.margin.total ?? 0), 0) / perOrderPriced.length
+      : null;
   const eur = (value: number | null | undefined) => formatAmount(value, locale);
+  const clientNames = new Map(summary.byClient.map((row) => [row.clientId, row.clientName]));
+  const summaryClientName = (id: string) => clientNames.get(id) ?? estimatedNames.get(id) ?? "—";
   const parcels = totals.weight;
   const perParcel = parcels > 0 ? totals.margin / parcels : null;
 
@@ -124,6 +155,84 @@ export default async function AdminMarginPage() {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section id="orders" className="mt-8 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--card)]">
+        <div className="flex flex-wrap items-end justify-between gap-3 p-6">
+          <div>
+            <h2 className="text-sm font-semibold">{t("byOrder.title")}</h2>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              {perOrderEstimated ? t("byOrder.leadEstimated", { days: WINDOW_DAYS }) : t("byOrder.lead", { days: WINDOW_DAYS })}
+            </p>
+          </div>
+          <div className="text-right text-xs text-[var(--muted)]">
+            {t("byOrder.avg")}{" "}
+            <span className="text-base font-bold text-[var(--ink)]">
+              <SignedAmount value={perOrderAvg} locale={locale} />
+            </span>
+            <div>
+              {t("byOrder.count", { priced: perOrderPriced.length, total: perOrder.length })}
+            </div>
+          </div>
+        </div>
+        {perOrderRows.length === 0 ? (
+          <p className="border-t border-[var(--line)] p-6 text-sm text-[var(--muted)]">{t("byOrder.empty")}</p>
+        ) : (
+          <div className="max-h-[640px] overflow-auto">
+            <table className="w-full min-w-[980px] text-left text-sm">
+              <thead className="sticky top-0 border-y border-[var(--line)] bg-[var(--card)] text-xs text-[var(--muted)]">
+                <tr>
+                  <th className="px-4 py-3">{t("byOrder.date")}</th>
+                  <th className="px-4 py-3">{t("byOrder.client")}</th>
+                  <th className="px-4 py-3">{t("byOrder.order")}</th>
+                  <th className="px-4 py-3 text-right">{t("byOrder.units")}</th>
+                  <th className="px-4 py-3 text-right">{t("byOrder.clientPays")}</th>
+                  <th className="px-4 py-3 text-right">{t("byOrder.cost")}</th>
+                  <th className="px-4 py-3 text-right">{t("split.sourcing")}</th>
+                  <th className="px-4 py-3 text-right">{t("split.transport")}</th>
+                  <th className="px-4 py-3 text-right">{t("split.handling")}</th>
+                  <th className="px-4 py-3 text-right">{t("byOrder.margin")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {perOrderRows.map((order) => {
+                  const m = order.margin;
+                  return (
+                    <tr key={order.orderId} className="border-b border-[var(--line)]">
+                      <td className="px-4 py-2.5 text-xs whitespace-nowrap text-[var(--muted)]">
+                        {order.shippedAt ? new Date(order.shippedAt).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-GB") : "—"}
+                      </td>
+                      <td className="px-4 py-2.5">{summaryClientName(order.clientId)}</td>
+                      <td className="px-4 py-2.5 font-medium">{order.label}</td>
+                      <td className="tabular px-4 py-2.5 text-right">
+                        {order.lines.reduce((sum, line) => sum + line.quantity, 0)}
+                      </td>
+                      {m ? (
+                        <>
+                          <td className="tabular px-4 py-2.5 text-right">{eur(m.clientPays.total)}</td>
+                          <td className="tabular px-4 py-2.5 text-right">{eur(m.costs.total)}</td>
+                          <td className="px-4 py-2.5 text-right"><SignedAmount value={m.margin.sourcing} locale={locale} /></td>
+                          <td className="px-4 py-2.5 text-right"><SignedAmount value={m.margin.transport} locale={locale} /></td>
+                          <td className="px-4 py-2.5 text-right"><SignedAmount value={m.margin.handling} locale={locale} /></td>
+                          <td className="px-4 py-2.5 text-right">
+                            <SignedAmount value={m.margin.total} locale={locale} bold />
+                          </td>
+                        </>
+                      ) : (
+                        <td colSpan={6} className="px-4 py-2.5 text-right text-xs text-[var(--rust-ink)]">
+                          {t("byOrder.unpriced")}{" "}
+                          <Link href="/admin/todo" className="font-semibold underline">
+                            {t("byOrder.toComplete")}
+                          </Link>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

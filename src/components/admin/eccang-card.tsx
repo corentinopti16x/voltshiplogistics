@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   pushEccangProductsAction,
   saveEccangSettingsAction,
@@ -36,12 +37,15 @@ const secondaryClass =
   "cursor-pointer rounded-md border border-[var(--line)] bg-white px-4 py-2 text-sm font-medium disabled:opacity-60";
 
 function Feedback({ state }: { state: EccangActionResult }) {
+  const t = useTranslations("admin.eccangCard");
   if (state.error) return <p className="text-sm text-red-700">{state.error}</p>;
-  if (state.ok) return <p className="text-sm text-emerald-800">{state.summary ?? "Saved."}</p>;
+  if (state.ok) return <p className="text-sm text-emerald-800">{state.summary ?? t("saved")}</p>;
   return null;
 }
 
 export function EccangCard(props: EccangCardProps) {
+  const t = useTranslations("admin.eccangCard");
+  const locale = useLocale();
   const [settings, saveSettings, saving] = useActionState(saveEccangSettingsAction, initial);
   const [test, runTest, testing] = useActionState(testEccangConnectionAction, initial);
   const [sync, runSync, syncing] = useActionState(syncEccangNowAction, initial);
@@ -60,24 +64,21 @@ export function EccangCard(props: EccangCardProps) {
     <section id="eccang" className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold">Entrepôt (ECCANG)</h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Une paire appKey / appToken par client (créée dans l’OMS ECCANG). Le token est chiffré et
-            jamais renvoyé au navigateur. Mise en service : 8 octobre 2026.
-          </p>
+          <h2 className="text-sm font-semibold">{t("title")}</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">{t("lead")}</p>
         </div>
         <span
           className={`rounded-full px-2.5 py-1 text-xs font-medium ${
             props.enabled ? "bg-emerald-100 text-emerald-900" : "bg-[var(--bg)] text-[var(--muted)]"
           }`}
         >
-          {props.enabled ? "Activé" : "Désactivé"}
+          {props.enabled ? t("enabled") : t("disabled")}
         </span>
       </div>
 
       {!props.configured ? (
         <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          ECCANG_API_HOST n’est pas défini sur le serveur : les appels sont désactivés.
+          {t.rich("notConfigured", { code: (chunks) => <code>{chunks}</code> })}
         </p>
       ) : null}
 
@@ -86,7 +87,7 @@ export function EccangCard(props: EccangCardProps) {
         <input type="hidden" name="client_id" value={props.clientId} />
         <label className="flex items-center gap-2 text-sm sm:col-span-2">
           <input type="checkbox" name="eccang_enabled" defaultChecked={props.enabled} />
-          Activer l’intégration ECCANG pour ce client
+          {t("enableLabel")}
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-[var(--muted)]">appKey</span>
@@ -94,7 +95,7 @@ export function EccangCard(props: EccangCardProps) {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-[var(--muted)]">
-            appToken {props.hasToken ? "(enregistré — laisser vide pour conserver)" : ""}
+            appToken {props.hasToken ? t("tokenSaved") : ""}
           </span>
           <input
             name="app_token"
@@ -105,7 +106,7 @@ export function EccangCard(props: EccangCardProps) {
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-[var(--muted)]">Code entrepôt (warehouse_code)</span>
+          <span className="text-[var(--muted)]">{t("warehouseCode")}</span>
           {warehouses.length > 0 ? (
             <select name="warehouse_code" defaultValue={props.warehouseCode} className={inputClass}>
               <option value="">—</option>
@@ -120,14 +121,14 @@ export function EccangCard(props: EccangCardProps) {
             <input
               name="warehouse_code"
               defaultValue={props.warehouseCode}
-              placeholder="Tester la connexion pour lister les entrepôts"
+              placeholder={t("warehousePlaceholder")}
               className={inputClass}
             />
           )}
         </label>
         <div className="flex items-end gap-3">
           <button type="submit" disabled={saving} className={buttonClass}>
-            {saving ? "Enregistrement…" : "Enregistrer"}
+            {saving ? t("saving") : t("save")}
           </button>
           <Feedback state={settings} />
         </div>
@@ -138,19 +139,19 @@ export function EccangCard(props: EccangCardProps) {
         <form action={runTest}>
           <input type="hidden" name="client_id" value={props.clientId} />
           <button type="submit" disabled={testing || !canCall} className={secondaryClass}>
-            {testing ? "Test…" : "Tester la connexion"}
+            {testing ? t("testing") : t("test")}
           </button>
         </form>
         <form action={runSync}>
           <input type="hidden" name="client_id" value={props.clientId} />
           <button type="submit" disabled={syncing || !canCall || !props.warehouseCode} className={secondaryClass}>
-            {syncing ? "Synchronisation…" : "Synchroniser maintenant"}
+            {syncing ? t("syncing") : t("sync")}
           </button>
         </form>
         <form action={runPush}>
           <input type="hidden" name="client_id" value={props.clientId} />
           <button type="submit" disabled={pushing || !canCall || !props.warehouseCode} className={secondaryClass}>
-            {pushing ? "Envoi…" : "Pousser tous les produits validés"}
+            {pushing ? t("pushing") : t("push")}
           </button>
         </form>
       </div>
@@ -162,7 +163,7 @@ export function EccangCard(props: EccangCardProps) {
 
       {warehouses.length > 0 ? (
         <div className="mt-3 rounded-md bg-[var(--bg)] p-3 text-xs">
-          <p className="font-semibold">Entrepôts (getWarehouse)</p>
+          <p className="font-semibold">{t("warehouses")}</p>
           <ul className="mt-1 space-y-0.5">
             {warehouses.map((warehouse) => (
               <li key={warehouse.warehouse_code}>
@@ -173,7 +174,7 @@ export function EccangCard(props: EccangCardProps) {
           </ul>
           {methods.length > 0 ? (
             <>
-              <p className="mt-3 font-semibold">Méthodes d’expédition (getShippingMethod)</p>
+              <p className="mt-3 font-semibold">{t("shippingMethods")}</p>
               <ul className="mt-1 max-h-40 space-y-0.5 overflow-auto">
                 {methods.map((method) => (
                   <li key={`${method.warehouse_code ?? ""}:${method.code}`}>
@@ -189,26 +190,26 @@ export function EccangCard(props: EccangCardProps) {
 
       {/* Status */}
       <dl className="mt-5 grid gap-3 border-t border-[var(--line)] pt-5 text-sm sm:grid-cols-4">
-        <Row label="Dernière synchro" value={props.lastSyncAt ? new Date(props.lastSyncAt).toLocaleString("fr-FR") : "Jamais"} />
-        <Row label="Produits poussés" value={`${props.stats.pushedProducts} / ${props.stats.products}`} />
-        <Row label="Commandes ECCANG" value={String(props.stats.orders)} />
-        <Row label="Réceptions (ASN)" value={String(props.stats.inbound)} />
+        <Row
+          label={t("lastSync")}
+          value={props.lastSyncAt ? new Date(props.lastSyncAt).toLocaleString(locale) : t("never")}
+        />
+        <Row label={t("pushedProducts")} value={`${props.stats.pushedProducts} / ${props.stats.products}`} />
+        <Row label={t("orders")} value={String(props.stats.orders)} />
+        <Row label={t("inbound")} value={String(props.stats.inbound)} />
       </dl>
       {props.syncError ? (
         <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-          Erreur de synchro : {props.syncError}
+          {t("syncError", { error: props.syncError })}
         </p>
       ) : null}
 
       {/* Shipping method mapping (global) */}
       <form action={saveMap} className="mt-6 border-t border-[var(--line)] pt-5">
         <input type="hidden" name="client_id" value={props.clientId} />
-        <h3 className="text-sm font-semibold">Correspondance transporteur → méthode ECCANG</h3>
+        <h3 className="text-sm font-semibold">{t("mapTitle")}</h3>
         <p className="mt-1 text-xs text-[var(--muted)]">
-          Clé = <code>Transporteur</code> ou <code>Transporteur|Ligne</code> tel qu’écrit dans la grille
-          tarifaire (ex. <code>YunExpress|CHC</code>), ou <code>default</code> / <code>default:FR</code>.
-          Valeur = code renvoyé par getShippingMethod. Table globale (tous clients). Une commande sans
-          correspondance n’est pas poussée et génère une notification.
+          {t.rich("mapHelp", { code: (chunks) => <code>{chunks}</code> })}
         </p>
         <datalist id="eccang-carrier-keys">
           {props.carrierKeys.map((key) => (
@@ -240,7 +241,7 @@ export function EccangCard(props: EccangCardProps) {
                 name="map_code"
                 list="eccang-method-codes"
                 value={row.code}
-                placeholder="Code ECCANG"
+                placeholder={t("codePlaceholder")}
                 onChange={(event) =>
                   setRows((prev) => prev.map((r, i) => (i === index ? { ...r, code: event.target.value } : r)))
                 }
@@ -250,7 +251,7 @@ export function EccangCard(props: EccangCardProps) {
                 type="button"
                 onClick={() => setRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev))}
                 className={secondaryClass}
-                aria-label="Supprimer la ligne"
+                aria-label={t("removeRow")}
               >
                 ×
               </button>
@@ -263,23 +264,19 @@ export function EccangCard(props: EccangCardProps) {
             onClick={() => setRows((prev) => [...prev, { key: "", code: "" }])}
             className={secondaryClass}
           >
-            + Ligne
+            {t("addRow")}
           </button>
           <button type="submit" disabled={savingMap} className={buttonClass}>
-            {savingMap ? "Enregistrement…" : "Enregistrer la correspondance"}
+            {savingMap ? t("saving") : t("saveMap")}
           </button>
           <Feedback state={mapState} />
         </div>
       </form>
 
       <div className="mt-6 border-t border-[var(--line)] pt-5 text-xs text-[var(--muted)]">
-        <p className="font-semibold text-[var(--ink)]">URL de callback à déclarer dans l’OMS ECCANG (订阅回调)</p>
+        <p className="font-semibold text-[var(--ink)]">{t("callbackTitle")}</p>
         <code className="mt-1 block break-all rounded-md bg-[var(--bg)] px-3 py-2">{props.callbackUrl}</code>
-        <p className="mt-1">
-          Types à souscrire : <code>order</code>, <code>receiving</code>, <code>stock</code>. ECCANG vérifie
-          l’URL avec <code>?random=…</code> (renvoyé tel quel). Sans callback, le cron toutes les 15 min
-          fait le même travail.
-        </p>
+        <p className="mt-1">{t.rich("callbackHelp", { code: (chunks) => <code>{chunks}</code> })}</p>
       </div>
     </section>
   );

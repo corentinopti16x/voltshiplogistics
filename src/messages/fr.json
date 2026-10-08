@@ -298,7 +298,8 @@
       "close": "Fermer",
       "label": "Navigation principale",
       "support": "SAV",
-      "alerts": "À vérifier"
+      "alerts": "À vérifier",
+      "orders": "Commandes"
     },
     "greeting": "Bonjour {name}",
     "summary": "{decisions, plural, =0 {Aucune décision en attente} =1 {1 décision t'attend} other {# décisions t'attendent}}",
@@ -326,7 +327,7 @@
     },
     "warehouse": {
       "title": "Commandes entrepôt",
-      "lead": "Dernières commandes poussées à l'entrepôt ECCANG : statut, transporteur, suivi et poids facturé.",
+      "lead": "Dernières commandes de l'entrepôt ECCANG (poussées depuis Shopify ou créées via ta clé API) : statut, transporteur, suivi et poids facturé.",
       "live": "Temps réel · ECCANG",
       "empty": "Aucune commande poussée à l'entrepôt pour l'instant.",
       "noTracking": "En attente de suivi",
@@ -340,7 +341,8 @@
         "N": "Anomalie",
         "P": "Problème",
         "X": "Annulée"
-      }
+      },
+      "external": "Créée via ECCANG"
     },
     "allShops": "Toutes les boutiques",
     "sales": {
@@ -362,6 +364,11 @@
       "toShip": "{count, plural, =0 {Rien en attente d'expédition} =1 {1 commande à expédier} other {# commandes à expédier}}",
       "trend": "{pct} vs période précédente",
       "basketQty": "{qty} articles / commande en moyenne"
+    },
+    "purchaseOrders": {
+      "title": "Commandes en cours",
+      "lead": "Production et réassort lancés par Voltship pour toi.",
+      "all": "Toutes mes commandes"
     }
   },
   "products": {
@@ -687,7 +694,8 @@
     "live": "En place",
     "liveNote": "Produit déjà en vente sur ta boutique — rien à sourcer, tout est OK.",
     "periodHint": "Ventes, commandes et CA de chaque produit sur la période choisie (glissant).",
-    "periodLabel": "Période"
+    "periodLabel": "Période",
+    "skuNotice": "Ton SKU Voltship : <b>{sku}</b>. Mets-le dans le champ SKU de ton produit sur Shopify (chaque variante) : tes commandes seront reliées automatiquement à cette cotation."
   },
   "economics": {
     "title": "Économie unitaire",
@@ -763,7 +771,8 @@
         "restock_requested": "Réassort demandé",
         "ops_request": "Demande à Voltship",
         "carrier_line_unavailable": "Ligne transporteur indisponible",
-        "order_alert": "Commande à vérifier"
+        "order_alert": "Commande à vérifier",
+        "purchase_order": "Commande fournisseur"
       }
     },
     "fields": {
@@ -970,7 +979,9 @@
       "admin": "Équipe",
       "margin": "Marge",
       "finance": "Finances",
-      "alerts": "Alertes"
+      "alerts": "Alertes",
+      "todo": "À compléter",
+      "orders": "Commandes fournisseurs"
     },
     "rateImport": {
       "kicker": "Admin Voltship",
@@ -1189,7 +1200,24 @@
         "grid": "Grille {version}",
         "notFound": "Produit introuvable."
       },
-      "settingsNote": "Coût préparation {handling} · change {fx} RMB/€ · taux marché {fxMarket} — modifiables dans Tarification › Mettre à jour les tarifs › Règle de marge."
+      "settingsNote": "Coût préparation {handling} · change {fx} RMB/€ · taux marché {fxMarket} — modifiables dans Tarification › Mettre à jour les tarifs › Règle de marge.",
+      "byOrder": {
+        "title": "Par commande",
+        "lead": "Colis expédiés via ECCANG ces {days} derniers jours : ce que le client paie, ce que ça coûte à Voltship et ce qu'on gagne sur chaque commande.",
+        "leadEstimated": "Pas encore de colis ECCANG : estimation sur les commandes Shopify des {days} derniers jours (1 colis par commande, poids calculé, coût transporteur de la grille).",
+        "avg": "Marge moyenne / commande",
+        "count": "{priced} chiffrées sur {total}",
+        "empty": "Aucune commande sur la période.",
+        "date": "Date",
+        "client": "Client",
+        "order": "Commande",
+        "units": "Unités",
+        "clientPays": "Client paie",
+        "cost": "Coût Voltship",
+        "margin": "Marge",
+        "unpriced": "Non chiffrée (fiche produit incomplète ou SKU inconnu).",
+        "toComplete": "À compléter →"
+      }
     },
     "finance": {
       "kicker": "Finances Voltship",
@@ -1313,7 +1341,318 @@
     "resetSending": "Envoi…",
     "resetSent": "Lien envoyé ✓",
     "resetFailed": "Envoi impossible (SMTP ?)",
-    "inviteEmailed": "Invitation envoyée par e-mail : le client choisit son mot de passe."
+    "inviteEmailed": "Invitation envoyée par e-mail : le client choisit son mot de passe.",
+    "todo": {
+      "kicker": "Opérations Voltship",
+      "title": "Produits à compléter",
+      "lead": "Tous les produits Shopify des boutiques connectées auxquels il manque une info Voltship (fiche, poids, prix client, transporteur, prix usine). Obligatoire = le produit s'est vendu ces 90 derniers jours : ses commandes ne sont pas chiffrées tant que la fiche n'est pas complète. Optionnel = aucune vente, à faire quand tu as le temps.",
+      "countRequired": "{count} obligatoire(s)",
+      "countOptional": "{count} optionnel(s)",
+      "showOptional": "Afficher les optionnels",
+      "hideOptional": "Masquer les optionnels",
+      "allClients": "Tous les clients",
+      "empty": "Rien à compléter 🎉",
+      "required": "Obligatoire",
+      "optional": "Optionnel",
+      "sales90": "{count} vendu(s) sur 90 j",
+      "noSku": "pas de SKU sur Shopify",
+      "missing": {
+        "link": "Pas de fiche Voltship",
+        "weight": "Poids",
+        "client_price": "Prix client",
+        "channel": "Transporteur",
+        "factory_price": "Prix usine"
+      },
+      "complete": "Compléter la fiche →",
+      "create": "Créer la fiche et la compléter →",
+      "linkPlaceholder": "…ou relier à un produit déjà coté",
+      "link": "Relier",
+      "footnote": "★ = nom proche d'un produit déjà coté pour ce client. Relier = les commandes Shopify de ce produit utilisent la cotation existante. La liste se met à jour à chaque synchro Shopify (toutes les 10 min)."
+    },
+    "orders": {
+      "kicker": "Opérations Voltship",
+      "title": "Commandes fournisseurs",
+      "lead": "Chaque commande de production ou de réassort qu'on passe pour un client. Le client la voit dans son espace (Commandes) avec la barre d'avancement, et il est prévenu à chaque changement de statut (app + email/WhatsApp). Les notes 🔒 internes ne sont jamais montrées au client.",
+      "missingTable": "La table purchase_orders n'existe pas encore : lance la migration 00019_purchase_orders.sql dans Supabase.",
+      "restocks": {
+        "title": "Demandes de réassort à traiter ({count})",
+        "lead": "Envoyées par les clients depuis l'app (90 derniers jours). Transforme-les en commande pour qu'ils voient l'avancement.",
+        "convert": "Créer la commande →"
+      },
+      "form": {
+        "heading": "Nouvelle commande",
+        "lead": "Le client est prévenu dès la création.",
+        "client": "Client",
+        "product": "Produit",
+        "noProduct": "— Hors catalogue —",
+        "title": "Nom (si pas de produit)",
+        "titlePlaceholder": "ex. Coffret cadeau 2026",
+        "quantity": "Quantité",
+        "unitPrice": "Prix unitaire client",
+        "unitHint": "Vide = prix client de la fiche produit.",
+        "total": "Total facturé",
+        "totalHint": "Vide = quantité × prix unitaire.",
+        "status": "Statut",
+        "eta": "Arrivée prévue",
+        "tracking": "N° de suivi / ASN",
+        "notesClient": "Message visible par le client",
+        "notesClientHint": "ex. Échantillon validé, production lancée, départ prévu le 20/10.",
+        "notesInternal": "Notes internes (jamais visibles par le client)",
+        "notesInternalHint": "Usine, prix d'achat, contact…",
+        "create": "Créer la commande",
+        "creating": "Création…",
+        "created": "Commande créée, le client est prévenu."
+      },
+      "list": {
+        "open": "Commandes en cours",
+        "all": "Toutes les commandes",
+        "showAll": "Voir tout l'historique",
+        "showOpen": "Voir seulement en cours",
+        "empty": "Aucune commande.",
+        "save": "Enregistrer"
+      },
+      "step": {
+        "to_pay": "Paiement",
+        "in_production": "Production",
+        "quality_check": "Contrôle",
+        "to_warehouse": "Vers l'entrepôt",
+        "received": "Reçue"
+      },
+      "status": {
+        "to_pay": "En attente de paiement",
+        "in_production": "En production",
+        "quality_check": "Contrôle qualité",
+        "to_warehouse": "En route vers l'entrepôt",
+        "received": "Reçue à l'entrepôt",
+        "cancelled": "Annulée"
+      }
+    },
+    "shopsPage": {
+      "kicker": "Admin Voltship",
+      "title": "Migration Shopify",
+      "lead": "« Connecter » t’envoie vers l’écran d’installation Shopify de la boutique choisie (OAuth). Une fois que le marchand a validé, la boutique est enregistrée et 90 jours de commandes ainsi que le catalogue sont importés. Les clients peuvent aussi connecter leur boutique eux-mêmes depuis les Paramètres.",
+      "connected": "Boutique connectée. Vérifie les produits importés ci-dessous.",
+      "appsTitle": "Apps Shopify par boutique",
+      "appsHelp": "Une app « Custom distribution » par boutique client (Dev Dashboard de l’orga Partner Voltship). Choisis le client, colle l’ID client et le secret (laisse-les vides pour seulement changer de client) : à l’installation, la boutique se rattache toute seule à ce client. Le bouton « Connecter ma boutique » utilisera automatiquement cette app pour ce domaine.",
+      "client": "Client",
+      "choose": "Choisir…",
+      "shopDomain": "Domaine boutique",
+      "shopDomainPlaceholder": "boutique.myshopify.com",
+      "apiKey": "ID client (app)",
+      "apiSecret": "Secret client (app)",
+      "label": "Nom (optionnel)",
+      "save": "Enregistrer",
+      "noClient": "aucun client",
+      "connectTitle": "Connecter une boutique",
+      "connectButton": "Connecter Shopify",
+      "connectedTitle": "Boutiques connectées",
+      "noShops": "Aucune boutique Shopify connectée.",
+      "lastSync": "Dernière synchro : {date}",
+      "never": "jamais",
+      "syncNow": "Synchroniser",
+      "importTitle": "Import des produits",
+      "importHelp": "Choisis une boutique. Les variantes sont regroupées par produit ; les produits à 30 ventes ou plus sur 90 jours (toutes variantes confondues) sont pré-cochés.",
+      "show": "Afficher"
+    },
+    "shopForms": {
+      "searchPlaceholder": "Rechercher un produit ou un SKU…",
+      "hideImported": "Masquer les déjà importés",
+      "selectAll": "Tout cocher",
+      "selectNone": "Tout décocher",
+      "counts": "{visible, plural, one {# produit} other {# produits}} · {selected, plural, one {# sélectionné} other {# sélectionnés}}",
+      "colImport": "Importer",
+      "colProduct": "Produit",
+      "colVariants": "Variantes",
+      "colSales90": "Ventes 90 j ↓",
+      "colStatus": "État",
+      "importAria": "Importer {name}",
+      "statusImported": "Importé",
+      "statusPartial": "Partiel",
+      "statusReady": "Prêt",
+      "noSku": "Sans SKU",
+      "importDone": "{count, plural, =0 {Aucun produit importé.} one {# produit importé.} other {# produits importés.}}",
+      "importing": "Import…",
+      "importButton": "{count, plural, =0 {Importer 0 produit} one {Importer # produit} other {Importer # produits}}",
+      "disconnect": "Déconnecter",
+      "cancel": "Annuler",
+      "disconnectFailed": "Échec de la déconnexion.",
+      "disconnecting": "Déconnexion…",
+      "confirmDisconnect": "Confirmer la déconnexion",
+      "whatsappLabel": "Numéro WhatsApp (avec indicatif)",
+      "saving": "Enregistrement…",
+      "save": "Enregistrer",
+      "saved": "Enregistré ✓"
+    },
+    "alertsPage": {
+      "kicker": "Opérations Voltship",
+      "title": "Commandes à vérifier",
+      "lead": "Commandes inhabituelles de tous les clients. Le client voit la même alerte et le même fil de discussion dans son espace.",
+      "filterOpen": "À traiter",
+      "filterAll": "Toutes",
+      "emptyAll": "Aucune alerte pour l’instant.",
+      "emptyOpen": "Rien à traiter."
+    },
+    "pricingPage": {
+      "kicker": "Admin Voltship",
+      "title": "Service tarifaire",
+      "lead": "Grilles de transport versionnées. Activer une version met à jour le COGS en direct ; les devis acceptés restent figés.",
+      "newGrid": "Nouvelle version de grille",
+      "versions": "Versions",
+      "noVersions": "Crée une grille avant d'ajouter des tarifs.",
+      "active": "Active",
+      "activate": "Activer",
+      "importTitle": "Importer une grille tarifaire",
+      "importLead": "Charge toutes les tranches de poids d'une version de grille. Les cellules correspondantes sont mises à jour.",
+      "addRateTitle": "Ajouter ou modifier un tarif",
+      "cellsTitle": "Cellules tarifaires",
+      "taxNotIncluded": "Hors taxe : taxe colis UE ajoutée",
+      "columns": {
+        "version": "Version",
+        "carrier": "Transporteur",
+        "line": "Ligne",
+        "destination": "Destination",
+        "channel": "Canal",
+        "weight": "Poids",
+        "price": "Prix (EUR)",
+        "delivery": "Délai"
+      }
+    },
+    "pricingForms": {
+      "saved": "Enregistré.",
+      "saving": "Enregistrement…",
+      "grid": {
+        "version": "Version de grille",
+        "effectiveDate": "Date d'effet",
+        "source": "Source",
+        "create": "Créer la grille"
+      },
+      "cell": {
+        "grid": "Grille",
+        "carrier": "Transporteur",
+        "destination": "Destination",
+        "channel": "Canal",
+        "weightMin": "Poids min. (g)",
+        "weightMax": "Poids max. (g)",
+        "price": "Prix transport (EUR)",
+        "deliveryRange": "Délai de livraison",
+        "deliveryRangePlaceholder": "8–12 jours",
+        "save": "Enregistrer le tarif"
+      },
+      "channels": {
+        "standard": "standard",
+        "electronics_battery": "électronique / batterie",
+        "cosmetics": "cosmétique",
+        "liquid_perfume": "liquide / parfum",
+        "magnetic": "magnétique",
+        "sensitive_other": "sensible (autre)"
+      },
+      "csv": {
+        "file": "Fichier CSV",
+        "columns": "Colonnes : {columns}.",
+        "import": "Importer les tarifs",
+        "importedCount": "{count} tarifs importés.",
+        "imported": "Import terminé.",
+        "downloadTemplate": "Télécharger le modèle"
+      },
+      "client": {
+        "tier": "Palier",
+        "logisticsDiscount": "Remise transport %",
+        "commission": "Commission produit %",
+        "handling": "Handling € / colis",
+        "save": "Enregistrer",
+        "customHint": "Tarifs ajustés à la main pour ce client (le palier {tier} prévoit {discount} % de remise, {commission} % de commission, {handling} € de handling).",
+        "standardHint": "Tarifs standard du palier {tier}. Changer de palier remplit les valeurs ; tu peux encore les ajuster avant d'enregistrer."
+      },
+      "carrierRules": {
+        "noActiveGrid": "Aucune grille active — active d'abord une grille tarifaire.",
+        "line": "Ligne",
+        "markets": "Marchés",
+        "allowed": "Autorisée",
+        "allowLine": "Autoriser {line}",
+        "forcedTitle": "Ligne imposée par marché (optionnel)",
+        "forcedLead": "Remplace le choix du client sur ce marché. Si la ligne imposée n'a pas de tranche au poids du colis, on revient à la ligne autorisée la moins chère.",
+        "clientChoice": "Choix du client (la moins chère par défaut)",
+        "saved": "Règles transporteurs enregistrées.",
+        "saving": "Enregistrement…",
+        "save": "Enregistrer les règles transporteurs"
+      },
+      "lifecycle": {
+        "testingMaxAge": "Durée max. en test (jours)",
+        "winningOrders": "Commandes / jour pour « winning » (14 jours)",
+        "decliningDrop": "Baisse pour « en déclin » (%)",
+        "deadAfter": "« Mort » après X jours sans vente",
+        "saved": "Règles de cycle de vie enregistrées.",
+        "saving": "Enregistrement…",
+        "save": "Enregistrer les règles de cycle de vie"
+      }
+    },
+    "clientPage": {
+      "webhookSecretMissing": "'<'définir ECCANG_WEBHOOK_SECRET'>'",
+      "whatsappLead": "Numéro qui reçoit les notifications WhatsApp (devis prêt avec COGS 1 à 5, alertes stock, passage en Winning / Declining). Vide = pas de WhatsApp.",
+      "pricingTitle": "Palier & tarifs",
+      "pricingLead": "Appliqués à la grille transport active dans chaque calcul de COGS (les devis déjà acceptés restent figés).",
+      "lifecycleTitle": "Règles Winning / Declining",
+      "lifecycleLead": "Seuils utilisés pour classer les produits de ce client à chaque synchro Shopify.",
+      "carriersTitle": "Lignes transport",
+      "carriersLead": "Lignes que ce client peut utiliser par produit et par marché (décochée = masquée et jamais utilisée), avec une ligne imposée par marché si besoin. Appliqué à chaque COGS et aux commandes envoyées à ECCANG ; les devis acceptés restent figés."
+    },
+    "clientForms": {
+      "tier": "Palier",
+      "languages": {
+        "en": "Anglais",
+        "fr": "Français"
+      }
+    },
+    "eccangCard": {
+      "title": "Entrepôt (ECCANG)",
+      "lead": "Une paire appKey / appToken par client (créée dans l’OMS ECCANG). Le token est chiffré et jamais renvoyé au navigateur. Mise en service : 8 octobre 2026.",
+      "enabled": "Activé",
+      "disabled": "Désactivé",
+      "notConfigured": "<code>ECCANG_API_HOST</code> n’est pas défini sur le serveur : les appels sont désactivés.",
+      "enableLabel": "Activer l’intégration ECCANG pour ce client",
+      "tokenSaved": "(enregistré — laisser vide pour conserver)",
+      "warehouseCode": "Code entrepôt (warehouse_code)",
+      "warehousePlaceholder": "Tester la connexion pour lister les entrepôts",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Enregistré.",
+      "test": "Tester la connexion",
+      "testing": "Test…",
+      "sync": "Synchroniser maintenant",
+      "syncing": "Synchronisation…",
+      "push": "Pousser tous les produits validés",
+      "pushing": "Envoi…",
+      "warehouses": "Entrepôts (getWarehouse)",
+      "shippingMethods": "Méthodes d’expédition (getShippingMethod)",
+      "lastSync": "Dernière synchro",
+      "never": "Jamais",
+      "pushedProducts": "Produits poussés",
+      "orders": "Commandes ECCANG",
+      "inbound": "Réceptions (ASN)",
+      "syncError": "Erreur de synchro : {error}",
+      "mapTitle": "Correspondance transporteur → méthode ECCANG",
+      "mapHelp": "Clé = <code>Transporteur</code> ou <code>Transporteur|Ligne</code> tel qu’écrit dans la grille tarifaire (ex. <code>YunExpress|CHC</code>), ou <code>default</code> / <code>default:FR</code>. Valeur = code renvoyé par getShippingMethod. Table globale (tous clients). Une commande sans correspondance n’est pas poussée et génère une notification.",
+      "codePlaceholder": "Code ECCANG",
+      "removeRow": "Supprimer la ligne",
+      "addRow": "+ Ligne",
+      "saveMap": "Enregistrer la correspondance",
+      "callbackTitle": "URL de callback à déclarer dans l’OMS ECCANG (订阅回调)",
+      "callbackHelp": "Types à souscrire : <code>order</code>, <code>receiving</code>, <code>stock</code>. ECCANG vérifie l’URL avec <code>?random=…</code> (renvoyé tel quel). Sans callback, le cron toutes les 15 min fait le même travail."
+    },
+    "financeChart": {
+      "weekShort": "S{week}",
+      "weekValue": "S{week} : {value}",
+      "estimated": "(estimé)"
+    },
+    "dashboardExtra": {
+      "unknownClient": "Client inconnu",
+      "unassigned": "Non assigné"
+    },
+    "financeExtra": {
+      "weekShort": "S{week}",
+      "percent": "{value} %",
+      "openEnded": "∞"
+    }
   },
   "impersonate": {
     "banner": "Vue {client}. Les écritures sont journalisées à votre nom.",
@@ -1321,7 +1660,122 @@
   },
   "sourcer": {
     "title": "File sourcing",
-    "soon": "Les demandes les plus anciennes d’abord. Complétez le devis et envoyez le COGS client."
+    "soon": "Les demandes les plus anciennes d’abord. Complétez le devis et envoyez le COGS client.",
+    "queue": {
+      "eyebrow": "Opérations",
+      "title": "File de sourcing",
+      "intro": "Les plus anciennes d'abord. Remplis le devis visible par le client et garde les infos fournisseur en interne.",
+      "openCount": "{count, plural, one {# en cours} other {# en cours}}",
+      "searchPlaceholder": "Produit, SKU ou client",
+      "allStatuses": "Tous les statuts ouverts",
+      "backfillOnly": "Reprise uniquement",
+      "apply": "Appliquer",
+      "empty": "Aucun sourcing ne correspond à ces filtres.",
+      "columns": {
+        "photo": "Photo",
+        "product": "Produit",
+        "client": "Client",
+        "status": "Statut",
+        "missing": "Manquant",
+        "created": "Créé le"
+      },
+      "noSku": "Pas de SKU",
+      "ready": "Complet",
+      "missing": {
+        "price": "prix",
+        "weight": "poids",
+        "channel": "canal"
+      },
+      "listSeparator": ", ",
+      "statuses": {
+        "brief_received": "Brief reçu",
+        "factories": "Recherche d'usines",
+        "samples": "Échantillons",
+        "negotiation": "Négociation",
+        "quote_sent": "Devis envoyé",
+        "validated": "Validé",
+        "in_production": "En production",
+        "in_stock": "En stock",
+        "flagged": "Signalé"
+      }
+    },
+    "product": {
+      "backToTodo": "← À compléter",
+      "backToQueue": "← File de sourcing",
+      "noSku": "Pas de SKU",
+      "clientBrief": "Brief client",
+      "description": "Description",
+      "targetUnitPrice": "Prix unitaire cible (€)",
+      "approxWeight": "Poids unitaire approx. (g, client)",
+      "currentUnitCost": "Coût unitaire actuel chez l'agent (€, client)",
+      "launchQty": "Quantité de lancement",
+      "destinationMarkets": "Marchés de destination",
+      "notes": "Notes",
+      "reference": "Référence",
+      "openSourceLink": "Ouvrir le lien source"
+    },
+    "shell": {
+      "queueLink": "File de sourcing",
+      "staff": "Équipe"
+    },
+    "form": {
+      "clientFieldsTitle": "Champs du devis visibles par le client",
+      "clientFieldsIntro": "Ces valeurs apparaissent sur la fiche produit du client.",
+      "clientPrice": "Prix produit client",
+      "clientPriceHint": "Par unité, avant la commission du palier (ajoutée automatiquement).",
+      "unitWeight": "Poids unitaire",
+      "gramsUnit": "g",
+      "sku": "SKU (Shopify / ECCANG)",
+      "skuHint": "Vide = un SKU Voltship (VS-CLIENT-001) est attribué à l'envoi du devis. Le client reporte ce SKU sur son produit Shopify pour que les commandes soient liées automatiquement.",
+      "shippingChannel": "Canal d'expédition",
+      "select": "Choisir",
+      "channels": {
+        "standard": "Standard",
+        "electronics_battery": "Électronique / batterie",
+        "cosmetics": "Cosmétique",
+        "liquid_perfume": "Liquide / parfum",
+        "magnetic": "Magnétique",
+        "sensitive_other": "Sensible (ingérable)"
+      },
+      "attributes": {
+        "electronics": "batterie / électronique",
+        "liquid": "liquide / crème",
+        "alcohol": "parfum ou alcool",
+        "ingestible": "ingérable",
+        "magnetic": "aimant"
+      },
+      "suggestedByClient": "Suggéré par le client : <strong>{channel}</strong>",
+      "tickedList": " (coché : {list})",
+      "nothingTicked": " (rien coché)",
+      "listSeparator": ", ",
+      "yourValueWins": " — ta valeur l'emporte",
+      "confirmOrCorrect": " — confirme ou corrige",
+      "productionLead": "Délai de production",
+      "daysUnit": "jours",
+      "moq": "MOQ",
+      "unitsUnit": "unités",
+      "sourcingStatus": "Statut sourcing",
+      "internalTitle": "Champs sourcing internes",
+      "internalIntro": "Jamais visibles par les clients.",
+      "factoryPrice": "Prix d'achat usine",
+      "fxConversion": "= {eur} € au taux de {rate} ¥/€",
+      "useAsClientPrice": "Utiliser comme prix produit client",
+      "sourcingLocation": "Lieu de sourcing",
+      "supplierName": "Nom du fournisseur",
+      "supplierContact": "Contact fournisseur",
+      "internalNotes": "Notes internes",
+      "draftSaved": "Brouillon enregistré.",
+      "quoteSent": "Devis envoyé.",
+      "saving": "Enregistrement…",
+      "saveDraft": "Enregistrer le brouillon",
+      "sending": "Envoi…",
+      "sendQuote": "Envoyer le devis",
+      "flagTitle": "Signaler un problème",
+      "reason": "Motif",
+      "flagging": "Signalement…",
+      "flagProblem": "Signaler le problème",
+      "productFlagged": "Produit signalé."
+    }
   },
   "support": {
     "title": "SAV",
@@ -1388,5 +1842,68 @@
     "24h": "24 h",
     "7d": "7 jours",
     "30d": "30 jours"
+  },
+  "orders": {
+    "title": "Mes commandes",
+    "lead": "Les commandes de production et de réassort que Voltship passe pour toi, avec leur avancement.",
+    "leadOpen": "{count} commande(s) en cours chez nos usines. Tu suis ici chaque étape jusqu'à l'arrivée à l'entrepôt.",
+    "empty": "Aucune commande pour l'instant. Quand Voltship lance une production pour toi, elle apparaît ici.",
+    "inProgress": "En cours",
+    "history": "Historique",
+    "placed": "Passée le {date}",
+    "total": "Total {amount}",
+    "eta": "arrivée prévue {date}",
+    "tracking": "suivi {tracking}",
+    "step": {
+      "to_pay": "Paiement",
+      "in_production": "Production",
+      "quality_check": "Contrôle",
+      "to_warehouse": "Vers l'entrepôt",
+      "received": "Reçue"
+    },
+    "status": {
+      "to_pay": "En attente de paiement",
+      "in_production": "En production",
+      "quality_check": "Contrôle qualité",
+      "to_warehouse": "En route vers l'entrepôt",
+      "received": "Reçue à l'entrepôt",
+      "cancelled": "Annulée"
+    }
+  },
+  "orderAlerts": {
+    "statusOpen": "À vérifier",
+    "statusLegit": "Vraie commande",
+    "statusAbuse": "Abus confirmé",
+    "orderTitle": "Commande {number}",
+    "reasons": {
+      "price_anomaly": {
+        "title": "Prix anormal",
+        "help": "Beaucoup d’articles pour presque rien payé (moins de 1 € par article). Commande sortie des ventes en attendant."
+      },
+      "zero_total": {
+        "title": "Commande à 0 €",
+        "help": "Le client n’a rien payé : cadeau, influenceur, test… ou code promo à 100 %."
+      },
+      "discount_abuse": {
+        "title": "Grosse remise",
+        "help": "Au moins 60 % de remise sur les produits : code promo partagé ou mal réglé ?"
+      },
+      "quantity_spike": {
+        "title": "Quantité inhabituelle",
+        "help": "10 articles ou plus dans une seule commande."
+      }
+    },
+    "paid": "Payé",
+    "gross": "Prix des produits",
+    "discount": "Remise",
+    "units": "Articles",
+    "discountCode": "Code promo",
+    "authorClient": "Client",
+    "messagePlaceholder": "Écrire un message…",
+    "sending": "Envoi…",
+    "send": "Envoyer",
+    "markLegit": "Vraie commande",
+    "markAbuse": "Abus confirmé",
+    "reopen": "Rouvrir"
   }
 }

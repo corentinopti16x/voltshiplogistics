@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { saveShopifyAppCredentialsAction, syncShopAction } from "@/app/actions/shopify";
 import { ShopifyImportForm } from "@/components/admin/shopify-import-form";
@@ -9,6 +10,7 @@ export default async function AdminShopsPage({
   searchParams: Promise<{ connected?: string; error?: string; shop?: string }>;
 }) {
   const query = await searchParams;
+  const t = await getTranslations("admin.shopsPage");
   const admin = createAdminClient();
   const { data: shopOptions } = await admin
     .from("shops")
@@ -54,17 +56,15 @@ export default async function AdminShopsPage({
   return (
     <div>
       <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--gold)] uppercase">
-        Voltship admin
+        {t("kicker")}
       </p>
-      <h1 className="font-display mt-2 text-3xl">Shopify migration</h1>
+      <h1 className="font-display mt-2 text-3xl">{t("title")}</h1>
       <p className="mt-2 text-sm text-[var(--muted)]">
-        Connect sends you to Shopify’s install screen for the chosen store (OAuth). Once the
-        merchant approves, the shop is saved and 90 days of orders plus the catalogue are imported.
-        Clients can also connect their own store from Settings.
+        {t("lead")}
       </p>
       {query.connected ? (
         <p className="mt-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          Shop connected. Review the imported products below.
+          {t("connected")}
         </p>
       ) : null}
       {query.error ? (
@@ -72,11 +72,9 @@ export default async function AdminShopsPage({
       ) : null}
 
       <section className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">Apps Shopify par boutique</h2>
+        <h2 className="text-sm font-semibold">{t("appsTitle")}</h2>
         <p className="mt-1 text-xs text-[var(--muted)]">
-          Une app « Custom distribution » par boutique client (Dev Dashboard de l’orga Partner
-          Voltship). Choisis le client, colle l’ID client et le secret (laisse-les vides pour seulement changer de client) : à l’installation, la boutique se rattache toute seule à ce client. Le bouton « Connecter ma boutique »
-          utilisera automatiquement cette app pour ce domaine.
+          {t("appsHelp")}
         </p>
         <form
           action={saveShopifyAppCredentialsAction}
@@ -84,13 +82,13 @@ export default async function AdminShopsPage({
           autoComplete="off"
         >
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-[var(--muted)]">Client</span>
+            <span className="text-[var(--muted)]">{t("client")}</span>
             <select
               name="client_id"
               required
               className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
             >
-              <option value="">Choisir…</option>
+              <option value="">{t("choose")}</option>
               {(clients ?? []).map((client) => (
                 <option key={client.id} value={client.id}>
                   {client.name}
@@ -99,23 +97,23 @@ export default async function AdminShopsPage({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-[var(--muted)]">Domaine boutique</span>
+            <span className="text-[var(--muted)]">{t("shopDomain")}</span>
             <input
               name="shop"
               required
-              placeholder="boutique.myshopify.com"
+              placeholder={t("shopDomainPlaceholder")}
               className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-[var(--muted)]">ID client (app)</span>
+            <span className="text-[var(--muted)]">{t("apiKey")}</span>
             <input
               name="api_key"
               className="rounded-md border border-[var(--line)] bg-white px-3 py-2 font-mono text-xs"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-[var(--muted)]">Secret client (app)</span>
+            <span className="text-[var(--muted)]">{t("apiSecret")}</span>
             <input
               name="api_secret"
               type="password"
@@ -124,7 +122,7 @@ export default async function AdminShopsPage({
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-[var(--muted)]">Nom (optionnel)</span>
+            <span className="text-[var(--muted)]">{t("label")}</span>
             <div className="flex gap-2">
               <input
                 name="label"
@@ -132,7 +130,7 @@ export default async function AdminShopsPage({
                 className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-3 py-2"
               />
               <button className="cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm text-white">
-                Enregistrer
+                {t("save")}
               </button>
             </div>
           </label>
@@ -149,7 +147,7 @@ export default async function AdminShopsPage({
                   →{" "}
                   {(clients ?? []).find(
                     (client) => client.id === (app as { client_id?: string | null }).client_id,
-                  )?.name ?? "aucun client"}
+                  )?.name ?? t("noClient")}
                 </span>
                 <span className="font-mono text-xs">{app.api_key}</span>
               </li>
@@ -159,11 +157,11 @@ export default async function AdminShopsPage({
       </section>
 
       <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">Connect shop</h2>
+        <h2 className="text-sm font-semibold">{t("connectTitle")}</h2>
         <form action="/api/shopify/connect" method="get" className="mt-4 grid gap-3 sm:grid-cols-3">
           <input type="hidden" name="from" value="admin" />
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-[var(--muted)]">Client</span>
+            <span className="text-[var(--muted)]">{t("client")}</span>
             <select
               name="client_id"
               required
@@ -177,26 +175,26 @@ export default async function AdminShopsPage({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-[var(--muted)]">Shop domain</span>
+            <span className="text-[var(--muted)]">{t("shopDomain")}</span>
             <input
               name="shop"
               required
-              placeholder="store.myshopify.com"
+              placeholder={t("shopDomainPlaceholder")}
               className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
             />
           </label>
           <div className="flex items-end">
             <button className="cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm text-white">
-              Connect Shopify
+              {t("connectButton")}
             </button>
           </div>
         </form>
       </section>
 
       <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">Connected shops</h2>
+        <h2 className="text-sm font-semibold">{t("connectedTitle")}</h2>
         {(shops ?? []).length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--muted)]">No Shopify shops connected.</p>
+          <p className="mt-3 text-sm text-[var(--muted)]">{t("noShops")}</p>
         ) : (
           <ul className="mt-4 space-y-2">
             {(shops ?? []).map((shop) => (
@@ -207,10 +205,12 @@ export default async function AdminShopsPage({
                 <div>
                   <p className="font-medium">{shop.shopify_domain}</p>
                   <p className="text-xs text-[var(--muted)]">
-                    {shop.status} · Last sync{" "}
-                    {shop.last_synced_at
-                      ? new Date(shop.last_synced_at).toLocaleString()
-                      : "never"}
+                    {shop.status} ·{" "}
+                    {t("lastSync", {
+                      date: shop.last_synced_at
+                        ? new Date(shop.last_synced_at).toLocaleString()
+                        : t("never"),
+                    })}
                   </p>
                   {shop.sync_error ? (
                     <p className="mt-1 text-xs text-red-700">{shop.sync_error}</p>
@@ -220,7 +220,7 @@ export default async function AdminShopsPage({
                   {shop.status === "active" ? (
                     <form action={syncShopAction.bind(null, shop.id)}>
                       <button className="cursor-pointer rounded-md border border-[var(--line)] px-3 py-1.5 hover:bg-white">
-                        Sync now
+                        {t("syncNow")}
                       </button>
                     </form>
                   ) : null}
@@ -234,10 +234,9 @@ export default async function AdminShopsPage({
 
       <section className="mt-6 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--card)]">
         <div className="p-6">
-          <h2 className="text-sm font-semibold">Import des produits</h2>
+          <h2 className="text-sm font-semibold">{t("importTitle")}</h2>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Choisis une boutique. Les variantes sont regroupées par produit ; les produits à
-            30 ventes ou plus sur 90 jours (toutes variantes confondues) sont pré-cochés.
+            {t("importHelp")}
           </p>
           <form method="get" className="mt-4 flex flex-wrap items-center gap-2">
             <select
@@ -253,7 +252,7 @@ export default async function AdminShopsPage({
               ))}
             </select>
             <button className="cursor-pointer rounded-md border border-[var(--line)] px-3 py-2 text-sm">
-              Afficher
+              {t("show")}
             </button>
           </form>
         </div>

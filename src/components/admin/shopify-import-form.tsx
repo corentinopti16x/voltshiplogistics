@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useActionState, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { importShopifyProductsAction } from "@/app/actions/shopify";
 import type { ActionResult } from "@/app/actions/admin";
 
@@ -44,6 +45,7 @@ function groupVariants(rows: ImportVariantRow[]): ProductGroup[] {
 }
 
 export function ShopifyImportForm({ products }: { products: ImportVariantRow[] }) {
+  const t = useTranslations("admin.shopForms");
   const [state, action, pending] = useActionState(importShopifyProductsAction, initial);
   const [query, setQuery] = useState("");
   const [onlyPending, setOnlyPending] = useState(true);
@@ -84,7 +86,7 @@ export function ShopifyImportForm({ products }: { products: ImportVariantRow[] }
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Rechercher un produit ou un SKU…"
+          placeholder={t("searchPlaceholder")}
           className="min-w-56 flex-1 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
         />
         <label className="flex items-center gap-2 text-sm">
@@ -93,35 +95,35 @@ export function ShopifyImportForm({ products }: { products: ImportVariantRow[] }
             checked={onlyPending}
             onChange={(event) => setOnlyPending(event.target.checked)}
           />
-          <span className="text-[var(--muted)]">Masquer les déjà importés</span>
+          <span className="text-[var(--muted)]">{t("hideImported")}</span>
         </label>
         <button
           type="button"
           onClick={() => setAll(true)}
           className="cursor-pointer rounded-md border border-[var(--line)] px-3 py-1.5 text-sm"
         >
-          Tout cocher
+          {t("selectAll")}
         </button>
         <button
           type="button"
           onClick={() => setAll(false)}
           className="cursor-pointer rounded-md border border-[var(--line)] px-3 py-1.5 text-sm"
         >
-          Tout décocher
+          {t("selectNone")}
         </button>
         <p className="text-xs text-[var(--muted)]">
-          {visible.length} produits · {selectedGroups.length} sélectionnés
+          {t("counts", { visible: visible.length, selected: selectedGroups.length })}
         </p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="border-y border-[var(--line)] text-xs text-[var(--muted)] uppercase">
             <tr>
-              <th className="px-4 py-3">Importer</th>
-              <th className="px-4 py-3">Produit</th>
-              <th className="px-4 py-3">Variantes</th>
-              <th className="px-4 py-3">Ventes 90 j ↓</th>
-              <th className="px-4 py-3">État</th>
+              <th className="px-4 py-3">{t("colImport")}</th>
+              <th className="px-4 py-3">{t("colProduct")}</th>
+              <th className="px-4 py-3">{t("colVariants")}</th>
+              <th className="px-4 py-3">{t("colSales90")}</th>
+              <th className="px-4 py-3">{t("colStatus")}</th>
             </tr>
           </thead>
           <tbody>
@@ -131,7 +133,7 @@ export function ShopifyImportForm({ products }: { products: ImportVariantRow[] }
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
-                      aria-label={`Importer ${group.title}`}
+                      aria-label={t("importAria", { name: group.title })}
                       disabled={group.pendingIds.length === 0}
                       checked={Boolean(selected[group.key]) && group.pendingIds.length > 0}
                       onChange={(event) =>
@@ -154,20 +156,20 @@ export function ShopifyImportForm({ products }: { products: ImportVariantRow[] }
                   <td className="px-4 py-3 font-medium">{group.units}</td>
                   <td className="px-4 py-3">
                     {group.pendingIds.length === 0
-                      ? "Importé"
+                      ? t("statusImported")
                       : group.imported
-                        ? "Partiel"
-                        : "Prêt"}
+                        ? t("statusPartial")
+                        : t("statusReady")}
                   </td>
                 </tr>
                 {open[group.key]
                   ? group.variants.map((variant) => (
                       <tr key={variant.id} className="border-b border-[var(--line)] bg-white/50 text-xs">
                         <td />
-                        <td className="px-4 py-2 text-[var(--muted)]">{variant.sku ?? "Sans SKU"}</td>
+                        <td className="px-4 py-2 text-[var(--muted)]">{variant.sku ?? t("noSku")}</td>
                         <td />
                         <td className="px-4 py-2">{variant.units_90d}</td>
-                        <td className="px-4 py-2">{variant.imported_product_id ? "Importé" : ""}</td>
+                        <td className="px-4 py-2">{variant.imported_product_id ? t("statusImported") : ""}</td>
                       </tr>
                     ))
                   : null}
@@ -179,7 +181,7 @@ export function ShopifyImportForm({ products }: { products: ImportVariantRow[] }
       {state.error ? <p className="mx-6 mt-4 text-sm text-red-700">{state.error}</p> : null}
       {state.ok ? (
         <p className="mx-6 mt-4 text-sm text-emerald-800">
-          {state.clientId ?? "0"} produit(s) importé(s).
+          {t("importDone", { count: Number(state.clientId ?? 0) })}
         </p>
       ) : null}
       <button
@@ -187,7 +189,7 @@ export function ShopifyImportForm({ products }: { products: ImportVariantRow[] }
         disabled={pending || selectedGroups.length === 0}
         className="m-4 cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
       >
-        {pending ? "Import…" : `Importer ${selectedGroups.length} produit(s)`}
+        {pending ? t("importing") : t("importButton", { count: selectedGroups.length })}
       </button>
     </form>
   );
