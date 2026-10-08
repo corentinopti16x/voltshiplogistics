@@ -23,8 +23,11 @@ export function NewProductForm() {
 
   return (
     <form action={action} encType="multipart/form-data" className="flex flex-col gap-4">
+      <p className="text-[12px] text-[var(--muted)]">
+        <span className="text-[var(--rust-ink)]">*</span> {t("form.requiredLegend")}
+      </p>
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-[12px] font-semibold text-[var(--muted)]">{t("form.name")}</span>
+        <span className="text-[12px] font-semibold text-[var(--muted)]">{t("form.name")} <span className="text-[var(--rust-ink)]" aria-hidden>*</span></span>
         <input
           name="title"
           required
@@ -33,7 +36,7 @@ export function NewProductForm() {
         />
       </label>
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-[12px] font-semibold text-[var(--muted)]">{t("form.photo")}</span>
+        <span className="text-[12px] font-semibold text-[var(--muted)]">{t("form.photo")} <span className="text-[var(--rust-ink)]" aria-hidden>*</span></span>
         <input
           name="photo"
           type="file"
@@ -42,13 +45,14 @@ export function NewProductForm() {
         />
       </label>
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-[12px] font-semibold text-[var(--muted)]">{t("form.link")}</span>
+        <span className="text-[12px] font-semibold text-[var(--muted)]">{t("form.link")} <span className="text-[var(--rust-ink)]" aria-hidden>*</span></span>
         <input
           name="source_url"
           type="url"
           placeholder="https://..."
           className="vs-input"
         />
+        <span className="text-[12px] text-[var(--faint)]">{t("form.photoOrLink")}</span>
       </label>
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="text-[12px] font-semibold text-[var(--muted)]">{t("form.description")}</span>
@@ -111,9 +115,11 @@ export function NewProductForm() {
         </label>
       </div>
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-[12px] font-semibold text-[var(--muted)]">{t("form.destinations")}</span>
+        <span className="text-[12px] font-semibold text-[var(--muted)]">{t("form.destinations")} <span className="text-[var(--rust-ink)]" aria-hidden>*</span></span>
         <input
           name="destinations"
+          required
+          defaultValue="FR"
           placeholder="FR, DE, UK"
           className="vs-input"
         />
