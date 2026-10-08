@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { updateLifecycleThresholdsAction, type ActionResult } from "@/app/actions/admin";
 import type { LifecycleThresholds } from "@/lib/domain/lifecycle";
 
@@ -13,24 +14,25 @@ export function LifecycleThresholdForm({
   clientId: string;
   thresholds: LifecycleThresholds;
 }) {
+  const t = useTranslations("admin.pricingForms.lifecycle");
   const [state, action, pending] = useActionState(updateLifecycleThresholdsAction, initial);
   const fields = [
-    ["testing_max_age_days", "Testing max age (days)", thresholds.testingMaxAgeDays, 1, 365],
+    ["testing_max_age_days", t("testingMaxAge"), thresholds.testingMaxAgeDays, 1, 365],
     [
       "winning_min_orders_per_day_14d",
-      "Winning orders / day (14 days)",
+      t("winningOrders"),
       thresholds.winningMinOrdersPerDay14d,
       0,
       1000,
     ],
     [
       "declining_sales_drop_pct",
-      "Declining drop %",
+      t("decliningDrop"),
       thresholds.decliningSalesDropPct,
       1,
       100,
     ],
-    ["dead_no_sales_days", "Dead after days without sales", thresholds.deadNoSalesDays, 1, 365],
+    ["dead_no_sales_days", t("deadAfter"), thresholds.deadNoSalesDays, 1, 365],
   ] as const;
 
   return (
@@ -52,14 +54,14 @@ export function LifecycleThresholdForm({
       ))}
       {state.error ? <p className="text-sm text-red-700 sm:col-span-2">{state.error}</p> : null}
       {state.ok ? (
-        <p className="text-sm text-emerald-800 sm:col-span-2">Lifecycle rules saved.</p>
+        <p className="text-sm text-emerald-800 sm:col-span-2">{t("saved")}</p>
       ) : null}
       <button
         type="submit"
         disabled={pending}
         className="w-fit rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
       >
-        {pending ? "Saving…" : "Save lifecycle rules"}
+        {pending ? t("saving") : t("save")}
       </button>
     </form>
   );

@@ -1,13 +1,14 @@
+import { useTranslations } from "next-intl";
 import { Badge, Card } from "@/components/ui";
 import { OrderAlertDecision, OrderAlertReplyForm } from "@/components/orders/order-alert-forms";
-import { ORDER_ALERT_LABELS, parseAlertReasons } from "@/lib/orders/anomalies";
+import { parseAlertReasons } from "@/lib/orders/anomalies";
 import type { OrderAlertView } from "@/lib/orders/alerts-queries";
 import { formatAmount, formatDate } from "@/lib/format";
 
 const statusBadge = {
-  open: { tone: "gold", label: "À vérifier" },
-  legit: { tone: "green", label: "Vraie commande" },
-  abuse: { tone: "rust", label: "Abus confirmé" },
+  open: { tone: "gold", label: "statusOpen" },
+  legit: { tone: "green", label: "statusLegit" },
+  abuse: { tone: "rust", label: "statusAbuse" },
 } as const;
 
 /** One flagged order with its reasons, figures and shared thread (Voltship ↔ client). */
@@ -23,6 +24,7 @@ export function OrderAlertCard({
   /** Who is reading: their own messages are on the right. */
   viewer: "client" | "voltship";
 }) {
+  const t = useTranslations("orderAlerts");
   const reasons = parseAlertReasons(alert.reasons);
   const details = alert.details ?? {};
   const currency = details.currency === "USD" ? "USD" : "EUR";
@@ -36,10 +38,12 @@ export function OrderAlertCard({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-[17px] font-bold">
-              Commande {alert.order_number ? `#${alert.order_number}` : alert.shopify_order_id}
+              {t("orderTitle", {
+                number: alert.order_number ? `#${alert.order_number}` : alert.shopify_order_id,
+              })}
             </h2>
             <Badge tone={badge.tone} dot>
-              {badge.label}
+              {t(badge.label)}
             </Badge>
           </div>
           <p className="mt-0.5 text-[13px] text-[var(--muted)]">
@@ -53,35 +57,35 @@ export function OrderAlertCard({
       <ul className="flex flex-col gap-1.5">
         {reasons.map((reason) => (
           <li key={reason} className="text-sm">
-            <span className="font-semibold">{ORDER_ALERT_LABELS[reason].title}</span>
-            <span className="text-[var(--muted)]"> — {ORDER_ALERT_LABELS[reason].help}</span>
+            <span className="font-semibold">{t(`reasons.${reason}.title`)}</span>
+            <span className="text-[var(--muted)]"> — {t(`reasons.${reason}.help`)}</span>
           </li>
         ))}
       </ul>
 
       <dl className="grid grid-cols-2 gap-3 rounded-xl bg-[var(--card-soft)] px-4 py-3 text-sm sm:grid-cols-4">
         <div>
-          <dt className="text-[12px] text-[var(--muted)]">Payé</dt>
+          <dt className="text-[12px] text-[var(--muted)]">{t("paid")}</dt>
           <dd className="font-semibold">{money(details.total)}</dd>
         </div>
         <div>
-          <dt className="text-[12px] text-[var(--muted)]">Prix des produits</dt>
+          <dt className="text-[12px] text-[var(--muted)]">{t("gross")}</dt>
           <dd className="font-semibold">{money(details.gross)}</dd>
         </div>
         <div>
-          <dt className="text-[12px] text-[var(--muted)]">Remise</dt>
+          <dt className="text-[12px] text-[var(--muted)]">{t("discount")}</dt>
           <dd className="font-semibold">
             {money(details.discounts)}
             {details.discount_pct != null ? ` (${details.discount_pct} %)` : ""}
           </dd>
         </div>
         <div>
-          <dt className="text-[12px] text-[var(--muted)]">Articles</dt>
+          <dt className="text-[12px] text-[var(--muted)]">{t("units")}</dt>
           <dd className="font-semibold">{details.units ?? "—"}</dd>
         </div>
         {details.discount_codes && details.discount_codes.length > 0 ? (
           <div className="col-span-2 sm:col-span-4">
-            <dt className="text-[12px] text-[var(--muted)]">Code promo</dt>
+            <dt className="text-[12px] text-[var(--muted)]">{t("discountCode")}</dt>
             <dd className="font-semibold">{details.discount_codes.join(", ")}</dd>
           </div>
         ) : null}
@@ -104,7 +108,7 @@ export function OrderAlertCard({
                 }`}
               >
                 <p className="text-[11px] font-semibold opacity-70">
-                  {message.author_role === "voltship" ? "Voltship" : "Client"} ·{" "}
+                  {message.author_role === "voltship" ? "Voltship" : t("authorClient")} ·{" "}
                   {formatDate(message.created_at, locale, true)}
                 </p>
                 <p className="mt-0.5 whitespace-pre-wrap">{message.body}</p>

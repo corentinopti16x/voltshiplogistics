@@ -36,6 +36,9 @@ export type EccangOrderRow = {
   pushed_at: string | null;
   shipped_at: string | null;
   created_at: string;
+  /** "external" = created by the client in ECCANG (own API key), not pushed from Shopify. */
+  source?: string | null;
+  external_ref?: string | null;
 };
 
 /** Cheap flag read used by client pages to switch "Stock déclaré" ↔ "Stock entrepôt". */
@@ -73,7 +76,7 @@ export async function listRecentEccangOrders(clientId: string, limit = 8): Promi
   const { data, error } = await admin
     .from("eccang_orders")
     .select(
-      "id, reference_no, eccang_order_code, status, tracking_no, carrier_code, shipping_method, billed_weight_g, error, pushed_at, shipped_at, created_at",
+      "id, reference_no, eccang_order_code, status, tracking_no, carrier_code, shipping_method, billed_weight_g, error, pushed_at, shipped_at, created_at, source, external_ref",
     )
     .eq("client_id", clientId)
     .order("created_at", { ascending: false })

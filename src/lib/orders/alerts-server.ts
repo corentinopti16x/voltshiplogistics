@@ -186,6 +186,7 @@ export async function applyOrderReview(
         currency: order.currency,
         units,
         review,
+        name: order.name,
       }),
       updated_at: new Date().toISOString(),
     })

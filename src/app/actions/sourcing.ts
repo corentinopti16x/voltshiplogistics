@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getAuthContext } from "@/lib/auth/context";
 import { getAirtableConfig } from "@/lib/airtable/config";
 import { patchAirtableProduct } from "@/lib/airtable/products";
@@ -13,6 +13,7 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ProductRow, SourcingStatus } from "@/lib/products/types";
 import type { ShippingChannel } from "@/lib/domain/pricing";
+import { nextVoltshipSku } from "@/lib/products/todo-core";
 
 export type SourcingActionResult = {
   ok: boolean;
@@ -72,6 +73,8 @@ async function loadProduct(productId: string) {
 }
 
 function revalidateSourcing(productId: string) {
+  revalidateTag("admin-todo", "max");
+  revalidatePath("/[locale]/admin/todo", "page");
   revalidatePath("/admin");
   revalidatePath("/sourcer");
   revalidatePath("/[locale]/sourcer", "page");
@@ -96,6 +99,7 @@ function parseDraft(formData: FormData) {
       client_price: nullableNumber(formData, "client_price"),
       sourcing_status: sourcingStatus,
     },
+    sku: nullableText(formData, "sku"),
     internal: {
       factory_purchase_price: nullableNumber(formData, "factory_purchase_price"),
       supplier_name: nullableText(formData, "supplier_name"),
@@ -160,6 +164,7 @@ async function persistDraft(
     .from("products_cache")
     .update({
       ...draft.client,
+      ...(draft.sku ? { sku: draft.sku.slice(0, 80) } : {}),
       last_synced_at: new Date().toISOString(),
     })
     .eq("id", product.id)
@@ -220,6 +225,15 @@ export async function sendQuoteAction(
     draft.client.client_price == null
   ) {
     return { ok: false, error: "Weight, shipping channel and client price are required." };
+  }
+
+  // Voltship SKU so the client can put it on Shopify and his orders link by themselves.
+  if (!draft.sku && !product.sku) {
+    const [{ data: client }, { data: skus }] = await Promise.all([
+      admin.from("clients").select("code, name").eq("id", product.client_id).maybeSingle(),
+      admin.from("products_cache").select("sku").eq("client_id", product.client_id).not("sku", "is", null),
+    ]);
+    draft.sku = nextVoltshipSku(client?.code ?? client?.name, (skus ?? []).map((row) => row.sku));
   }
 
   const candidate = { ...product, ...draft.client } as ProductRow;

@@ -18,8 +18,13 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function AdminFinanceCostsPage() {
-  const [t, rawLocale, ctx] = await Promise.all([getTranslations("admin.finance"), getLocale(), getAuthContext()]);
-  const locale = rawLocale === "fr" ? "fr" : "en";
+  const [t, tExtra, rawLocale, ctx] = await Promise.all([
+    getTranslations("admin.finance"),
+    getTranslations("admin.financeExtra"),
+    getLocale(),
+    getAuthContext(),
+  ]);
+  const locale = rawLocale === "fr" || rawLocale === "zh" ? rawLocale : "en";
   if (!ctx || ctx.role !== "voltship_admin") {
     redirect({ href: "/home", locale });
     return null;
@@ -106,7 +111,7 @@ export default async function AdminFinanceCostsPage() {
                       <td className="px-4 py-3 text-xs">{t(`periods.${cost.period}`)}</td>
                       <td className="tabular px-4 py-3 text-right">{weekly == null ? "—" : eur(weekly)}</td>
                       <td className="px-4 py-3 text-xs">
-                        {formatDate(cost.startDate, locale)} → {cost.endDate ? formatDate(cost.endDate, locale) : "∞"}
+                        {formatDate(cost.startDate, locale)} → {cost.endDate ? formatDate(cost.endDate, locale) : tExtra("openEnded")}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <DeleteFixedCostButton id={cost.id} />
@@ -149,7 +154,7 @@ export default async function AdminFinanceCostsPage() {
                   <tr key={adjustment.id} className="border-b border-[var(--line)]">
                     <td className="px-4 py-3">
                       <Link href={`/admin/finance?week=${adjustment.weekStart}`} className="font-medium hover:underline">
-                        S{isoWeekNumber(adjustment.weekStart)}
+                        {tExtra("weekShort", { week: isoWeekNumber(adjustment.weekStart) })}
                       </Link>
                       <span className="ml-2 text-xs text-[var(--muted)]">{formatDate(adjustment.weekStart, locale)}</span>
                     </td>

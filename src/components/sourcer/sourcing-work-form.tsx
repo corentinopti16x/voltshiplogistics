@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import {
   flagSourcingAction,
@@ -21,21 +22,6 @@ const channels: ShippingChannel[] = [
   "magnetic",
   "sensitive_other",
 ];
-const channelLabels: Record<ShippingChannel, string> = {
-  standard: "standard",
-  electronics_battery: "électronique / batterie",
-  cosmetics: "cosmétique",
-  liquid_perfume: "liquide / parfum",
-  magnetic: "magnétique",
-  sensitive_other: "sensible (ingérable)",
-};
-const attributeLabels: Record<string, string> = {
-  electronics: "batterie / électronique",
-  liquid: "liquide / crème",
-  alcohol: "parfum ou alcool",
-  ingestible: "ingérable",
-  magnetic: "aimant",
-};
 const statuses: SourcingStatus[] = [
   "brief_received",
   "factories",
@@ -68,6 +54,11 @@ export function SourcingWorkForm({
   fxRmbPerEur: number;
 }) {
   const router = useRouter();
+  const t = useTranslations("sourcer.form");
+  const tQueue = useTranslations("sourcer.queue");
+  // Channel / attribute labels live in messages (sourcer.form.channels / .attributes).
+  const attributeLabel = (key: string) =>
+    t.has(`attributes.${key}`) ? t(`attributes.${key}`) : key;
   const [factoryRmb, setFactoryRmb] = useState<string>(
     work?.factory_purchase_price != null ? String(work.factory_purchase_price) : "",
   );
@@ -98,16 +89,16 @@ export function SourcingWorkForm({
       <form action={saveAction} className="space-y-6">
         <input type="hidden" name="product_id" value={product.id} />
         <section className="rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-          <h2 className="text-sm font-semibold">Client-safe quote fields</h2>
+          <h2 className="text-sm font-semibold">{t("clientFieldsTitle")}</h2>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            These values appear on the client product page.
+            {t("clientFieldsIntro")}
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Input
               name="client_price"
-              label="Client product price"
+              label={t("clientPrice")}
               unit="€ EUR"
-              hint="Per unit, before the tier commission (added automatically)."
+              hint={t("clientPriceHint")}
               type="number"
               min="0"
               step="0.0001"
@@ -116,56 +107,68 @@ export function SourcingWorkForm({
             />
             <Input
               name="weight_g"
-              label="Unit weight"
-              unit="g"
+              label={t("unitWeight")}
+              unit={t("gramsUnit")}
               type="number"
               min="1"
               defaultValue={product.weight_g ?? ""}
             />
+            <Input
+              name="sku"
+              label={t("sku")}
+              hint={t("skuHint")}
+              defaultValue={product.sku ?? ""}
+              maxLength={80}
+            />
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-[var(--muted)]">Shipping channel</span>
+              <span className="text-[var(--muted)]">{t("shippingChannel")}</span>
               <select
                 name="shipping_channel"
                 defaultValue={product.shipping_channel ?? suggested ?? ""}
                 className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
               >
-                <option value="">Select</option>
+                <option value="">{t("select")}</option>
                 {channels.map((channel) => (
                   <option key={channel} value={channel}>
-                    {channel.replaceAll("_", " ")}
+                    {t(`channels.${channel}`)}
                   </option>
                 ))}
               </select>
               {suggested ? (
                 <span className="text-xs text-[var(--muted)]">
-                  Suggéré par le client : <strong>{channelLabels[suggested]}</strong>
+                  {t.rich("suggestedByClient", {
+                    channel: t(`channels.${suggested}`),
+                    strong: (chunks) => <strong>{chunks}</strong>,
+                  })}
                   {ticked.length > 0
-                    ? ` (coché : ${ticked.map((key) => attributeLabels[key] ?? key).join(", ")})`
-                    : " (rien coché)"}
+                    ? t("tickedList", {
+                        list: ticked.map((key) => attributeLabel(key)).join(t("listSeparator")),
+                      })
+                    : t("nothingTicked")}
                   {product.shipping_channel && product.shipping_channel !== suggested
-                    ? " — ta valeur l'emporte"
-                    : " — confirme ou corrige"}
+                    ? t("yourValueWins")
+                    : t("confirmOrCorrect")}
                 </span>
               ) : null}
             </label>
             <Input
               name="production_lead_days"
-              label="Production lead"
-              unit="days"
+              label={t("productionLead")}
+              unit={t("daysUnit")}
               type="number"
               min="0"
               defaultValue={product.production_lead_days ?? ""}
             />
             <Input
               name="moq"
-              label="MOQ"
-              unit="units"
+              label={t("moq")}
+              unit={t("unitsUnit")}
               type="number"
               min="0"
               defaultValue={product.moq ?? ""}
             />
             <label className="flex flex-col gap-1 text-sm">
-              <span className="text-[var(--muted)]">Sourcing status</span>
+              <span className="text-[var(--muted)]">{t("sourcingStatus")}</span>
               <select
                 name="sourcing_status"
                 defaultValue={product.sourcing_status ?? "brief_received"}
@@ -173,7 +176,7 @@ export function SourcingWorkForm({
               >
                 {statuses.map((status) => (
                   <option key={status} value={status}>
-                    {status.replaceAll("_", " ")}
+                    {tQueue(`statuses.${status}`)}
                   </option>
                 ))}
               </select>
@@ -182,15 +185,15 @@ export function SourcingWorkForm({
         </section>
 
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-          <h2 className="text-sm font-semibold text-amber-950">Internal sourcing fields</h2>
+          <h2 className="text-sm font-semibold text-amber-950">{t("internalTitle")}</h2>
           <p className="mt-1 text-xs text-amber-900">
-            Never shown to clients.
+            {t("internalIntro")}
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1">
               <Input
                 name="factory_purchase_price"
-                label="Factory purchase price"
+                label={t("factoryPrice")}
                 unit="¥ RMB"
                 type="number"
                 min="0"
@@ -200,7 +203,7 @@ export function SourcingWorkForm({
               />
               {factoryEur != null ? (
                 <p className="text-xs text-amber-900">
-                  = {factoryEur.toFixed(2)} € at {fxRmbPerEur} ¥/€
+                  {t("fxConversion", { eur: factoryEur.toFixed(2), rate: String(fxRmbPerEur) })}
                   {String(factoryEur) !== clientPrice ? (
                     <>
                       {" · "}
@@ -209,7 +212,7 @@ export function SourcingWorkForm({
                         onClick={() => setClientPrice(String(factoryEur))}
                         className="cursor-pointer font-semibold underline"
                       >
-                        Use as client product price
+                        {t("useAsClientPrice")}
                       </button>
                     </>
                   ) : null}
@@ -218,21 +221,21 @@ export function SourcingWorkForm({
             </div>
             <Input
               name="sourcing_location"
-              label="Sourcing location"
+              label={t("sourcingLocation")}
               defaultValue={work?.sourcing_location ?? ""}
             />
             <Input
               name="supplier_name"
-              label="Supplier name"
+              label={t("supplierName")}
               defaultValue={work?.supplier_name ?? ""}
             />
             <Input
               name="supplier_contact"
-              label="Supplier contact"
+              label={t("supplierContact")}
               defaultValue={work?.supplier_contact ?? ""}
             />
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="text-amber-900">Internal notes</span>
+              <span className="text-amber-900">{t("internalNotes")}</span>
               <textarea
                 name="internal_notes"
                 rows={4}
@@ -248,15 +251,15 @@ export function SourcingWorkForm({
             {saveState.error ?? sendState.error}
           </p>
         ) : null}
-        {saveState.ok ? <p className="text-sm text-emerald-800">Draft saved.</p> : null}
-        {sendState.ok ? <p className="text-sm text-emerald-800">Quote sent.</p> : null}
+        {saveState.ok ? <p className="text-sm text-emerald-800">{t("draftSaved")}</p> : null}
+        {sendState.ok ? <p className="text-sm text-emerald-800">{t("quoteSent")}</p> : null}
         <div className="flex flex-wrap gap-3">
           <button
             type="submit"
             disabled={saving || sending}
             className="cursor-pointer rounded-md border border-[var(--line)] px-4 py-2 text-sm hover:bg-white disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Save draft"}
+            {saving ? t("saving") : t("saveDraft")}
           </button>
           <button
             type="submit"
@@ -264,17 +267,17 @@ export function SourcingWorkForm({
             disabled={saving || sending}
             className="cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
           >
-            {sending ? "Sending…" : "Send quote"}
+            {sending ? t("sending") : t("sendQuote")}
           </button>
         </div>
       </form>
 
       <form action={flagAction} className="rounded-2xl border border-red-200 bg-red-50 p-6">
         <input type="hidden" name="product_id" value={product.id} />
-        <h2 className="text-sm font-semibold text-red-950">Flag a problem</h2>
+        <h2 className="text-sm font-semibold text-red-950">{t("flagTitle")}</h2>
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <label className="min-w-[240px] flex-1 flex flex-col gap-1 text-sm">
-            <span className="text-red-900">Reason</span>
+            <span className="text-red-900">{t("reason")}</span>
             <input
               name="flagged_reason"
               required
@@ -287,11 +290,11 @@ export function SourcingWorkForm({
             disabled={flagging}
             className="cursor-pointer rounded-md border border-red-300 px-4 py-2 text-sm text-red-900 disabled:opacity-60"
           >
-            {flagging ? "Flagging…" : "Flag problem"}
+            {flagging ? t("flagging") : t("flagProblem")}
           </button>
         </div>
         {flagState.error ? <p className="mt-2 text-sm text-red-700">{flagState.error}</p> : null}
-        {flagState.ok ? <p className="mt-2 text-sm text-red-800">Product flagged.</p> : null}
+        {flagState.ok ? <p className="mt-2 text-sm text-red-800">{t("productFlagged")}</p> : null}
       </form>
     </div>
   );

@@ -122,6 +122,8 @@ export function packOrderLines(
     currency?: string | null;
     units?: number;
     review?: OrderReview | null;
+    /** Shopify order name ("#1042"), shown in the admin per-order margin. */
+    name?: string | null;
   } | null,
 ) {
   const amount = Number(total?.amount);
@@ -132,6 +134,7 @@ export function packOrderLines(
   }
   if (total?.units != null && Number.isFinite(total.units)) meta.units = total.units;
   if (total?.review) meta.review = total.review;
+  if (total?.name) meta.name = String(total.name).slice(0, 40);
   if (total && isExcludedOrder(total.amount, total.units ?? 0, total.review)) meta.suspicious = true;
   return [{ _order: meta }, ...lines];
 }
@@ -148,6 +151,8 @@ export function unpackOrderLines(value: unknown): {
   suspicious: boolean;
   /** Decision taken on the order alert, if any. */
   review: OrderReview | null;
+  /** Shopify order name ("#1042") when recorded. */
+  name: string | null;
 } {
   if (!Array.isArray(value)) {
     return {
@@ -158,6 +163,7 @@ export function unpackOrderLines(value: unknown): {
       units: null,
       suspicious: false,
       review: null,
+      name: null,
     };
   }
   let suspicious = false;
@@ -166,6 +172,7 @@ export function unpackOrderLines(value: unknown): {
   let fulfilled: boolean | null = null;
   let total: number | null = null;
   let currency: string | null = null;
+  let name: string | null = null;
   const lines: OrderLine[] = [];
   for (const item of value) {
     if (!item || typeof item !== "object") continue;
@@ -181,6 +188,7 @@ export function unpackOrderLines(value: unknown): {
         units?: unknown;
         suspicious?: unknown;
         review?: unknown;
+        name?: unknown;
       };
     };
     if (row._order && typeof row._order === "object") {
@@ -188,6 +196,7 @@ export function unpackOrderLines(value: unknown): {
       const amount = Number(row._order.total);
       if (row._order.total != null && Number.isFinite(amount)) total = amount;
       if (typeof row._order.currency === "string") currency = row._order.currency;
+      if (typeof row._order.name === "string") name = row._order.name;
       if (row._order.suspicious === true) suspicious = true;
       if (row._order.review === "legit" || row._order.review === "abuse") review = row._order.review;
       if (row._order.units != null && Number.isFinite(Number(row._order.units))) {
@@ -201,7 +210,7 @@ export function unpackOrderLines(value: unknown): {
     if (row.price != null && Number.isFinite(Number(row.price))) line.price = Number(row.price);
     lines.push(line);
   }
-  return { fulfilled, lines, total, currency, units, suspicious, review };
+  return { fulfilled, lines, total, currency, units, suspicious, review, name };
 }
 
 export function isShopifyFulfilled(status: string | null | undefined) {

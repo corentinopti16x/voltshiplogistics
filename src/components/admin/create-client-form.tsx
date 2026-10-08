@@ -11,6 +11,7 @@ const initial: ActionResult = { ok: false };
 
 export function CreateClientForm() {
   const t = useTranslations("admin");
+  const tForms = useTranslations("admin.clientForms");
   const router = useRouter();
   const [state, action, pending] = useActionState(createClientAction, initial);
 
@@ -47,12 +48,12 @@ export function CreateClientForm() {
             defaultValue="en"
             className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
           >
-            <option value="en">English</option>
-            <option value="fr">Français</option>
+            <option value="en">{tForms("languages.en")}</option>
+            <option value="fr">{tForms("languages.fr")}</option>
           </select>
         </label>
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="text-[var(--muted)]">Palier</span>
+          <span className="text-[var(--muted)]">{tForms("tier")}</span>
           <select
             name="pricing_tier"
             defaultValue="gold"

@@ -21,6 +21,7 @@ describe("shopify order cache", () => {
       units: null,
       suspicious: false,
       review: null,
+      name: null,
     });
   });
 
@@ -58,6 +59,7 @@ describe("shopify order cache", () => {
       units: null,
       suspicious: false,
       review: null,
+      name: null,
     });
   });
 

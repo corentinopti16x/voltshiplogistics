@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { updateCarrierRulesAction, type ActionResult } from "@/app/actions/admin";
 import { lineKey, type CarrierLineRef } from "@/lib/domain/pricing";
 import { carrierLineLabel, type CarrierRules } from "@/lib/domain/carrier-rules";
@@ -28,11 +29,12 @@ export function CarrierRulesForm({
   markets: string[];
   rules: CarrierRules;
 }) {
+  const t = useTranslations("admin.pricingForms.carrierRules");
   const [state, action, pending] = useActionState(updateCarrierRulesAction, initial);
   const blocked = new Set(rules.blocked);
 
   if (lines.length === 0) {
-    return <p className="text-sm text-[var(--muted)]">No active grid — activate a rate grid first.</p>;
+    return <p className="text-sm text-[var(--muted)]">{t("noActiveGrid")}</p>;
   }
 
   return (
@@ -41,9 +43,9 @@ export function CarrierRulesForm({
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="text-xs text-[var(--muted)]">
-            <th className="pb-2 font-medium">Line</th>
-            <th className="pb-2 font-medium">Markets</th>
-            <th className="pb-2 text-right font-medium">Autorisée</th>
+            <th className="pb-2 font-medium">{t("line")}</th>
+            <th className="pb-2 font-medium">{t("markets")}</th>
+            <th className="pb-2 text-right font-medium">{t("allowed")}</th>
           </tr>
         </thead>
         <tbody>
@@ -62,7 +64,7 @@ export function CarrierRulesForm({
                     name="allowed"
                     value={key}
                     defaultChecked={!blocked.has(key)}
-                    aria-label={`Allow ${carrierLineLabel(line)}`}
+                    aria-label={t("allowLine", { line: carrierLineLabel(line) })}
                     className="h-4 w-4 cursor-pointer"
                   />
                 </td>
@@ -73,11 +75,8 @@ export function CarrierRulesForm({
       </table>
 
       <div>
-        <h3 className="text-xs font-semibold text-[var(--muted)]">Forced line per market (optional)</h3>
-        <p className="mt-1 mb-3 text-xs text-[var(--muted)]">
-          Replaces the client’s choice on that market. Falls back to the cheapest allowed line when the
-          forced line has no bracket at the parcel weight.
-        </p>
+        <h3 className="text-xs font-semibold text-[var(--muted)]">{t("forcedTitle")}</h3>
+        <p className="mt-1 mb-3 text-xs text-[var(--muted)]">{t("forcedLead")}</p>
         <div className="grid gap-3 sm:grid-cols-2">
           {markets.map((market) => {
             const current = rules.forced[market];
@@ -90,7 +89,7 @@ export function CarrierRulesForm({
                   defaultValue={current ? lineKey(current.carrier, current.lineName) : ""}
                   className="flex-1 rounded-md border border-[var(--line)] bg-white px-3 py-2"
                 >
-                  <option value="">Client choice (cheapest by default)</option>
+                  <option value="">{t("clientChoice")}</option>
                   {options.map((line) => {
                     const key = lineKey(line.carrier, line.lineName);
                     return (
@@ -107,13 +106,13 @@ export function CarrierRulesForm({
       </div>
 
       {state.error ? <p className="text-sm text-red-700">{state.error}</p> : null}
-      {state.ok ? <p className="text-sm text-emerald-800">Carrier rules saved.</p> : null}
+      {state.ok ? <p className="text-sm text-emerald-800">{t("saved")}</p> : null}
       <button
         type="submit"
         disabled={pending}
         className="w-fit rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
       >
-        {pending ? "Saving…" : "Save carrier rules"}
+        {pending ? t("saving") : t("save")}
       </button>
     </form>
   );

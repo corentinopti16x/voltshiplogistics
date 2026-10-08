@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import type { FinanceWeek } from "@/lib/finance/weeks";
 
 /**
@@ -15,6 +16,7 @@ export function WeeklyResultChart({
   title: string;
   selected?: string;
 }) {
+  const t = useTranslations("admin.financeChart");
   const width = 720;
   const height = 220;
   const padTop = 18;
@@ -34,7 +36,9 @@ export function WeeklyResultChart({
   const money = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
   const compact = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
   const ticks = [max, max / 2, 0, min / 2, min].filter((value, index, array) => array.indexOf(value) === index);
-  const describe = weeks.map((week) => `S${week.isoWeek}: ${money.format(week.result)}`).join(", ");
+  const describe = weeks
+    .map((week) => t("weekValue", { week: week.isoWeek, value: money.format(week.result) }))
+    .join(", ");
 
   return (
     <svg
@@ -100,14 +104,14 @@ export function WeeklyResultChart({
               fill={isSelected ? "var(--ink)" : "var(--muted)"}
               fontWeight={isSelected ? 700 : 400}
             >
-              S{week.isoWeek}
+              {t("weekShort", { week: week.isoWeek })}
             </text>
             <text x={x + barW / 2} y={height - padBottom + 26} textAnchor="middle" fontSize="9" fill="var(--faint)">
               {week.weekStart.slice(8, 10)}/{week.weekStart.slice(5, 7)}
             </text>
             <title>
-              S{week.isoWeek} · {money.format(week.result)}
-              {week.estimated ? " (est.)" : ""}
+              {t("weekShort", { week: week.isoWeek })} · {money.format(week.result)}
+              {week.estimated ? ` ${t("estimated")}` : ""}
             </title>
           </g>
         );

@@ -17,13 +17,14 @@ export default async function AdminFinancePage({
 }: {
   searchParams: Promise<{ week?: string; recompute?: string }>;
 }) {
-  const [t, rawLocale, ctx, params] = await Promise.all([
+  const [t, tExtra, rawLocale, ctx, params] = await Promise.all([
     getTranslations("admin.finance"),
+    getTranslations("admin.financeExtra"),
     getLocale(),
     getAuthContext(),
     searchParams,
   ]);
-  const locale = rawLocale === "fr" ? "fr" : "en";
+  const locale = rawLocale === "fr" || rawLocale === "zh" ? rawLocale : "en";
   if (!ctx || ctx.role !== "voltship_admin") {
     redirect({ href: "/home", locale });
     return null;
@@ -45,7 +46,7 @@ export default async function AdminFinancePage({
   const eur = (value: number | null | undefined) => formatAmount(value, locale);
   const num = (value: number | null | undefined, digits = 0) => formatNumber(value, locale, digits);
   const weekLabel = (week: FinanceWeek) =>
-    `S${week.isoWeek} · ${formatDate(week.weekStart, locale)} → ${formatDate(week.weekEnd, locale)}`;
+    `${tExtra("weekShort", { week: week.isoWeek })} · ${formatDate(week.weekStart, locale)} → ${formatDate(week.weekEnd, locale)}`;
 
   return (
     <div>
@@ -139,7 +140,7 @@ export default async function AdminFinancePage({
                   <tr key={week.weekStart} className={`border-b border-[var(--line)] ${isSelected ? "bg-[#fbf5df]" : ""}`}>
                     <td className="px-4 py-3">
                       <Link href={`/admin/finance?week=${week.weekStart}`} className="font-medium hover:underline">
-                        S{week.isoWeek}
+                        {tExtra("weekShort", { week: week.isoWeek })}
                       </Link>
                       <span className="ml-2 text-xs text-[var(--muted)]">{formatDate(week.weekStart, locale)}</span>
                       {week.weekStart === current.weekStart ? (
@@ -230,7 +231,7 @@ export default async function AdminFinancePage({
                       <SignedAmount value={row.margin} locale={locale} bold />
                     </td>
                     <td className="tabular px-4 py-3 text-right">
-                      {selected.parcels > 0 ? `${num((row.parcels / selected.parcels) * 100)} %` : "—"}
+                      {selected.parcels > 0 ? tExtra("percent", { value: num((row.parcels / selected.parcels) * 100) }) : "—"}
                     </td>
                   </tr>
                 ))}

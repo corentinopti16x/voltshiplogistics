@@ -6,6 +6,8 @@ import {
 import { parseCallback } from "@/lib/eccang/mapping";
 import {
   findClientByAppKey,
+  importExternalOrder,
+  isOwnEccangOrder as isOwnOrder,
   pullAsn,
   pullInventory,
   pullOrderStatus,
@@ -74,7 +76,10 @@ export async function POST(request: Request) {
     const body = callback.body;
     if (callback.type === "order") {
       const referenceNo = String(body.reference_no ?? "").trim();
-      if (referenceNo) await pullOrderStatus(clientId, referenceNo);
+      if (referenceNo) {
+        if (await isOwnOrder(clientId, referenceNo)) await pullOrderStatus(clientId, referenceNo);
+        else await importExternalOrder(clientId, referenceNo);
+      }
     } else if (callback.type === "receiving") {
       const referenceNo = String(body.reference_no ?? "").trim();
       await pullAsn(clientId, undefined, referenceNo || undefined);

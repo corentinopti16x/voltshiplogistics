@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { redirect, Link } from "@/i18n/routing";
 import { getAuthContext } from "@/lib/auth/context";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -10,10 +11,12 @@ import { SourcingWorkForm } from "@/components/sourcer/sourcing-work-form";
 
 export default async function SourcerProductPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: "en" | "fr"; id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
-  const { locale, id } = await params;
+  const [{ locale, id }, { from }] = await Promise.all([params, searchParams]);
   const ctx = await getAuthContext();
   if (!ctx) {
     redirect({ href: "/staff/login", locale });
@@ -24,6 +27,8 @@ export default async function SourcerProductPage({
     return null;
   }
 
+  const t = await getTranslations("sourcer.product");
+  const tQueue = await getTranslations("sourcer.queue");
   const admin = createAdminClient();
   const settings = await readPricingSettings(admin);
   const [{ data: productData }, { data: work }] = await Promise.all([
@@ -48,8 +53,11 @@ export default async function SourcerProductPage({
 
   return (
     <SourcerShell role={ctx.role}>
-      <Link href="/sourcer" className="text-sm text-[var(--muted)] hover:text-[var(--ink)]">
-        ← Sourcing queue
+      <Link
+        href={from === "todo" ? "/admin/todo" : "/sourcer"}
+        className="text-sm text-[var(--muted)] hover:text-[var(--ink)]"
+      >
+        {from === "todo" ? t("backToTodo") : t("backToQueue")}
       </Link>
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <ProductPhoto
@@ -59,28 +67,28 @@ export default async function SourcerProductPage({
         />
         <div className="min-w-0 flex-1">
           <p className="text-xs text-[var(--muted)]">
-            {product.clients.name} · {product.sku ?? "No SKU"}
+            {product.clients.name} · {product.sku ?? t("noSku")}
           </p>
           <h1 className="font-display mt-1 text-3xl">{product.title}</h1>
         </div>
-        <span className="rounded-full bg-[var(--card)] px-3 py-1 text-xs capitalize ring-1 ring-[var(--line)]">
-          {(product.sourcing_status ?? "brief_received").replaceAll("_", " ")}
+        <span className="rounded-full bg-[var(--card)] px-3 py-1 text-xs ring-1 ring-[var(--line)]">
+          {tQueue(`statuses.${product.sourcing_status ?? "brief_received"}`)}
         </span>
       </div>
 
       <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
-        <h2 className="text-sm font-semibold">Client brief</h2>
+        <h2 className="text-sm font-semibold">{t("clientBrief")}</h2>
         <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
-          <Item label="Description" value={request.description} />
-          <Item label="Target unit price (€)" value={request.target_unit_price} />
-          <Item label="Approx. unit weight (g, client)" value={request.approx_weight_g} />
-          <Item label="Current unit cost at agent (€, client)" value={request.current_unit_cost} />
-          <Item label="Launch quantity" value={request.expected_launch_qty} />
-          <Item label="Destination markets" value={request.destination_markets} />
-          <Item label="Notes" value={request.notes} />
+          <Item label={t("description")} value={request.description} />
+          <Item label={t("targetUnitPrice")} value={request.target_unit_price} />
+          <Item label={t("approxWeight")} value={request.approx_weight_g} />
+          <Item label={t("currentUnitCost")} value={request.current_unit_cost} />
+          <Item label={t("launchQty")} value={request.expected_launch_qty} />
+          <Item label={t("destinationMarkets")} value={request.destination_markets} />
+          <Item label={t("notes")} value={request.notes} />
           {request.source_url ? (
             <div>
-              <dt className="text-xs text-[var(--muted)]">Reference</dt>
+              <dt className="text-xs text-[var(--muted)]">{t("reference")}</dt>
               <dd className="mt-1">
                 <a
                   href={request.source_url}
@@ -88,7 +96,7 @@ export default async function SourcerProductPage({
                   rel="noreferrer"
                   className="underline"
                 >
-                  Open source link
+                  {t("openSourceLink")}
                 </a>
               </dd>
             </div>

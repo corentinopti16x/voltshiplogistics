@@ -13,7 +13,9 @@ import {
 import {
   asnReferenceNo,
   isProductExistsError,
+  isVoltshipOrderReference,
   mapAsnToInbound,
+  mapExternalOrderToRow,
   mapInventoryToStock,
   mapOrderStatusToRow,
   mapProductToEccang,
@@ -481,6 +483,86 @@ export async function pullPendingOrders(clientId: string, config?: ClientEccangC
   return result;
 }
 
+// --- Orders created by the client himself (his own ECCANG API key) --------------------
+
+async function upsertExternalOrders(clientId: string, records: EccangOrderRecord[]) {
+  const rows = records
+    .filter((record) => !isVoltshipOrderReference(record.reference_no))
+    .map((record) => mapExternalOrderToRow(clientId, record))
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+  if (rows.length === 0) return 0;
+  const admin = createAdminClient();
+  for (let i = 0; i < rows.length; i += 200) {
+    const { error } = await admin
+      .from("eccang_orders")
+      .upsert(rows.slice(i, i + 200), { onConflict: "reference_no" });
+    if (error) throw error;
+  }
+  return rows.length;
+}
+
+/**
+ * getOrderList (modified in the last `days`) → every order of this client's ECCANG
+ * account. Orders we pushed (VS-…) are refreshed by pullPendingOrders; the others —
+ * created by the client through his own API key or the ECCANG UI — are stored with
+ * source "external" so Voltship sees and bills them. First run looks back 90 days.
+ */
+export async function pullAllOrders(clientId: string, config?: ClientEccangConfig, options: { days?: number } = {}) {
+  const cfg = config ?? (await getCredentialsForClient(clientId));
+  const { credentials } = requireEccangClient(cfg);
+  let days = options.days;
+  if (days == null) {
+    const admin = createAdminClient();
+    const { count } = await admin
+      .from("eccang_orders")
+      .select("id", { count: "exact", head: true })
+      .eq("client_id", clientId)
+      .eq("source", "external");
+    days = count ? 7 : 90;
+  }
+  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 19).replace("T", " ");
+  const records: EccangOrderRecord[] = [];
+  for (let page = 1; page <= 20; page += 1) {
+    const response = await callEccang<EccangOrderRecord[]>(credentials, "getOrderList", {
+      page,
+      pageSize: 100,
+      modify_date_from: since,
+    });
+    const data = Array.isArray(response.data) ? response.data : [];
+    records.push(...data);
+    const next = String(response.nextPage ?? "false").toLowerCase() === "true";
+    if (!next || data.length === 0) break;
+  }
+  const imported = await upsertExternalOrders(clientId, records);
+  return { seen: records.length, imported };
+}
+
+/** True when the reference belongs to an order we pushed (row already in eccang_orders). */
+export async function isOwnEccangOrder(clientId: string, referenceNo: string) {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("eccang_orders")
+    .select("id")
+    .eq("client_id", clientId)
+    .eq("reference_no", referenceNo)
+    .maybeSingle();
+  return Boolean(data);
+}
+
+/** Callback for an order we did not push: fetch it and store it as external. */
+export async function importExternalOrder(clientId: string, referenceNo: string, config?: ClientEccangConfig) {
+  const cfg = config ?? (await getCredentialsForClient(clientId));
+  const { credentials } = requireEccangClient(cfg);
+  const response = await callEccang<EccangOrderRecord | EccangOrderRecord[]>(
+    credentials,
+    "getOrderByRefCode",
+    { reference_no: referenceNo },
+  );
+  const record = Array.isArray(response.data) ? response.data[0] : response.data;
+  if (!record) return 0;
+  return upsertExternalOrders(clientId, [record]);
+}
+
 // --- ASN / inbound -------------------------------------------------------------------
 
 async function upsertAsnRows(clientId: string, asns: EccangAsnRecord[]) {
@@ -593,12 +675,13 @@ export async function createAsnIfEnabled(clientId: string, productId: string, qt
 export async function syncClient(clientId: string) {
   const admin = createAdminClient();
   const cfg = await getCredentialsForClient(clientId);
-  const summary = { inventory: 0, orders: 0, asns: 0, errors: [] as string[] };
+  const summary = { inventory: 0, orders: 0, externalOrders: 0, asns: 0, errors: [] as string[] };
   try {
     requireEccangClient(cfg);
     const steps: Array<[string, () => Promise<void>]> = [
       ["inventory", async () => void (summary.inventory = (await pullInventory(clientId, cfg)).skus)],
       ["orders", async () => void (summary.orders = (await pullPendingOrders(clientId, cfg)).polled)],
+      ["external orders", async () => void (summary.externalOrders = (await pullAllOrders(clientId, cfg)).imported)],
       ["asn", async () => void (summary.asns = (await pullAsn(clientId, cfg)).asns)],
     ];
     for (const [name, step] of steps) {

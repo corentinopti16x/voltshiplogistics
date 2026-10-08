@@ -24,16 +24,24 @@ type RecentClient = {
   created_at: string;
 };
 
-function relationName(relation: RecentProduct["clients"]) {
-  if (Array.isArray(relation)) return relation[0]?.name ?? "Unknown client";
-  return relation?.name ?? "Unknown client";
+function relationName(relation: RecentProduct["clients"], fallback: string) {
+  if (Array.isArray(relation)) return relation[0]?.name ?? fallback;
+  return relation?.name ?? fallback;
 }
 
 export default async function AdminDashboardPage() {
-  const [t, locale] = await Promise.all([
+  const [t, tExtra, tSourcing, locale] = await Promise.all([
     getTranslations("admin.dashboard"),
+    getTranslations("admin.dashboardExtra"),
+    getTranslations("products.sourcing"),
     getLocale(),
   ]);
+  const sourcingLabel = (status: string | null) =>
+    status == null
+      ? tExtra("unassigned")
+      : tSourcing.has(status)
+        ? tSourcing(status)
+        : status.replaceAll("_", " ");
   const admin = createAdminClient();
 
   const [
@@ -280,10 +288,8 @@ export default async function AdminDashboardPage() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{product.title}</p>
                       <p className="mt-1 text-xs text-[var(--muted)]">
-                        {relationName(product.clients)} ·{" "}
-                        <span className="capitalize">
-                          {(product.sourcing_status ?? "unassigned").replaceAll("_", " ")}
-                        </span>
+                        {relationName(product.clients, tExtra("unknownClient"))} ·{" "}
+                        <span className="capitalize">{sourcingLabel(product.sourcing_status)}</span>
                       </p>
                     </div>
                     <span className="shrink-0 text-xs text-[var(--muted)]">

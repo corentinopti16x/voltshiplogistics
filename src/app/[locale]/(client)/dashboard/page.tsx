@@ -5,6 +5,8 @@ import { getAuthContext } from "@/lib/auth/context";
 import { SIMPLE_PIPELINE, simpleStage } from "@/lib/products/types";
 import { getSalesSummary, listRestockAlerts } from "@/lib/products/queries";
 import { countOpenOrderAlerts } from "@/lib/orders/alerts-queries";
+import { listClientPurchaseOrders } from "@/lib/purchase-orders/queries";
+import { PurchaseOrderCard } from "@/components/orders/purchase-order-card";
 import { parseDashboardPeriod } from "@/lib/products/periods";
 import { PeriodTabs } from "@/components/client/period-tabs";
 import { loadProductInsights, type ProductInsight } from "@/lib/products/overview";
@@ -99,6 +101,9 @@ export default async function DashboardPage({
   }
 
   const openOrderAlerts = clientId ? await countOpenOrderAlerts(clientId).catch(() => 0) : 0;
+  const openPurchaseOrders = clientId
+    ? await listClientPurchaseOrders(clientId, { openOnly: true, limit: 3 }).catch(() => [])
+    : [];
   const products = insights.map((row) => row.product);
   const activeProducts = insights.filter((row) => row.product.lifecycle_status !== "dead");
   const quotesPending = insights.filter((row) => row.quotePending);
@@ -163,6 +168,21 @@ export default async function DashboardPage({
           </span>
           <span className="font-semibold">Voir →</span>
         </Link>
+      ) : null}
+
+      {/* Commandes fournisseurs en cours — purchase_orders (passées par Voltship) */}
+      {openPurchaseOrders.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <SectionTitle sub={t("purchaseOrders.lead")}>{t("purchaseOrders.title")}</SectionTitle>
+            <Link href="/orders" className="text-[13px] font-bold text-[var(--blue-ink)] hover:underline">
+              {t("purchaseOrders.all")} →
+            </Link>
+          </div>
+          {openPurchaseOrders.map((order) => (
+            <PurchaseOrderCard key={order.id} order={order} locale={locale === "fr" ? "fr" : "en"} />
+          ))}
+        </section>
       ) : null}
 
       {/* Ventes — getSalesSummary: rolling window from shopify_orders_cache (placed_at, total) */}
@@ -398,8 +418,11 @@ export default async function DashboardPage({
                   row.status === "D" ? "green" : row.status === "N" || row.status === "P" ? "rust" : row.status === "X" ? "grey" : "blue";
                 return (
                   <li key={row.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-sm">
-                    <span className="min-w-[160px] font-semibold">{row.reference_no}</span>
+                    <span className="min-w-[160px] font-semibold">
+                      {row.source === "external" ? row.external_ref ?? row.eccang_order_code ?? row.reference_no : row.reference_no}
+                    </span>
                     <Badge tone={tone}>{t(`warehouse.status.${statusKey}`)}</Badge>
+                    {row.source === "external" ? <Badge tone="grey">{t("warehouse.external")}</Badge> : null}
                     <span className="text-[12px] text-[var(--muted)]">
                       {row.carrier_code ?? row.shipping_method ?? "—"}
                     </span>

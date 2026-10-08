@@ -437,6 +437,65 @@ export function mapOrderStatusToRow(record: EccangOrderRecord, now = new Date())
   };
 }
 
+// --- Orders created outside Voltship (client's own ECCANG API key / ECCANG UI) ----------
+
+/** Our pushed orders all carry `VS-<code>-<n>`; anything else was created by the client. */
+export function isVoltshipOrderReference(referenceNo: string | null | undefined) {
+  return /^VS-/i.test((referenceNo ?? "").trim());
+}
+
+/** Key used in eccang_orders.reference_no for external orders (order_code is unique in ECCANG). */
+export function externalOrderKey(orderCode: string) {
+  return `ECC-${orderCode.trim()}`;
+}
+
+type EccangOrderItemLike = {
+  product_sku?: string;
+  sku?: string;
+  quantity?: string | number;
+  qty?: string | number;
+  op_quantity?: string | number;
+};
+
+/** Order lines from a getOrderList / getOrderByRefCode detail (items | order_product | product). */
+export function eccangOrderItems(record: Record<string, unknown>) {
+  const source = [record.items, record.order_product, record.product, record.order_details].find(Array.isArray) as
+    | EccangOrderItemLike[]
+    | undefined;
+  const bySku = new Map<string, number>();
+  for (const item of source ?? []) {
+    const sku = (item.product_sku ?? item.sku ?? "").trim();
+    if (!sku) continue;
+    const qty = int(item.quantity ?? item.qty ?? item.op_quantity);
+    bySku.set(sku, (bySku.get(sku) ?? 0) + Math.max(1, qty));
+  }
+  return [...bySku.entries()].map(([sku, quantity]) => ({ sku, quantity }));
+}
+
+function eccangDate(value: unknown) {
+  return typeof value === "string" ? dateOrNull(value) : null;
+}
+
+/**
+ * ECCANG order the client created himself (no VS- reference) → eccang_orders row with
+ * source "external" so it shows in the app and is billed like our own orders.
+ */
+export function mapExternalOrderToRow(clientId: string, record: EccangOrderRecord, now = new Date()) {
+  const orderCode = record.order_code?.trim();
+  if (!orderCode) return null;
+  const raw = record as unknown as Record<string, unknown>;
+  return {
+    client_id: clientId,
+    reference_no: externalOrderKey(orderCode),
+    external_ref: record.reference_no?.trim() || null,
+    source: "external" as const,
+    items_json: eccangOrderItems(raw),
+    eccang_created_at:
+      eccangDate(raw.date_create) ?? eccangDate(raw.add_time) ?? null,
+    ...mapOrderStatusToRow(record, now),
+  };
+}
+
 // --- ASN → inbound_cache -------------------------------------------------------------
 
 export type EccangAsnRecord = {

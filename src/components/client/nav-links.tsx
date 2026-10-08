@@ -6,6 +6,7 @@ import { Link, usePathname } from "@/i18n/routing";
 const items = [
   { href: "/dashboard", key: "dashboard" },
   { href: "/products", key: "products" },
+  { href: "/orders", key: "orders" },
   { href: "/alerts", key: "alerts" },
   { href: "/inbound", key: "inbound" },
   { href: "/support", key: "support" },
@@ -19,6 +20,8 @@ export function ClientNavLinks({
   showSupport = true,
   showAlerts = false,
   openAlerts = 0,
+  showOrders = false,
+  openOrders = 0,
 }: {
   showSettings?: boolean;
   /** Réceptions only once the warehouse (ECCANG) is live for the client. */
@@ -28,6 +31,9 @@ export function ClientNavLinks({
   /** « À vérifier » once the client has had at least one flagged order. */
   showAlerts?: boolean;
   openAlerts?: number;
+  /** « Commandes » once Voltship has placed at least one supplier order for the client. */
+  showOrders?: boolean;
+  openOrders?: number;
 }) {
   const t = useTranslations("dashboard.nav");
   const pathname = usePathname();
@@ -36,7 +42,8 @@ export function ClientNavLinks({
       (showSettings || item.key !== "settings") &&
       (showInbound || item.key !== "inbound") &&
       (showSupport || item.key !== "support") &&
-      (showAlerts || item.key !== "alerts"),
+      (showAlerts || item.key !== "alerts") &&
+      (showOrders || item.key !== "orders"),
   );
 
   return (
@@ -56,6 +63,9 @@ export function ClientNavLinks({
             }`}
           >
             {t(item.key)}
+            {item.key === "orders" && openOrders > 0 ? (
+              <span className="ml-1.5 rounded-full bg-white/20 px-1.5 text-[11px] font-bold text-white">{openOrders}</span>
+            ) : null}
             {item.key === "alerts" && openAlerts > 0 ? (
               <span className="ml-1.5 rounded-full bg-[var(--gold-bright)] px-1.5 text-[11px] font-bold text-[var(--navy)]">
                 {openAlerts}

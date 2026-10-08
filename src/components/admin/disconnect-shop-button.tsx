@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { disconnectShopAdminAction } from "@/app/actions/shopify";
 
 export function DisconnectShopButton({ shopId }: { shopId: string }) {
+  const t = useTranslations("admin.shopForms");
   const [armed, setArmed] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +17,7 @@ export function DisconnectShopButton({ shopId }: { shopId: string }) {
         onClick={() => setArmed(true)}
         className="cursor-pointer rounded-md border border-[var(--line)] px-3 py-1.5 text-red-700 hover:bg-white"
       >
-        Disconnect
+        {t("disconnect")}
       </button>
     );
   }
@@ -27,7 +29,7 @@ export function DisconnectShopButton({ shopId }: { shopId: string }) {
         disabled={pending}
         className="cursor-pointer rounded-md px-3 py-1.5 text-[var(--muted)] hover:bg-white"
       >
-        Cancel
+        {t("cancel")}
       </button>
       <button
         type="button"
@@ -38,13 +40,13 @@ export function DisconnectShopButton({ shopId }: { shopId: string }) {
               await disconnectShopAdminAction(shopId);
               setArmed(false);
             } catch (caught) {
-              setError(caught instanceof Error ? caught.message : "Disconnect failed.");
+              setError(caught instanceof Error ? caught.message : t("disconnectFailed"));
             }
           })
         }
         className="cursor-pointer rounded-md bg-red-700 px-3 py-1.5 text-white disabled:opacity-60"
       >
-        {pending ? "Disconnecting…" : "Confirm disconnect"}
+        {pending ? t("disconnecting") : t("confirmDisconnect")}
       </button>
       {error ? <span className="text-xs text-red-700">{error}</span> : null}
     </span>

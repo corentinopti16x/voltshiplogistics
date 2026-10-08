@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { ActionResult } from "@/app/actions/admin";
 import {
   createRateGridAction,
@@ -31,54 +32,57 @@ function SubmitState({
   state,
   pending,
   idle,
-  saved = "Saved.",
+  saved,
 }: {
   state: ActionResult;
   pending: boolean;
   idle: string;
   saved?: string;
 }) {
+  const t = useTranslations("admin.pricingForms");
   return (
     <>
       {state.error ? <p className="text-sm text-red-700">{state.error}</p> : null}
-      {state.ok ? <p className="text-sm text-emerald-800">{saved}</p> : null}
+      {state.ok ? <p className="text-sm text-emerald-800">{saved ?? t("saved")}</p> : null}
       <button
         type="submit"
         disabled={pending}
         className="cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
       >
-        {pending ? (idle === "Enregistrer" ? "Enregistrement…" : "Saving…") : idle}
+        {pending ? t("saving") : idle}
       </button>
     </>
   );
 }
 
 export function CreateGridForm() {
+  const t = useTranslations("admin.pricingForms");
   const [state, action, pending] = useActionState(createRateGridAction, initial);
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-4">
-      <Input name="grid_version" label="Grid version" placeholder="2026-09-21.1" required />
+      <Input name="grid_version" label={t("grid.version")} placeholder="2026-09-21.1" required />
       <Input
         name="effective_date"
-        label="Effective date"
+        label={t("grid.effectiveDate")}
         type="date"
         defaultValue={new Date().toISOString().slice(0, 10)}
         required
       />
-      <Input name="source" label="Source" defaultValue="manual" required />
+      <Input name="source" label={t("grid.source")} defaultValue="manual" required />
       <div className="flex items-end">
-        <SubmitState state={state} pending={pending} idle="Create grid" />
+        <SubmitState state={state} pending={pending} idle={t("grid.create")} />
       </div>
     </form>
   );
 }
 
 export function RateCellForm({ versions }: { versions: string[] }) {
+  const t = useTranslations("admin.pricingForms");
   const [state, action, pending] = useActionState(upsertRateCellAction, initial);
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-[var(--muted)]">Grid</span>
+        <span className="text-[var(--muted)]">{t("cell.grid")}</span>
         <select
           name="grid_version"
           required
@@ -89,31 +93,34 @@ export function RateCellForm({ versions }: { versions: string[] }) {
           ))}
         </select>
       </label>
-      <Input name="carrier" label="Carrier" placeholder="YunExpress" required />
-      <Input name="destination" label="Destination" placeholder="FR" maxLength={2} required />
+      <Input name="carrier" label={t("cell.carrier")} placeholder="YunExpress" required />
+      <Input name="destination" label={t("cell.destination")} placeholder="FR" maxLength={2} required />
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-[var(--muted)]">Channel</span>
+        <span className="text-[var(--muted)]">{t("cell.channel")}</span>
         <select
           name="channel"
           className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
         >
           {channels.map((channel) => (
-            <option key={channel}>{channel}</option>
+            <option key={channel} value={channel}>
+              {t(`channels.${channel}`)}
+            </option>
           ))}
         </select>
       </label>
-      <Input name="weight_min_g" label="Min weight (g)" type="number" min="0" required />
-      <Input name="weight_max_g" label="Max weight (g)" type="number" min="0" required />
-      <Input name="price" label="Shipping price (EUR)" type="number" min="0" step="0.0001" required />
-      <Input name="delivery_range" label="Delivery range" placeholder="8–12 days" />
+      <Input name="weight_min_g" label={t("cell.weightMin")} type="number" min="0" required />
+      <Input name="weight_max_g" label={t("cell.weightMax")} type="number" min="0" required />
+      <Input name="price" label={t("cell.price")} type="number" min="0" step="0.0001" required />
+      <Input name="delivery_range" label={t("cell.deliveryRange")} placeholder={t("cell.deliveryRangePlaceholder")} />
       <div className="sm:col-span-2 lg:col-span-4 flex items-center gap-3">
-        <SubmitState state={state} pending={pending} idle="Save rate cell" />
+        <SubmitState state={state} pending={pending} idle={t("cell.save")} />
       </div>
     </form>
   );
 }
 
 export function RateGridCsvForm({ versions }: { versions: string[] }) {
+  const t = useTranslations("admin.pricingForms");
   const [state, action, pending] = useActionState(importRateGridCsvAction, initial);
 
   function downloadTemplate() {
@@ -129,7 +136,7 @@ export function RateGridCsvForm({ versions }: { versions: string[] }) {
   return (
     <form action={action} className="grid gap-3">
       <label className="flex max-w-xs flex-col gap-1 text-sm">
-        <span className="text-[var(--muted)]">Grid</span>
+        <span className="text-[var(--muted)]">{t("cell.grid")}</span>
         <select
           name="grid_version"
           required
@@ -141,7 +148,7 @@ export function RateGridCsvForm({ versions }: { versions: string[] }) {
         </select>
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-[var(--muted)]">CSV file</span>
+        <span className="text-[var(--muted)]">{t("csv.file")}</span>
         <input
           name="csv"
           type="file"
@@ -151,22 +158,23 @@ export function RateGridCsvForm({ versions }: { versions: string[] }) {
         />
       </label>
       <p className="text-xs text-[var(--muted)]">
-        Columns: carrier, destination, channel, weight_min_g, weight_max_g, price,
-        delivery_range.
+        {t("csv.columns", {
+          columns: "carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range",
+        })}
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <SubmitState
           state={state}
           pending={pending}
-          idle="Import rates"
-          saved={state.clientId ? `Imported ${state.clientId} rates.` : "Imported."}
+          idle={t("csv.import")}
+          saved={state.clientId ? t("csv.importedCount", { count: state.clientId }) : t("csv.imported")}
         />
         <button
           type="button"
           onClick={downloadTemplate}
           className="cursor-pointer rounded-md border border-[var(--line)] px-4 py-2 text-sm"
         >
-          Download template
+          {t("csv.downloadTemplate")}
         </button>
       </div>
     </form>
@@ -186,6 +194,7 @@ export function ClientPricingForm({
   handlingFee: number;
   logisticsDiscountPct: number;
 }) {
+  const t = useTranslations("admin.pricingForms");
   const [state, action, pending] = useActionState(updateClientPricingAction, initial);
   const [tier, setTier] = useState<PricingTier>(pricingTier);
   const [commission, setCommission] = useState(String(commissionPct));
@@ -210,7 +219,7 @@ export function ClientPricingForm({
     <form action={action} className="grid gap-3 sm:grid-cols-4">
       <input type="hidden" name="client_id" value={clientId} />
       <label className="flex flex-col gap-1 text-sm sm:col-span-4 sm:max-w-xs">
-        <span className="text-[var(--muted)]">Palier</span>
+        <span className="text-[var(--muted)]">{t("client.tier")}</span>
         <select
           name="pricing_tier"
           value={tier}
@@ -226,7 +235,7 @@ export function ClientPricingForm({
       </label>
       <Input
         name="logistics_discount_pct"
-        label="Remise transport %"
+        label={t("client.logisticsDiscount")}
         type="number"
         min="0"
         max="100"
@@ -236,7 +245,7 @@ export function ClientPricingForm({
       />
       <Input
         name="commission_pct"
-        label="Commission produit %"
+        label={t("client.commission")}
         type="number"
         min="0"
         step="0.001"
@@ -245,7 +254,7 @@ export function ClientPricingForm({
       />
       <Input
         name="handling_fee"
-        label="Handling € / colis"
+        label={t("client.handling")}
         type="number"
         min="0"
         step="0.0001"
@@ -253,12 +262,17 @@ export function ClientPricingForm({
         onChange={(event) => setHandling(event.target.value)}
       />
       <div className="flex items-end gap-3">
-        <SubmitState state={state} pending={pending} idle="Enregistrer" saved="Enregistré." />
+        <SubmitState state={state} pending={pending} idle={t("client.save")} />
       </div>
       <p className="text-xs text-[var(--muted)] sm:col-span-4">
         {custom
-          ? `Tarifs ajustés à la main pour ce client (le palier ${PRICING_TIER_LABELS[tier]} prévoit ${preset.logisticsDiscountPct} % de remise, ${preset.commissionPct} % de commission, ${preset.handlingFee} € de handling).`
-          : `Tarifs standard du palier ${PRICING_TIER_LABELS[tier]}. Changer de palier remplit les valeurs ; tu peux encore les ajuster avant d'enregistrer.`}
+          ? t("client.customHint", {
+              tier: PRICING_TIER_LABELS[tier],
+              discount: preset.logisticsDiscountPct,
+              commission: preset.commissionPct,
+              handling: preset.handlingFee,
+            })
+          : t("client.standardHint", { tier: PRICING_TIER_LABELS[tier] })}
       </p>
     </form>
   );
