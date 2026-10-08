@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAirtableConfig } from "@/lib/airtable/config";
 import { createAirtableProduct } from "@/lib/airtable/products";
+import { groupListings, normSku, pickKeeper } from "@/lib/shopify/sku-groups";
 
 export type ShopifyCacheVariant = {
   id: string;
@@ -99,74 +100,230 @@ export async function importShopifyVariantGroup(
   return { ok: true, productId: id };
 }
 
+type ReconcileVariant = ShopifyCacheVariant & { status: string | null; imported_product_id: string | null };
+
+type ReconcileProduct = {
+  id: string;
+  sku: string | null;
+  airtable_record_id: string;
+  migration_state: string | null;
+  lifecycle_status: string | null;
+  client_price: number | null;
+  weight_g: number | null;
+  shipping_channel: string | null;
+  created_at: string;
+};
+
+async function pageRows<T>(fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>) {
+  const rows: T[] = [];
+  for (let from = 0; from < 50000; from += 1000) {
+    const { data, error } = await fetchPage(from, from + 999);
+    if (error) throw error;
+    rows.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
+  return rows;
+}
+
+function isLive(product: Pick<ReconcileProduct, "migration_state" | "lifecycle_status">) {
+  return product.migration_state !== "ignored" && product.lifecycle_status !== "archived";
+}
+
 /**
- * Every active Shopify product of a shop becomes a Voltship product, so the client sees his
- * whole catalogue as soon as the store is connected and Voltship completes the sheets from
- * "À compléter". A Shopify product whose SKU already belongs to a Voltship product (quoted
- * before the client created it on Shopify) is linked to it instead of duplicated.
+ * One Voltship product per real item, for the whole client (every shop at once):
+ *  - Shopify listings sharing an (effective) SKU — duplicate pages, A/B tests, the same item
+ *    in several stores — are one product; new listings / variants join it automatically;
+ *  - a listing whose SKU is unknown becomes a new product ("à compléter");
+ *  - duplicates created automatically and still empty are merged into the kept product
+ *    (archived, never deleted); products filled by hand are never touched;
+ *  - an automatic product left without any listing (re-linked elsewhere) is archived.
  */
-export async function autoImportShopProducts(input: { clientId: string; shopId: string; limit?: number }) {
+export async function reconcileClientProducts(input: { clientId: string; limit?: number }) {
   const admin = createAdminClient();
-  const { data: cache, error } = await admin
-    .from("shopify_products_cache")
-    .select("id, client_id, shop_id, shopify_product_id, title, sku, photo_url, status, imported_product_id")
-    .eq("shop_id", input.shopId)
-    .eq("client_id", input.clientId)
-    .limit(10000);
-  if (error) throw error;
-  const rows = (cache ?? []).filter((row) => !row.status || row.status === "active");
-  // Shopify products where at least one variant is already linked are left alone.
-  const linkedProducts = new Set(rows.filter((row) => row.imported_product_id).map((row) => row.shopify_product_id));
-  const groups = new Map<string, ShopifyCacheVariant[]>();
-  for (const row of rows) {
-    if (row.imported_product_id || linkedProducts.has(row.shopify_product_id)) continue;
-    groups.set(row.shopify_product_id, [...(groups.get(row.shopify_product_id) ?? []), row as ShopifyCacheVariant]);
-  }
-  if (groups.size === 0) return { created: 0, linked: 0 };
-
-  // SKUs already owned by a Voltship product of this client (own SKU or sku_maps).
-  const [{ data: products }, { data: maps }] = await Promise.all([
-    admin.from("products_cache").select("id, sku, airtable_record_id").eq("client_id", input.clientId).limit(10000),
-    admin.from("sku_maps").select("shopify_sku, airtable_record_id").eq("client_id", input.clientId).limit(20000),
+  const clientId = input.clientId;
+  const [variants, products, maps] = await Promise.all([
+    pageRows<ReconcileVariant>((from, to) =>
+      admin
+        .from("shopify_products_cache")
+        .select("id, client_id, shop_id, shopify_product_id, title, sku, photo_url, status, imported_product_id")
+        .eq("client_id", clientId)
+        .order("id")
+        .range(from, to),
+    ),
+    pageRows<ReconcileProduct>((from, to) =>
+      admin
+        .from("products_cache")
+        .select("id, sku, airtable_record_id, migration_state, lifecycle_status, client_price, weight_g, shipping_channel, created_at")
+        .eq("client_id", clientId)
+        .order("id")
+        .range(from, to),
+    ),
+    pageRows<{ shop_id: string | null; shopify_sku: string | null; airtable_record_id: string | null }>((from, to) =>
+      admin
+        .from("sku_maps")
+        .select("shop_id, shopify_sku, airtable_record_id")
+        .eq("client_id", clientId)
+        .order("id")
+        .range(from, to),
+    ),
   ]);
-  const byRecord = new Map((products ?? []).map((product) => [product.airtable_record_id, product]));
-  const owner = new Map<string, { id: string; airtable_record_id: string }>();
-  for (const product of products ?? []) if (product.sku) owner.set(product.sku.trim().toLowerCase(), product);
-  for (const map of maps ?? []) {
-    const product = byRecord.get(map.airtable_record_id);
-    if (product) owner.set(map.shopify_sku.trim().toLowerCase(), product);
-  }
+  const live = new Map(products.filter(isLive).map((product) => [product.id, product]));
+  const liveIds = [...live.keys()];
 
+  // Filled in (factory price) or used elsewhere (purchase orders, inbounds) = never merged away.
+  const withFactory = new Set<string>();
+  const referenced = new Set<string>();
+  for (let i = 0; i < liveIds.length; i += 300) {
+    const ids = liveIds.slice(i, i + 300);
+    const [{ data: work }, { data: pos }, { data: inbounds }] = await Promise.all([
+      admin.from("sourcing_work").select("product_id, factory_purchase_price").in("product_id", ids),
+      admin.from("purchase_orders").select("product_id").in("product_id", ids),
+      admin.from("inbound_cache").select("product_id").in("product_id", ids),
+    ]);
+    for (const row of work ?? []) if (Number(row.factory_purchase_price) > 0) withFactory.add(row.product_id);
+    for (const row of [...(pos ?? []), ...(inbounds ?? [])]) if (row.product_id) referenced.add(row.product_id);
+  }
+  const hasData = (product: ReconcileProduct) =>
+    (Number(product.client_price) || 0) > 0 ||
+    (Number(product.weight_g) || 0) > 0 ||
+    Boolean(product.shipping_channel) ||
+    withFactory.has(product.id);
+  const isAuto = (product: ReconcileProduct) => product.migration_state === "imported_auto";
+  const disposable = (product: ReconcileProduct) => isAuto(product) && !hasData(product) && !referenced.has(product.id);
+
+  const byRecord = new Map([...live.values()].map((product) => [product.airtable_record_id, product]));
+  const owner = new Map<string, ReconcileProduct>();
+  for (const product of live.values()) if (product.sku) owner.set(normSku(product.sku), product);
+  for (const map of maps) {
+    const product = map.airtable_record_id ? byRecord.get(map.airtable_record_id) : undefined;
+    if (product && map.shopify_sku) owner.set(normSku(map.shopify_sku), product);
+  }
+  const mapKey = (shopId: string | null, sku: string) => `${shopId ?? ""}|${sku}`;
+  const currentMap = new Map(
+    maps
+      .filter((map) => map.shopify_sku)
+      .map((map) => [mapKey(map.shop_id, map.shopify_sku as string), map.airtable_record_id]),
+  );
+
+  const active = variants.filter((variant) => !variant.status || variant.status === "active");
+  const byListing = new Map<string, ReconcileVariant[]>();
+  for (const variant of active) {
+    const key = `${variant.shop_id}:${variant.shopify_product_id}`;
+    byListing.set(key, [...(byListing.get(key) ?? []), variant]);
+  }
+  const finalLink = new Map(variants.map((variant) => [variant.id, variant.imported_product_id]));
+  const archived = new Set<string>();
   let created = 0;
   let linked = 0;
-  for (const variants of [...groups.values()].slice(0, input.limit ?? 80)) {
-    const match = variants
-      .map((variant) => (variant.sku ? owner.get(variant.sku.trim().toLowerCase()) : undefined))
-      .find(Boolean);
-    if (match) {
-      for (const variant of variants) {
-        await admin
-          .from("shopify_products_cache")
-          .update({ imported_product_id: match.id })
-          .eq("id", variant.id)
-          .eq("client_id", variant.client_id);
-        if (variant.sku) {
-          await admin.from("sku_maps").upsert(
-            {
-              client_id: variant.client_id,
-              shop_id: variant.shop_id,
-              shopify_sku: variant.sku,
-              airtable_record_id: match.airtable_record_id,
-            },
-            { onConflict: "client_id,shop_id,shopify_sku" },
-          );
-        }
+  let merged = 0;
+
+  const archive = async (loser: ReconcileProduct, keeper: ReconcileProduct | null) => {
+    if (archived.has(loser.id)) return;
+    archived.add(loser.id);
+    // Its SKU is released so a SKU always resolves to one live product (kept in the request notes).
+    await admin
+      .from("products_cache")
+      .update({ lifecycle_status: "archived", migration_state: "ignored", sku: null })
+      .eq("id", loser.id)
+      .eq("client_id", clientId);
+    if (keeper && !keeper.sku && loser.sku) {
+      keeper.sku = loser.sku;
+      await admin.from("products_cache").update({ sku: loser.sku }).eq("id", keeper.id).is("sku", null);
+    }
+    if (keeper) {
+      await admin
+        .from("sku_maps")
+        .update({ airtable_record_id: keeper.airtable_record_id })
+        .eq("client_id", clientId)
+        .eq("airtable_record_id", loser.airtable_record_id);
+    }
+  };
+
+  for (const listingKeys of groupListings(active.map((v) => ({ shopId: v.shop_id, shopifyProductId: v.shopify_product_id, sku: v.sku })))) {
+    // Oldest listing first: its title names a new product.
+    const group = listingKeys
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+      .flatMap((key) => byListing.get(key) ?? []);
+    if (group.length === 0) continue;
+
+    const candidates = [
+      ...new Map(
+        group
+          .map((variant) => (variant.imported_product_id ? live.get(variant.imported_product_id) : undefined))
+          .filter((product): product is ReconcileProduct => Boolean(product) && !archived.has(product!.id))
+          .map((product) => [product.id, product]),
+      ).values(),
+    ];
+    if (candidates.length === 0) {
+      // Not linked yet: a product already owning one of the SKUs (quoted before the client created it on Shopify).
+      for (const variant of group) {
+        const product = variant.sku ? owner.get(normSku(variant.sku)) : undefined;
+        if (product && !archived.has(product.id) && !candidates.some((c) => c.id === product.id)) candidates.push(product);
       }
-      linked += 1;
+    }
+    if (candidates.length === 0) {
+      if (created >= (input.limit ?? 150)) continue;
+      const result = await importShopifyVariantGroup(group, { auto: true });
+      if (result.ok) {
+        created += 1;
+        for (const variant of group) finalLink.set(variant.id, result.productId);
+      }
       continue;
     }
-    const result = await importShopifyVariantGroup(variants, { auto: true });
-    if (result.ok) created += 1;
+
+    const keeper = pickKeeper(
+      candidates.map((product) => ({
+        ...product,
+        auto: isAuto(product),
+        hasData: hasData(product),
+        createdAt: product.created_at,
+      })),
+    )!;
+    const losers = candidates.filter((product) => product.id !== keeper.id && disposable(product));
+    const loserIds = new Set(losers.map((product) => product.id));
+    for (const variant of group) {
+      const current = variant.imported_product_id;
+      const keep = current && current !== keeper.id && live.has(current) && !loserIds.has(current) && !archived.has(current);
+      if (keep) continue; // linked by hand to another product: respected
+      if (current !== keeper.id) {
+        await admin
+          .from("shopify_products_cache")
+          .update({ imported_product_id: keeper.id })
+          .eq("id", variant.id)
+          .eq("client_id", clientId);
+        finalLink.set(variant.id, keeper.id);
+        linked += 1;
+      }
+      if (variant.sku && currentMap.get(mapKey(variant.shop_id, variant.sku)) !== keeper.airtable_record_id) {
+        await admin.from("sku_maps").upsert(
+          {
+            client_id: clientId,
+            shop_id: variant.shop_id,
+            shopify_sku: variant.sku,
+            airtable_record_id: keeper.airtable_record_id,
+          },
+          { onConflict: "client_id,shop_id,shopify_sku" },
+        );
+        currentMap.set(mapKey(variant.shop_id, variant.sku), keeper.airtable_record_id);
+      }
+    }
+    for (const loser of losers) {
+      await archive(loser, keeper);
+      merged += 1;
+    }
   }
-  return { created, linked };
+
+  // Automatic products no Shopify variant points to any more (re-linked to another product).
+  const stillLinked = new Set([...finalLink.values()].filter(Boolean));
+  for (const product of live.values()) {
+    if (archived.has(product.id) || stillLinked.has(product.id) || !disposable(product)) continue;
+    await archive(product, null);
+    merged += 1;
+  }
+  return { created, linked, merged };
+}
+
+/** Kept for the existing call sites (sync, OAuth callback, "Synchroniser"): reconciles the whole client. */
+export async function autoImportShopProducts(input: { clientId: string; shopId: string; limit?: number }) {
+  return reconcileClientProducts({ clientId: input.clientId, limit: input.limit });
 }

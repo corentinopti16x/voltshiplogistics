@@ -1,6 +1,6 @@
 import "server-only";
 
-import { autoImportShopProducts } from "@/lib/shopify/import-product";
+import { reconcileClientProducts } from "@/lib/shopify/import-product";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptShopifyToken, encryptShopifyToken } from "./crypto";
 import { unpackOrderLines } from "./order-cache";
@@ -82,7 +82,6 @@ export async function syncConnectedShopifyShops(options: { days?: number } = {})
         shop: shop.shopify_domain,
         accessToken,
       });
-      await autoImportShopProducts({ clientId: shop.client_id, shopId: shop.id }).catch(() => null);
       await admin
         .from("shops")
         .update({ last_synced_at: new Date().toISOString(), sync_error: null })
@@ -96,6 +95,10 @@ export async function syncConnectedShopifyShops(options: { days?: number } = {})
         .update({ sync_error: message })
         .eq("id", shop.id);
     }
+  }
+  // One product per real item, across all the shops of each client.
+  for (const clientId of new Set((shops ?? []).map((shop) => shop.client_id as string))) {
+    await reconcileClientProducts({ clientId }).catch(() => null);
   }
   return { scanned: (shops ?? []).length, synced, errors };
 }

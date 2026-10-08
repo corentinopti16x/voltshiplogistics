@@ -1,5 +1,6 @@
 import "server-only";
-import { effectiveSku } from "@/lib/shopify/sku";
+import { effectiveSku, lineSku } from "@/lib/shopify/sku";
+import { loadVariantSkuResolver, refreshClientEffectiveSkus } from "@/lib/shopify/sku-resolve";
 import {
   detectShopifyOrder,
   loadOrderReviews,
@@ -445,6 +446,8 @@ export async function backfillShopifyOrders(input: {
   const orderRows: Array<Record<string, unknown>> = [];
   const alertCandidates: AlertCandidate[] = [];
   const reviews = await loadOrderReviews(createAdminClient(), input.shopId);
+  // Same SKU per variant as the catalogue (shared SKUs of different items are split there).
+  const resolver = await loadVariantSkuResolver(input.shopId);
   do {
     const response = await shopifyRequest<{ orders: ShopifyOrder[] }>(
       input.shop,
@@ -453,7 +456,7 @@ export async function backfillShopifyOrders(input: {
     );
     for (const order of response.data.orders) {
       const date = order.created_at.slice(0, 10);
-      const normalizedLines = cacheOrderLines(order.line_items);
+      const normalizedLines = cacheOrderLines(order.line_items, resolver);
       const review = reviews.get(String(order.id)) ?? null;
       const anomalies = detectShopifyOrder(order);
       if (anomalies.reasons.length > 0) {
@@ -492,7 +495,7 @@ export async function backfillShopifyOrders(input: {
       const orderUnits = order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
       if (isExcludedOrder(order.total_price, orderUnits, review)) continue;
       for (const line of order.line_items) {
-        const sku = effectiveSku(line.sku, line.variant_id);
+        const sku = lineSku(line, resolver);
         if (!sku) continue;
         const key = `${sku}\u0000${date}`;
         counts.set(key, (counts.get(key) ?? 0) + line.quantity);
@@ -561,6 +564,7 @@ export async function syncShopifyProducts(input: {
           shopify_variant_id: String(variant.id),
           title: product.title,
           sku: effectiveSku(variant.sku, variant.id),
+          shopify_sku: variant.sku?.trim() || null,
           photo_url: images[0] ?? null,
           images_json: images,
           status: product.status,
@@ -578,6 +582,9 @@ export async function syncShopifyProducts(input: {
       .upsert(rows, { onConflict: "shop_id,shopify_variant_id" });
     if (error) throw error;
   }
+  // Effective SKUs are decided on the whole catalogue of the client (all shops).
+  await refreshClientEffectiveSkus(input.clientId);
+  const skuByVariant = await loadVariantSkuResolver(input.shopId);
 
   const { data: sales } = await admin
     .from("sales_cache")
@@ -590,10 +597,11 @@ export async function syncShopifyProducts(input: {
     units.set(row.sku, (units.get(row.sku) ?? 0) + Number(row.units_sold));
   }
   for (const row of rows) {
-    if (!row.sku) continue;
+    const sku = skuByVariant.get(String(row.shopify_variant_id)) ?? (row.sku as string | null);
+    if (!sku) continue;
     await admin
       .from("shopify_products_cache")
-      .update({ units_90d: units.get(String(row.sku)) ?? 0 })
+      .update({ units_90d: units.get(sku) ?? 0 })
       .eq("shop_id", input.shopId)
       .eq("shopify_variant_id", row.shopify_variant_id);
   }

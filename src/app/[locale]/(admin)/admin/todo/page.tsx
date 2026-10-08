@@ -1,7 +1,11 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { loadProductTodo } from "@/lib/products/todo";
-import { createProductFromShopifyAction, linkShopifyProductAction } from "@/app/actions/product-todo";
+import {
+  createProductFromShopifyAction,
+  linkShopifyProductAction,
+  splitShopifyListingAction,
+} from "@/app/actions/product-todo";
 import { ProductPhoto } from "@/components/client/product-photo";
 import { Badge } from "@/components/ui";
 import { formatNumber } from "@/lib/format";
@@ -90,14 +94,45 @@ export default async function AdminProductTodoPage({
                       {item.priority === "required" ? t("required") : t("optional")}
                     </Badge>
                     <span className="text-[12px] text-[var(--muted)]">
-                      {item.clientName} · {item.shopDomain.replace(".myshopify.com", "")}
+                      {item.clientName} ·{" "}
+                      {[...new Set(item.listings.map((l) => l.shopDomain.replace(".myshopify.com", "")))].join(", ")}
                     </span>
+                    {item.listings.length > 1 ? (
+                      <Badge tone="outline">{t("pages", { count: item.listings.length })}</Badge>
+                    ) : null}
                   </div>
                   <p className="mt-1 font-semibold">{item.title}</p>
                   <p className="mt-0.5 text-[12px] text-[var(--muted)]">
                     {t("sales90", { count: formatNumber(item.units90d, fmtLocale) })}
                     {item.skus.length ? ` · SKU ${item.skus.slice(0, 4).join(", ")}${item.skus.length > 4 ? "…" : ""}` : ` · ${t("noSku")}`}
                   </p>
+                  {item.listings.length > 1 ? (
+                    <details className="mt-1.5 text-[12px]">
+                      <summary className="cursor-pointer text-[var(--muted)]">{t("pagesDetail")}</summary>
+                      <ul className="mt-1.5 flex flex-col gap-1">
+                        {item.listings.map((listing) => (
+                          <li key={`${listing.shopId}:${listing.shopifyProductId}`} className="flex items-center gap-2">
+                            <span className="min-w-0 flex-1 truncate">
+                              {listing.title}{" "}
+                              <span className="text-[var(--faint)]">
+                                · {listing.shopDomain.replace(".myshopify.com", "")}
+                              </span>
+                            </span>
+                            <form action={splitShopifyListingAction}>
+                              <input type="hidden" name="shop_id" value={listing.shopId} />
+                              <input type="hidden" name="shopify_product_id" value={listing.shopifyProductId} />
+                              <button
+                                className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[11px]"
+                                title={t("splitHint")}
+                              >
+                                {t("split")}
+                              </button>
+                            </form>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {item.missing.map((field) => (
                       <Badge key={field} tone="outline">
@@ -108,12 +143,39 @@ export default async function AdminProductTodoPage({
                 </div>
                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[300px]">
                   {item.productId ? (
-                    <Link
-                      href={`/sourcer/${item.productId}?from=todo`}
-                      className="rounded-lg bg-[var(--navy)] px-4 py-2 text-center text-sm font-semibold text-white"
-                    >
-                      {t("complete")}
-                    </Link>
+                    <>
+                      <Link
+                        href={`/sourcer/${item.productId}?from=todo`}
+                        className="rounded-lg bg-[var(--navy)] px-4 py-2 text-center text-sm font-semibold text-white"
+                      >
+                        {t("complete")}
+                      </Link>
+                      {item.auto && item.candidates.length > 0 ? (
+                        <form action={linkShopifyProductAction} className="flex gap-2">
+                          <input type="hidden" name="shop_id" value={item.shopId} />
+                          <input type="hidden" name="shopify_product_id" value={item.shopifyProductId} />
+                          <input type="hidden" name="from_product_id" value={item.productId} />
+                          <select
+                            name="product_id"
+                            required
+                            defaultValue=""
+                            className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--bg)] px-2 py-2 text-[13px]"
+                          >
+                            <option value="">{t("relinkPlaceholder")}</option>
+                            {item.candidates.map((candidate) => (
+                              <option key={candidate.id} value={candidate.id}>
+                                {candidate.score >= 0.3 ? "★ " : ""}
+                                {candidate.title}
+                                {candidate.sku ? ` (${candidate.sku})` : ""}
+                              </option>
+                            ))}
+                          </select>
+                          <button className="rounded-lg border border-[var(--line)] px-3 py-2 text-[13px] font-semibold">
+                            {t("link")}
+                          </button>
+                        </form>
+                      ) : null}
+                    </>
                   ) : (
                     <>
                       <form action={createProductFromShopifyAction}>

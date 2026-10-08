@@ -4,7 +4,7 @@
  */
 
 import type { ProductRow } from "@/lib/products/types";
-import { effectiveSku } from "../shopify/sku";
+import { lineSku, type SkuResolver } from "../shopify/sku";
 
 // --- Reference numbers ---------------------------------------------------------------
 
@@ -282,11 +282,11 @@ export function orderNumberOf(order: Pick<ShopifyOrderForEccang, "id" | "order_n
 }
 
 /** Shippable line items with a SKU, same-SKU lines merged. */
-export function orderLinesForEccang(order: ShopifyOrderForEccang) {
+export function orderLinesForEccang(order: ShopifyOrderForEccang, resolver?: SkuResolver | null) {
   const merged = new Map<string, EccangOrderItem>();
   for (const line of order.line_items) {
     if (line.requires_shipping === false) continue;
-    const sku = effectiveSku(line.sku, line.variant_id);
+    const sku = lineSku(line, resolver);
     if (!sku || !(line.quantity > 0)) continue;
     const current = merged.get(sku);
     if (current) {
@@ -303,10 +303,26 @@ export function orderLinesForEccang(order: ShopifyOrderForEccang) {
   return [...merged.values()];
 }
 
+/**
+ * Shopify SKUs → warehouse SKUs (sku_maps.eccang_sku when Voltship set one, e.g. several
+ * Shopify SKUs of one item, or a SKU shared by two items split by Voltship). Lines that end
+ * up on the same warehouse SKU are merged.
+ */
+export function toWarehouseItems(items: EccangOrderItem[], warehouseSku: Map<string, string>) {
+  const merged = new Map<string, EccangOrderItem>();
+  for (const item of items) {
+    const sku = warehouseSku.get(item.product_sku) || item.product_sku;
+    const current = merged.get(sku);
+    if (current) current.quantity += item.quantity;
+    else merged.set(sku, { ...item, product_sku: sku });
+  }
+  return [...merged.values()];
+}
+
 /** Lines without a SKU (cannot be pushed) — used for the "SKU inconnu" notification. */
-export function orderLinesWithoutSku(order: ShopifyOrderForEccang) {
+export function orderLinesWithoutSku(order: ShopifyOrderForEccang, resolver?: SkuResolver | null) {
   return order.line_items
-    .filter((line) => line.requires_shipping !== false && !effectiveSku(line.sku, line.variant_id))
+    .filter((line) => line.requires_shipping !== false && !lineSku(line, resolver))
     .map((line) => (line.title ?? line.name ?? "?").trim());
 }
 
@@ -318,6 +334,8 @@ export function mapShopifyOrderToEccang(
     warehouseCode: string;
     shippingMethod: string;
     shopDomain?: string | null;
+    /** Items already resolved to warehouse SKUs (default: the order's own SKUs). */
+    items?: EccangOrderItem[];
   },
 ): EccangCreateOrderPayload {
   const address = order.shipping_address;
@@ -330,7 +348,7 @@ export function mapShopifyOrderToEccang(
   if (!name) throw new Error("Order has no consignee name.");
   const address1 = (address.address1 ?? "").trim();
   if (!address1) throw new Error("Order has no street address.");
-  const items = orderLinesForEccang(order);
+  const items = input.items ?? orderLinesForEccang(order);
   if (items.length === 0) throw new Error("Order has no shippable line with a SKU.");
   const phone = (address.phone ?? order.phone ?? "").trim() || "0000000000";
   const email = (order.email ?? order.contact_email ?? "").trim();
