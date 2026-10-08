@@ -393,7 +393,7 @@
       "photo": "Photo du produit",
       "link": "Lien 1688 / AliExpress / concurrent",
       "description": "Description et besoins",
-      "targetPrice": "Prix unitaire cible",
+      "targetPrice": "Prix unitaire cible (€)",
       "launchQty": "Quantité de lancement",
       "destinations": "Marchés de destination",
       "notes": "Notes",
@@ -413,8 +413,10 @@
       "attrMagneticEx": "support téléphone, fermeture magnétique",
       "approxWeight": "Poids approximatif de l'unité, si tu le sais",
       "approxWeightEx": "en grammes, emballage compris",
-      "currentUnitCost": "Ce que tu paies aujourd'hui par unité chez ton agent, si tu veux une estimation",
-      "currentUnitCostEx": "on te montre un COGS estimé avant même le sourcing"
+      "currentUnitCost": "Ce que tu paies aujourd'hui par unité chez ton agent (€), si tu veux une estimation",
+      "currentUnitCostEx": "on te montre un COGS estimé avant même le sourcing",
+      "photoOrLink": "Photo ou lien : au moins l'un des deux, pour qu'on trouve le bon produit.",
+      "requiredLegend": "Champs obligatoires. Le reste est optionnel mais nous aide à te répondre plus vite."
     },
     "quote": {
       "title": "Coût de revient",

@@ -393,7 +393,7 @@
       "photo": "Product photo",
       "link": "1688 / AliExpress / competitor link",
       "description": "Description & requirements",
-      "targetPrice": "Target unit price",
+      "targetPrice": "Target unit price (€)",
       "launchQty": "Expected launch qty",
       "destinations": "Destination markets",
       "notes": "Notes",
@@ -413,8 +413,10 @@
       "attrMagneticEx": "phone holder, magnetic closure",
       "approxWeight": "Approximate unit weight, if you know it",
       "approxWeightEx": "in grams, packaging included",
-      "currentUnitCost": "What you pay today per unit at your agent, if you want an estimate",
-      "currentUnitCostEx": "we show an estimated COGS before sourcing even starts"
+      "currentUnitCost": "What you pay today per unit at your agent (€), if you want an estimate",
+      "currentUnitCostEx": "we show an estimated COGS before sourcing even starts",
+      "photoOrLink": "Photo or link: at least one, so we can find the right product.",
+      "requiredLegend": "Required fields. The rest is optional but helps us answer faster."
     },
     "quote": {
       "title": "Landed cost",

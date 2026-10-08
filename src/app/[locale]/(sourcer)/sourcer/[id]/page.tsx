@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { redirect, Link } from "@/i18n/routing";
 import { getAuthContext } from "@/lib/auth/context";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readPricingSettings } from "@/lib/pricing/settings";
 import { getProductRequest, type ProductRow } from "@/lib/products/types";
 import { ProductPhoto } from "@/components/client/product-photo";
 import { SourcerShell } from "@/components/sourcer/sourcer-shell";
@@ -24,6 +25,7 @@ export default async function SourcerProductPage({
   }
 
   const admin = createAdminClient();
+  const settings = await readPricingSettings(admin);
   const [{ data: productData }, { data: work }] = await Promise.all([
     admin
       .from("products_cache")
@@ -70,9 +72,9 @@ export default async function SourcerProductPage({
         <h2 className="text-sm font-semibold">Client brief</h2>
         <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
           <Item label="Description" value={request.description} />
-          <Item label="Target unit price" value={request.target_unit_price} />
+          <Item label="Target unit price (€)" value={request.target_unit_price} />
           <Item label="Approx. unit weight (g, client)" value={request.approx_weight_g} />
-          <Item label="Current unit cost at agent (client)" value={request.current_unit_cost} />
+          <Item label="Current unit cost at agent (€, client)" value={request.current_unit_cost} />
           <Item label="Launch quantity" value={request.expected_launch_qty} />
           <Item label="Destination markets" value={request.destination_markets} />
           <Item label="Notes" value={request.notes} />
@@ -95,7 +97,7 @@ export default async function SourcerProductPage({
       </section>
 
       <div className="mt-6">
-        <SourcingWorkForm product={product} work={work} />
+        <SourcingWorkForm product={product} work={work} fxRmbPerEur={settings.fx_rmb_per_eur} />
       </div>
     </SourcerShell>
   );
