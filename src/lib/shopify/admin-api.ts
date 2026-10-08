@@ -1,4 +1,5 @@
 import "server-only";
+import { effectiveSku } from "@/lib/shopify/sku";
 import {
   detectShopifyOrder,
   loadOrderReviews,
@@ -30,6 +31,8 @@ export type ShopifyOrder = {
   fulfillment_status?: string | null;
   line_items: Array<{
     sku: string | null;
+    /** Used as SKU fallback (SHOPIFY-<variant id>) when the variant has no SKU. */
+    variant_id?: number | string | null;
     quantity: number;
     title?: string | null;
     name?: string | null;
@@ -489,7 +492,7 @@ export async function backfillShopifyOrders(input: {
       const orderUnits = order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
       if (isExcludedOrder(order.total_price, orderUnits, review)) continue;
       for (const line of order.line_items) {
-        const sku = line.sku?.trim();
+        const sku = effectiveSku(line.sku, line.variant_id);
         if (!sku) continue;
         const key = `${sku}\u0000${date}`;
         counts.set(key, (counts.get(key) ?? 0) + line.quantity);
@@ -557,7 +560,7 @@ export async function syncShopifyProducts(input: {
           shopify_product_id: String(product.id),
           shopify_variant_id: String(variant.id),
           title: product.title,
-          sku: variant.sku?.trim() || null,
+          sku: effectiveSku(variant.sku, variant.id),
           photo_url: images[0] ?? null,
           images_json: images,
           status: product.status,
