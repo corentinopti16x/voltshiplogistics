@@ -8,6 +8,8 @@ import { getProductRequest, type ProductRow } from "@/lib/products/types";
 import { ProductPhoto } from "@/components/client/product-photo";
 import { SourcerShell } from "@/components/sourcer/sourcer-shell";
 import { SourcingWorkForm } from "@/components/sourcer/sourcing-work-form";
+import { AnnouncedPricesForm } from "@/components/sourcer/announced-prices-form";
+import { getProductMarkets } from "@/lib/pricing/server";
 
 export default async function SourcerProductPage({
   params,
@@ -106,6 +108,9 @@ export default async function SourcerProductPage({
 
       <div className="mt-6">
         <SourcingWorkForm product={product} work={work} fxRmbPerEur={settings.fx_rmb_per_eur} />
+      </div>
+      <div className="mt-6">
+        <AnnouncedPricesForm productId={product.id} quoteJson={product.quote_json} markets={getProductMarkets(product)} />
       </div>
     </SourcerShell>
   );

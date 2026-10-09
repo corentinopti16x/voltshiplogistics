@@ -29,9 +29,12 @@ export async function importShopifyVariantGroup(
   const admin = createAdminClient();
   const row = variants[0];
   const id = randomUUID();
+  // Products are priced for the store's delivery country (Admin › Boutiques), FR by default.
+  const { data: shop } = await admin.from("shops").select("market").eq("id", row.shop_id).maybeSingle();
+  const market = typeof shop?.market === "string" && /^[A-Z]{2}$/.test(shop.market) ? shop.market : "FR";
   const request = {
     description: `Imported from Shopify product ${row.shopify_product_id} (${variants.length} variant(s)).`,
-    destination_markets: "FR",
+    destination_markets: market,
     notes: "Winning-product migration. Sourcer backfill required.",
   };
   let airtableRecordId = `pending:${id}`;

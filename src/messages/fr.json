@@ -1067,7 +1067,11 @@
           "saveDefault": "Enregistrer par défaut",
           "savedDefault": "Règle par défaut enregistrée.",
           "handlingCost": "Coût réel préparation € / commande (interne)",
-          "fxMarket": "Taux de change marché RMB / EUR (interne)"
+          "fxMarket": "Taux de change marché RMB / EUR (interne)",
+          "handlingStep2": "Handling en plus pour 2 unités (€, tous les paliers)",
+          "handlingStep3": "Handling en plus pour 3 unités (€, tous les paliers)",
+          "handlingExtraUnit": "Handling en plus par unité au-delà de 3 (€, tous les paliers)",
+          "announcedAlert": "Seuil d'alerte prix bloqués (marge min. par colis, €)"
         },
         "summary": {
           "cells": "Cellules",
@@ -1217,6 +1221,27 @@
         "margin": "Marge",
         "unpriced": "Non chiffrée (fiche produit incomplète ou SKU inconnu).",
         "toComplete": "À compléter →"
+      },
+      "announced": {
+        "title": "Prix bloqués à surveiller",
+        "lead": "Chaque prix annoncé recalculé sur la grille en vigueur. Si un transporteur augmente, le prix client ne bouge pas et c'est ta marge qui baisse : alerte sous {threshold} par colis. Après la date « valable jusqu'au », l'app repasse sur la règle du palier.",
+        "empty": "Aucun prix bloqué.",
+        "product": "Produit",
+        "market": "Pays · qté",
+        "locked": "Prix bloqué",
+        "rule": "Prix règle actuelle",
+        "margin": "Marge / colis",
+        "until": "Valable jusqu'au",
+        "status": "État",
+        "noDate": "Sans date",
+        "statuses": {
+          "loss": "À perte",
+          "low_margin": "Marge trop basse",
+          "expired": "Expiré",
+          "expiring": "Expire bientôt",
+          "no_data": "Données manquantes",
+          "ok": "OK"
+        }
       }
     },
     "finance": {
@@ -1457,7 +1482,9 @@
       "syncNow": "Synchroniser",
       "importTitle": "Import des produits",
       "importHelp": "Choisis une boutique. Les variantes sont regroupées par produit ; les produits à 30 ventes ou plus sur 90 jours (toutes variantes confondues) sont pré-cochés.",
-      "show": "Afficher"
+      "show": "Afficher",
+      "market": "Pays de livraison",
+      "marketPlaceholder": "Pays…"
     },
     "shopForms": {
       "searchPlaceholder": "Rechercher un produit ou un SKU…",
@@ -1780,6 +1807,14 @@
       "flagging": "Signalement…",
       "flagProblem": "Signaler le problème",
       "productFlagged": "Produit signalé."
+    },
+    "announced": {
+      "title": "Prix annoncés au client",
+      "lead": "Total par colis (produit + transport + handling, en €) promis au client. Quand une case est remplie, l'app facture exactement ce prix pour ce pays et cette quantité, et la marge Voltship se calcule dessus. Case vide = règle du palier.",
+      "save": "Enregistrer",
+      "otherMarket": "Autre pays",
+      "until": "Valable jusqu'au",
+      "expired": "Expiré : règle du palier appliquée"
     }
   },
   "support": {

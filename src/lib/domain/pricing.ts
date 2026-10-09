@@ -111,6 +111,23 @@ export function sameLine(a: CarrierLineRef | null | undefined, b: CarrierLineRef
   return a.carrier === b.carrier && (a.lineName ?? "") === (b.lineName ?? "");
 }
 
+/** Extra handling above the 1-unit fee, by parcel size (see PricingSettings). */
+export type HandlingLadder = { step2: number; step3: number; extraUnit: number };
+
+export const FLAT_HANDLING: HandlingLadder = { step2: 0, step3: 0, extraUnit: 0 };
+
+export const DEFAULT_HANDLING_LADDER: HandlingLadder = { step2: 0.15, step3: 0.3, extraUnit: 0.15 };
+
+/** Handling for a parcel of `quantity` units: base fee + 0,15 € per extra unit by default (1 → 1,15 → 1,30 → 1,45 €). */
+export function handlingForQuantity(base: number, quantity: number, ladder?: HandlingLadder | null) {
+  const fee = Math.max(0, base);
+  const q = Math.max(1, Math.floor(quantity || 1));
+  const l = ladder ?? DEFAULT_HANDLING_LADDER;
+  if (q === 1 || fee === 0) return money(fee);
+  if (q === 2) return money(fee + Math.max(0, l.step2));
+  return money(fee + Math.max(0, l.step3) + (q - 3) * Math.max(0, l.extraUnit));
+}
+
 export type PricingInput = {
   clientPrice: number;
   weightG: number;
@@ -134,6 +151,15 @@ export type PricingInput = {
   carrierPreference?: CarrierLineRef | null;
   /** When set, only these lines (`lineKey`) may be picked — admin "Autorisée" rules. */
   allowedLines?: Set<string> | null;
+  /** Handling grows with the parcel size (default +0,15 € per extra unit). */
+  handlingLadder?: HandlingLadder | null;
+  /** False = fixed handling per parcel (Platinium / Gold); default true. */
+  handlingGrows?: boolean | null;
+  /**
+   * RMB per EUR of the carrier cost: with the cell's internal carrier cost, the palier
+   * discount never takes the client transport below what the carrier costs Voltship.
+   */
+  fxRmbPerEur?: number | null;
 };
 
 export type CogsBreakdown = {
@@ -172,6 +198,8 @@ export type CogsBreakdown = {
   weightMaxG: number;
   /** How the line was selected (preferred / cheapest / fallback). */
   selectionReason: SelectionReason;
+  /** Total fixed by hand for this product / market / quantity (price promised to the client). */
+  announced?: boolean;
 };
 
 export type AcceptedQuoteSnapshot = CogsBreakdown & {
@@ -350,13 +378,17 @@ export function calculateCogs(input: PricingInput): CogsBreakdown | null {
 
   const product = money(input.clientPrice * quantity);
   const shippingBase = money(cell.price);
-  // Handling (picking + packing) is charged once per order, not per unit.
-  const handling = money(Math.max(0, input.handlingFee ?? 0));
+  // Handling (picking + packing) is charged per order and grows with the parcel size.
+  const handling = handlingForQuantity(
+    input.handlingFee ?? 0,
+    quantity,
+    input.handlingGrows === false ? FLAT_HANDLING : input.handlingLadder,
+  );
   const commissionRate = Math.max(0, input.commissionPct ?? 0) / 100;
   const discountRate = Math.min(100, Math.max(0, input.logisticsDiscountPct ?? 0)) / 100;
   const commission = money(product * commissionRate);
-  const discount = money(shippingBase * discountRate);
-  const shipping = money(shippingBase - discount);
+  const shipping = discountedShipping(shippingBase, discountRate, cell.carrierCostRmb, input.fxRmbPerEur);
+  const discount = money(shippingBase - shipping);
   const cogs = money(product + commission + shipping + handling);
 
   return {
@@ -384,6 +416,26 @@ export function calculateCogs(input: PricingInput): CogsBreakdown | null {
     weightMaxG: cell.weightMaxG,
     selectionReason: selected.reason,
   };
+}
+
+/**
+ * Client transport after the palier discount, never below the carrier cost (when the
+ * internal cost of the cell is known): the discount only eats into Voltship's markup.
+ */
+export function discountedShipping(
+  price: number,
+  discountRate: number,
+  carrierCostRmb?: number | null,
+  fxRmbPerEur?: number | null,
+) {
+  const discounted = money(price - price * Math.min(1, Math.max(0, discountRate)));
+  const fx = Number(fxRmbPerEur);
+  const cost = Number(carrierCostRmb);
+  if (carrierCostRmb == null || !Number.isFinite(cost) || cost <= 0 || !Number.isFinite(fx) || fx <= 0) {
+    return discounted;
+  }
+  const floor = Math.ceil((cost / fx) * 100 - 1e-9) / 100;
+  return money(Math.min(price, Math.max(discounted, floor)));
 }
 
 /** "251–300 g" label for a rate bracket. */
@@ -512,5 +564,108 @@ export function parseAcceptedQuoteSnapshot(raw: unknown): AcceptedQuoteSnapshot 
         ? row.selectionReason
         : "cheapest",
     acceptedAt,
+  };
+}
+
+/**
+ * Prices promised to a client for a product, by market then quantity: total parcel price
+ * in EUR (product + transport + handling), e.g. { "IT": { "1": 9.75, "2": 14.5 } }.
+ * Stored in products_cache.quote_json.announced_prices.
+ */
+export type AnnouncedPrices = Record<string, Record<string, number>>;
+
+export function parseAnnouncedPrices(raw: unknown): AnnouncedPrices {
+  const out: AnnouncedPrices = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [market, byQty] of Object.entries(raw as Record<string, unknown>)) {
+    if (!/^[A-Z]{2}$/.test(market) || !byQty || typeof byQty !== "object") continue;
+    for (const [qty, value] of Object.entries(byQty as Record<string, unknown>)) {
+      const price = Number(value);
+      if (!/^[1-9]$/.test(qty) || !Number.isFinite(price) || price <= 0) continue;
+      (out[market] ??= {})[qty] = money(price);
+    }
+  }
+  return out;
+}
+
+export function announcedPriceFor(prices: AnnouncedPrices, destination: string, quantity: number) {
+  const value = prices[destination.toUpperCase()]?.[String(quantity)];
+  return value != null && value > 0 ? value : null;
+}
+
+/** Last day (YYYY-MM-DD, inclusive) each market's announced prices are guaranteed. */
+export type AnnouncedUntil = Record<string, string>;
+
+export function parseAnnouncedUntil(raw: unknown): AnnouncedUntil {
+  const out: AnnouncedUntil = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [market, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (/^[A-Z]{2}$/.test(market) && typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      out[market] = value;
+    }
+  }
+  return out;
+}
+
+export function todayIso(now: Date = new Date()) {
+  return now.toISOString().slice(0, 10);
+}
+
+/** True once the guarantee date of the market is past (no date = guaranteed until removed). */
+export function announcedExpired(until: AnnouncedUntil, market: string, today: string = todayIso()) {
+  const last = until[market.toUpperCase()];
+  return last != null && last < today;
+}
+
+/**
+ * Announced prices still guaranteed today (quote_json.announced_prices minus the markets whose
+ * `announced_until` date is past): an expired market falls back to the live palier rule.
+ */
+export function activeAnnouncedPrices(quoteJson: Record<string, unknown> | null | undefined, today: string = todayIso()) {
+  const prices = parseAnnouncedPrices(quoteJson?.announced_prices);
+  const until = parseAnnouncedUntil(quoteJson?.announced_until);
+  for (const market of Object.keys(prices)) if (announcedExpired(until, market, today)) delete prices[market];
+  return prices;
+}
+
+export type AnnouncedAlertStatus = "expired" | "loss" | "low_margin" | "expiring" | "no_data" | "ok";
+
+/** Days before the guarantee date from which an announced price is flagged « expire bientôt ». */
+export const ANNOUNCED_EXPIRY_WARNING_DAYS = 14;
+
+/**
+ * Health of one locked price: expired, selling at a loss, under the alert threshold, close
+ * to its guarantee date, impossible to compute (product data / rate missing) or fine.
+ */
+export function classifyAnnouncedPrice(input: {
+  until: string | null;
+  today: string;
+  margin: number | null;
+  threshold: number;
+}): AnnouncedAlertStatus {
+  if (input.until && input.until < input.today) return "expired";
+  if (input.margin == null) return "no_data";
+  if (input.margin < 0) return "loss";
+  if (input.margin < input.threshold) return "low_margin";
+  if (input.until) {
+    const days = (Date.parse(`${input.until}T00:00:00Z`) - Date.parse(`${input.today}T00:00:00Z`)) / 86_400_000;
+    if (days <= ANNOUNCED_EXPIRY_WARNING_DAYS) return "expiring";
+  }
+  return "ok";
+}
+
+/**
+ * The client pays exactly the announced total: product, commission and handling stay as
+ * computed, the transport line absorbs the difference (it is what was negotiated).
+ */
+export function applyAnnouncedPrice(breakdown: CogsBreakdown, price: number): CogsBreakdown {
+  const shipping = money(price - breakdown.product - breakdown.commission - breakdown.handling);
+  return {
+    ...breakdown,
+    shipping,
+    discount: money(breakdown.shippingBase - shipping),
+    cogs: money(price),
+    cogsPerUnit: money(price / breakdown.quantity),
+    announced: true,
   };
 }

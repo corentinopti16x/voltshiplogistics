@@ -1067,7 +1067,11 @@
           "saveDefault": "Save as default",
           "savedDefault": "Default rule saved.",
           "handlingCost": "Real handling cost € / order (internal)",
-          "fxMarket": "Market FX rate RMB / EUR (internal)"
+          "fxMarket": "Market FX rate RMB / EUR (internal)",
+          "handlingStep2": "Extra handling for 2 units (€, every palier)",
+          "handlingStep3": "Extra handling for 3 units (€, every palier)",
+          "handlingExtraUnit": "Extra handling per unit above 3 (€, every palier)",
+          "announcedAlert": "Locked price alert threshold (min. margin per parcel, €)"
         },
         "summary": {
           "cells": "Cells",
@@ -1217,6 +1221,27 @@
         "margin": "Margin",
         "unpriced": "Not priced (incomplete product sheet or unknown SKU).",
         "toComplete": "To complete →"
+      },
+      "announced": {
+        "title": "Locked prices to watch",
+        "lead": "Each announced price re-checked on the live grid. When a carrier raises its prices the client price does not move and your margin shrinks: alert under {threshold} per parcel. After the « valid until » date the app falls back to the palier rule.",
+        "empty": "No locked price.",
+        "product": "Product",
+        "market": "Market · qty",
+        "locked": "Locked price",
+        "rule": "Current rule price",
+        "margin": "Margin / parcel",
+        "until": "Valid until",
+        "status": "Status",
+        "noDate": "No date",
+        "statuses": {
+          "loss": "At a loss",
+          "low_margin": "Margin too low",
+          "expired": "Expired",
+          "expiring": "Expires soon",
+          "no_data": "Missing data",
+          "ok": "OK"
+        }
       }
     },
     "finance": {
@@ -1457,7 +1482,9 @@
       "syncNow": "Sync now",
       "importTitle": "Product import",
       "importHelp": "Choose a store. Variants are grouped by product; products with 30 or more sales over 90 days (all variants combined) are pre-selected.",
-      "show": "Show"
+      "show": "Show",
+      "market": "Delivery country",
+      "marketPlaceholder": "Country…"
     },
     "shopForms": {
       "searchPlaceholder": "Search a product or SKU…",
@@ -1780,6 +1807,14 @@
       "flagging": "Flagging…",
       "flagProblem": "Flag problem",
       "productFlagged": "Product flagged."
+    },
+    "announced": {
+      "title": "Prices announced to the client",
+      "lead": "Total per parcel (product + transport + handling, €) promised to the client. When a box is filled, the app bills exactly this price for that market and quantity, and the Voltship margin is computed on it. Empty = palier rule.",
+      "save": "Save",
+      "otherMarket": "Other market",
+      "until": "Valid until",
+      "expired": "Expired: palier rule applies"
     }
   },
   "support": {

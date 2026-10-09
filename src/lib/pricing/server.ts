@@ -4,9 +4,12 @@ import { resolveClientPricing } from "@/lib/domain/pricing-tiers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   COGS_MATRIX_QUANTITIES,
+  announcedPriceFor,
+  applyAnnouncedPrice,
   calculateCogs,
   listRateOptions,
   normalizeDestination,
+  activeAnnouncedPrices,
   parseDestinationMarkets,
   parseParcelDimensions,
   type CarrierLineRef,
@@ -25,12 +28,14 @@ import {
   type CarrierRules,
 } from "@/lib/domain/carrier-rules";
 import { getProductRequest, type ProductRow } from "@/lib/products/types";
-import { readPricingSettings } from "./settings";
+import { handlingLadderFrom, readPricingSettings } from "./settings";
 
 export type ClientPricingProfile = {
   commissionPct: number;
   handlingFee: number;
   logisticsDiscountPct: number;
+  /** Handling grows with the parcel (Ultra VIP / VIP) or stays fixed (Platinium / Gold). */
+  handlingGrows?: boolean;
 };
 
 export type LiveProductQuote = {
@@ -127,7 +132,7 @@ export async function loadRateCells(
   const { data } = await admin
     .from("rate_grid_cells")
     .select(
-      "grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, ioss_required",
+      "grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, ioss_required, carrier_cost_rmb",
     )
     .eq("grid_version", gridVersion)
     .in("destination", destinations)
@@ -143,6 +148,8 @@ export async function loadRateCells(
     deliveryRange: cell.delivery_range,
     lineName: cell.line_name || null,
     iossRequired: cell.ioss_required === true,
+    // Internal: only used so the palier discount never prices transport below cost.
+    carrierCostRmb: cell.carrier_cost_rmb == null ? null : Number(cell.carrier_cost_rmb),
   }));
 }
 
@@ -242,6 +249,8 @@ export async function calculateProductCogsMatrix(
   const channel = effective.channel as ShippingChannel;
   // Dimensions (cm) from quote_json, same keys as the ECCANG mapping → volumetric weight.
   const dimensionsCm = parseParcelDimensions(product.quote_json);
+  // Prices promised to the client (fiche produit → « Prix annoncés ») win over the rule.
+  const announcedPrices = activeAnnouncedPrices(product.quote_json);
   // Admin rules: blocked lines are removed from every selection (and from the options list).
   const allowedLines = allowedLinesFromRules(cells, rules);
 
@@ -260,16 +269,22 @@ export async function calculateProductCogsMatrix(
         volumetricDivisors: settings.volumetric_divisors,
         carrierPreference: selection.preference,
         allowedLines,
+        handlingLadder: handlingLadderFrom(settings),
+        fxRmbPerEur: settings.fx_rmb_per_eur,
       };
       return {
         destination,
         preference: selection.preference,
         forced: selection.forced,
         options: listRateOptions(cells, { ...common, quantity: 1 }),
-        cells: quantities.map((quantity) => ({
-          quantity,
-          breakdown: calculateCogs({ ...common, cells, clientPrice, quantity, ...profile }),
-        })),
+        cells: quantities.map((quantity) => {
+          const computed = calculateCogs({ ...common, cells, clientPrice, quantity, ...profile });
+          const announced = announcedPriceFor(announcedPrices, destination, quantity);
+          return {
+            quantity,
+            breakdown: computed && announced != null ? applyAnnouncedPrice(computed, announced) : computed,
+          };
+        }),
       };
     }),
   };

@@ -8,10 +8,10 @@ import {
 
 describe("pricing tiers", () => {
   it("presets follow the validated rule", () => {
-    expect(PRICING_TIER_PRESETS.ultra_vip).toEqual({ logisticsDiscountPct: 10, commissionPct: 3, handlingFee: 1 });
-    expect(PRICING_TIER_PRESETS.vip).toEqual({ logisticsDiscountPct: 5, commissionPct: 5, handlingFee: 1 });
-    expect(PRICING_TIER_PRESETS.platinium).toEqual({ logisticsDiscountPct: 0, commissionPct: 7, handlingFee: 1 });
-    expect(PRICING_TIER_PRESETS.gold).toEqual({ logisticsDiscountPct: 0, commissionPct: 10, handlingFee: 1 });
+    expect(PRICING_TIER_PRESETS.ultra_vip).toEqual({ logisticsDiscountPct: 10, commissionPct: 3, handlingFee: 1, handlingGrows: true });
+    expect(PRICING_TIER_PRESETS.vip).toEqual({ logisticsDiscountPct: 5, commissionPct: 5, handlingFee: 1, handlingGrows: true });
+    expect(PRICING_TIER_PRESETS.platinium).toEqual({ logisticsDiscountPct: 0, commissionPct: 7, handlingFee: 1, handlingGrows: true });
+    expect(PRICING_TIER_PRESETS.gold).toEqual({ logisticsDiscountPct: 0, commissionPct: 10, handlingFee: 1, handlingGrows: true });
   });
 
   it("infers the palier from existing prices", () => {
@@ -29,11 +29,11 @@ describe("pricing tiers", () => {
 
   it("fills unset tariffs with the palier, keeps explicit values", () => {
     expect(resolveClientPricing({ pricing_tier: "gold", commission_pct: null, handling_fee: null, logistics_discount_pct: null }))
-      .toEqual({ commissionPct: 10, handlingFee: 1, logisticsDiscountPct: 0 });
+      .toEqual({ commissionPct: 10, handlingFee: 1, logisticsDiscountPct: 0, handlingGrows: true });
     expect(resolveClientPricing({ pricing_tier: "vip", commission_pct: "5.000", handling_fee: "1.0000", logistics_discount_pct: "5.000" }))
-      .toEqual({ commissionPct: 5, handlingFee: 1, logisticsDiscountPct: 5 });
+      .toEqual({ commissionPct: 5, handlingFee: 1, logisticsDiscountPct: 5, handlingGrows: true });
     expect(resolveClientPricing({ pricing_tier: "vip", commission_pct: 0, handling_fee: 1.7, logistics_discount_pct: 5 }))
-      .toEqual({ commissionPct: 0, handlingFee: 1.7, logisticsDiscountPct: 5 });
-    expect(resolveClientPricing(null)).toEqual({ commissionPct: 10, handlingFee: 1, logisticsDiscountPct: 0 });
+      .toEqual({ commissionPct: 0, handlingFee: 1.7, logisticsDiscountPct: 5, handlingGrows: true });
+    expect(resolveClientPricing(null)).toEqual({ commissionPct: 10, handlingFee: 1, logisticsDiscountPct: 0, handlingGrows: true });
   });
 });

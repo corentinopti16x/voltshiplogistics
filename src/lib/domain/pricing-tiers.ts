@@ -2,7 +2,7 @@
  * Paliers clients Voltship (règle validée le 5 oct. 2026) :
  *   transport = grille ÷ 7,5 + max(10 % ; 0,60 €) − remise logistique du palier
  *   produit   = prix usine ÷ 7,5 × (1 + commission du palier)
- *   handling  = 1 € par colis pour tous
+ *   handling  = identique pour tous : 1 € par colis + 0,15 € par unité en plus (réglable)
  * Le palier pré-remplit les tarifs du client ; ils restent ajustables à la main.
  */
 export const PRICING_TIERS = ["ultra_vip", "vip", "platinium", "gold"] as const;
@@ -19,13 +19,15 @@ export type PricingTierPreset = {
   logisticsDiscountPct: number;
   commissionPct: number;
   handlingFee: number;
+  /** Handling grows with the parcel (same ladder for every palier). */
+  handlingGrows: boolean;
 };
 
 export const PRICING_TIER_PRESETS: Record<PricingTier, PricingTierPreset> = {
-  ultra_vip: { logisticsDiscountPct: 10, commissionPct: 3, handlingFee: 1 },
-  vip: { logisticsDiscountPct: 5, commissionPct: 5, handlingFee: 1 },
-  platinium: { logisticsDiscountPct: 0, commissionPct: 7, handlingFee: 1 },
-  gold: { logisticsDiscountPct: 0, commissionPct: 10, handlingFee: 1 },
+  ultra_vip: { logisticsDiscountPct: 10, commissionPct: 3, handlingFee: 1, handlingGrows: true },
+  vip: { logisticsDiscountPct: 5, commissionPct: 5, handlingFee: 1, handlingGrows: true },
+  platinium: { logisticsDiscountPct: 0, commissionPct: 7, handlingFee: 1, handlingGrows: true },
+  gold: { logisticsDiscountPct: 0, commissionPct: 10, handlingFee: 1, handlingGrows: true },
 };
 
 export function parsePricingTier(value: unknown): PricingTier | null {
@@ -82,5 +84,6 @@ export function resolveClientPricing(row: {
     commissionPct: pick(row?.commission_pct, preset.commissionPct),
     handlingFee: pick(row?.handling_fee, preset.handlingFee),
     logisticsDiscountPct: pick(row?.logistics_discount_pct, preset.logisticsDiscountPct),
+    handlingGrows: preset.handlingGrows,
   };
 }

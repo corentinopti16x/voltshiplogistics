@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { saveShopifyAppCredentialsAction, syncShopAction } from "@/app/actions/shopify";
+import { saveShopifyAppCredentialsAction, setShopMarketAction, syncShopAction } from "@/app/actions/shopify";
 import { ShopifyImportForm } from "@/components/admin/shopify-import-form";
 import { DisconnectShopButton } from "@/components/admin/disconnect-shop-button";
 
@@ -28,7 +28,7 @@ export default async function AdminShopsPage({
     admin.from("clients").select("id, name").order("name"),
     admin
       .from("shops")
-      .select("id, client_id, shopify_domain, status, last_synced_at, sync_error, clients!inner(name)")
+      .select("id, client_id, shopify_domain, status, last_synced_at, sync_error, market, clients!inner(name)")
       .order("created_at", { ascending: false }),
     selectedShopId
       ? admin
@@ -217,6 +217,24 @@ export default async function AdminShopsPage({
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
+                  <form action={setShopMarketAction.bind(null, shop.id)} className="flex items-center gap-1">
+                    <select
+                      name="market"
+                      defaultValue={(shop.market as string | null) ?? ""}
+                      aria-label={t("market")}
+                      className="rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs"
+                    >
+                      <option value="">{t("marketPlaceholder")}</option>
+                      {["FR", "IT", "DE", "ES", "BE", "NL", "PT", "AT", "CH", "GB", "US", "CA", "AU"].map((code) => (
+                        <option key={code} value={code}>
+                          {code}
+                        </option>
+                      ))}
+                    </select>
+                    <button className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1.5 text-xs hover:bg-white">
+                      OK
+                    </button>
+                  </form>
                   {shop.status === "active" ? (
                     <form action={syncShopAction.bind(null, shop.id)}>
                       <button className="cursor-pointer rounded-md border border-[var(--line)] px-3 py-1.5 hover:bg-white">
