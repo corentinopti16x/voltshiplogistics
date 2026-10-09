@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "crypto";
+import { keepAppMarkets } from "./keep-markets";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ProductRequest } from "@/lib/products/types";
 import { getAirtableConfig } from "./config";
@@ -318,6 +319,7 @@ export async function syncAirtableRecord(
     quote_json: {
       ...existingQuote,
       ...row.quote_json,
+      _request: keepAppMarkets(existingQuote._request, row.quote_json._request, migrated),
       _photo_source: source?.id ?? previousSource,
     },
   };
