@@ -871,7 +871,8 @@
         "client": "客户",
         "status": "状态",
         "missing": "缺少项",
-        "created": "创建日期"
+        "created": "创建日期",
+        "sales90": "90 天销量"
       },
       "noSku": "无 SKU",
       "ready": "已齐全",
@@ -891,7 +892,11 @@
         "in_production": "生产中",
         "in_stock": "已入库",
         "flagged": "有问题"
-      }
+      },
+      "zeroHidden": "已隐藏 {count} 个 90 天无销量的 Shopify 产品。",
+      "zeroShown": "正在显示 90 天无销量的 Shopify 产品。",
+      "showZero": "显示",
+      "hideZero": "隐藏"
     },
     "product": {
       "backToTodo": "← 待完善",

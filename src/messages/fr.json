@@ -1709,7 +1709,8 @@
         "client": "Client",
         "status": "Statut",
         "missing": "Manquant",
-        "created": "Créé le"
+        "created": "Créé le",
+        "sales90": "Ventes 90 j"
       },
       "noSku": "Pas de SKU",
       "ready": "Complet",
@@ -1729,7 +1730,11 @@
         "in_production": "En production",
         "in_stock": "En stock",
         "flagged": "Signalé"
-      }
+      },
+      "zeroHidden": "{count, plural, one {# produit Shopify sans vente sur 90 jours masqué.} other {# produits Shopify sans vente sur 90 jours masqués.}}",
+      "zeroShown": "Produits Shopify sans vente sur 90 jours affichés.",
+      "showZero": "Les afficher",
+      "hideZero": "Les masquer"
     },
     "product": {
       "backToTodo": "← À compléter",

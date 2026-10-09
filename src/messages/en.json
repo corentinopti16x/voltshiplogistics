@@ -1709,7 +1709,8 @@
         "client": "Client",
         "status": "Status",
         "missing": "Missing",
-        "created": "Created"
+        "created": "Created",
+        "sales90": "Sales 90 d"
       },
       "noSku": "No SKU",
       "ready": "Ready",
@@ -1729,7 +1730,11 @@
         "in_production": "In production",
         "in_stock": "In stock",
         "flagged": "Flagged"
-      }
+      },
+      "zeroHidden": "{count, plural, one {# Shopify product with no sale in 90 days hidden.} other {# Shopify products with no sale in 90 days hidden.}}",
+      "zeroShown": "Shopify products with no sale in 90 days shown.",
+      "showZero": "Show them",
+      "hideZero": "Hide them"
     },
     "product": {
       "backToTodo": "← To complete",
