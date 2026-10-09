@@ -114,9 +114,9 @@ export function sameLine(a: CarrierLineRef | null | undefined, b: CarrierLineRef
 /** Extra handling above the 1-unit fee, by parcel size (see PricingSettings). */
 export type HandlingLadder = { step2: number; step3: number; extraUnit: number };
 
-export const DEFAULT_HANDLING_LADDER: HandlingLadder = { step2: 0.3, step3: 0.5, extraUnit: 0 };
+export const DEFAULT_HANDLING_LADDER: HandlingLadder = { step2: 0.25, step3: 0.5, extraUnit: 0.25 };
 
-/** Handling for a parcel of `quantity` units: base fee + ladder (1 € → 1,30 → 1,50 by default). */
+/** Handling for a parcel of `quantity` units: base fee + 0,25 € per extra unit by default (1 → 1,25 → 1,50 → 1,75 €). */
 export function handlingForQuantity(base: number, quantity: number, ladder?: HandlingLadder | null) {
   const fee = Math.max(0, base);
   const q = Math.max(1, Math.floor(quantity || 1));
