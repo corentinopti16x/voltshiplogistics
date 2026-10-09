@@ -1068,9 +1068,9 @@
           "savedDefault": "Default rule saved.",
           "handlingCost": "Real handling cost € / order (internal)",
           "fxMarket": "Market FX rate RMB / EUR (internal)",
-          "handlingStep2": "Extra handling for 2 units — Ultra VIP / VIP (€)",
-          "handlingStep3": "Extra handling for 3 units — Ultra VIP / VIP (€)",
-          "handlingExtraUnit": "Extra handling per unit above 3 — Ultra VIP / VIP (€)"
+          "handlingStep2": "Extra handling for 2 units (€, every palier)",
+          "handlingStep3": "Extra handling for 3 units (€, every palier)",
+          "handlingExtraUnit": "Extra handling per unit above 3 (€, every palier)"
         },
         "summary": {
           "cells": "Cells",

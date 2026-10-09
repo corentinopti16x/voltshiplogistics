@@ -104,7 +104,7 @@ describe("computeVoltshipMargin", () => {
     expect(result.costs.taxPassThrough).toBe(0);
     expect(result.margin.transport).toBe(3); // 9 − 6
     expect(result.margin.sourcing).toBe(15); // 33 − 18
-    expect(result.margin.perUnit).toBeCloseTo((15 + 3 + 1) / 3, 4); // handling 1,50 € for 3 units − 0,50 € cost
+    expect(result.margin.perUnit).toBeCloseTo((15 + 3 + 0.8) / 3, 4); // handling 1,30 € for 3 units − 0,50 € cost
   });
 
   it("returns null sourcing margin and flags a missing factory price", () => {

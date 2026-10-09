@@ -162,14 +162,14 @@ describe("pricing", () => {
 
     it("scales product and commission per unit; handling per order grows with the parcel", () => {
       const result = calculateCogs({ ...base, quantity: 3 });
-      // handling 0,80 € + 0,50 € for 3 units (default +0,25 € per extra unit)
+      // handling 0,80 € + 0,30 € for 3 units (default +0,15 € per extra unit)
       expect(result).toMatchObject({
         product: 12.6,
         commission: 0.63,
-        handling: 1.3,
+        handling: 1.1,
         shipping: 9.8,
-        cogs: 24.33,
-        cogsPerUnit: 8.11,
+        cogs: 24.13,
+        cogsPerUnit: 8.0433,
       });
     });
 

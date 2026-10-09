@@ -426,9 +426,9 @@
           "savedDefault": "默认规则已保存。",
           "handlingCost": "实际操作成本 € / 单（内部）",
           "fxMarket": "市场汇率 RMB / EUR（内部）",
-          "handlingStep2": "2 件额外操作费 (€)",
-          "handlingStep3": "3 件额外操作费 (€)",
-          "handlingExtraUnit": "超过 3 件每件额外操作费 (€)"
+          "handlingStep2": "2 件额外操作费 (€，所有等级)",
+          "handlingStep3": "3 件额外操作费 (€，所有等级)",
+          "handlingExtraUnit": "超过 3 件每件额外操作费 (€，所有等级)"
         },
         "summary": {
           "cells": "价格单元",

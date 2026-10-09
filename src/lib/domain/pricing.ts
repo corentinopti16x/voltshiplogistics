@@ -116,9 +116,9 @@ export type HandlingLadder = { step2: number; step3: number; extraUnit: number }
 
 export const FLAT_HANDLING: HandlingLadder = { step2: 0, step3: 0, extraUnit: 0 };
 
-export const DEFAULT_HANDLING_LADDER: HandlingLadder = { step2: 0.25, step3: 0.5, extraUnit: 0.25 };
+export const DEFAULT_HANDLING_LADDER: HandlingLadder = { step2: 0.15, step3: 0.3, extraUnit: 0.15 };
 
-/** Handling for a parcel of `quantity` units: base fee + 0,25 € per extra unit by default (1 → 1,25 → 1,50 → 1,75 €). */
+/** Handling for a parcel of `quantity` units: base fee + 0,15 € per extra unit by default (1 → 1,15 → 1,30 → 1,45 €). */
 export function handlingForQuantity(base: number, quantity: number, ladder?: HandlingLadder | null) {
   const fee = Math.max(0, base);
   const q = Math.max(1, Math.floor(quantity || 1));
@@ -151,7 +151,7 @@ export type PricingInput = {
   carrierPreference?: CarrierLineRef | null;
   /** When set, only these lines (`lineKey`) may be picked — admin "Autorisée" rules. */
   allowedLines?: Set<string> | null;
-  /** Handling grows with the parcel size (default +0,25 € per extra unit). */
+  /** Handling grows with the parcel size (default +0,15 € per extra unit). */
   handlingLadder?: HandlingLadder | null;
   /** False = fixed handling per parcel (Platinium / Gold); default true. */
   handlingGrows?: boolean | null;

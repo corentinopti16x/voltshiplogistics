@@ -28,8 +28,8 @@ export type PricingSettings = {
   /**
    * Handling grows with the parcel: client handling fee (1 € by default) for 1 unit,
    * + handling_step2_eur for 2 units, + handling_step3_eur for 3 units, then
-   * + handling_extra_unit_eur per unit above 3. Default +0,25 € per extra unit:
-   * 1,00 / 1,25 / 1,50 / 1,75 / 2,00 €.
+   * + handling_extra_unit_eur per unit above 3. Default +0,15 € per extra unit, same for
+   * every palier: 1,00 / 1,15 / 1,30 / 1,45 / 1,60 €.
    */
   handling_step2_eur: number;
   handling_step3_eur: number;
@@ -46,9 +46,9 @@ export const DEFAULT_PRICING_SETTINGS: PricingSettings = {
   volumetric_divisors: { ...DEFAULT_VOLUMETRIC_DIVISORS },
   handling_cost_eur: 0,
   fx_market_rate: 7.8,
-  handling_step2_eur: 0.25,
-  handling_step3_eur: 0.5,
-  handling_extra_unit_eur: 0.25,
+  handling_step2_eur: 0.15,
+  handling_step3_eur: 0.3,
+  handling_extra_unit_eur: 0.15,
 };
 
 export type NumericPricingSetting = Exclude<keyof PricingSettings, "volumetric_divisors">;
