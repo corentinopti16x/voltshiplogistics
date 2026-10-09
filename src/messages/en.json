@@ -1460,7 +1460,9 @@
       "syncNow": "Sync now",
       "importTitle": "Product import",
       "importHelp": "Choose a store. Variants are grouped by product; products with 30 or more sales over 90 days (all variants combined) are pre-selected.",
-      "show": "Show"
+      "show": "Show",
+      "market": "Delivery country",
+      "marketPlaceholder": "Country…"
     },
     "shopForms": {
       "searchPlaceholder": "Search a product or SKU…",
@@ -1783,6 +1785,12 @@
       "flagging": "Flagging…",
       "flagProblem": "Flag problem",
       "productFlagged": "Product flagged."
+    },
+    "announced": {
+      "title": "Prices announced to the client",
+      "lead": "Total per parcel (product + transport + handling, €) promised to the client. When a box is filled, the app bills exactly this price for that market and quantity, and the Voltship margin is computed on it. Empty = palier rule.",
+      "save": "Save",
+      "otherMarket": "Other market"
     }
   },
   "support": {

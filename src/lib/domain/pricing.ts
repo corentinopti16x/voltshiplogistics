@@ -198,6 +198,8 @@ export type CogsBreakdown = {
   weightMaxG: number;
   /** How the line was selected (preferred / cheapest / fallback). */
   selectionReason: SelectionReason;
+  /** Total fixed by hand for this product / market / quantity (price promised to the client). */
+  announced?: boolean;
 };
 
 export type AcceptedQuoteSnapshot = CogsBreakdown & {
@@ -562,5 +564,47 @@ export function parseAcceptedQuoteSnapshot(raw: unknown): AcceptedQuoteSnapshot 
         ? row.selectionReason
         : "cheapest",
     acceptedAt,
+  };
+}
+
+/**
+ * Prices promised to a client for a product, by market then quantity: total parcel price
+ * in EUR (product + transport + handling), e.g. { "IT": { "1": 9.75, "2": 14.5 } }.
+ * Stored in products_cache.quote_json.announced_prices.
+ */
+export type AnnouncedPrices = Record<string, Record<string, number>>;
+
+export function parseAnnouncedPrices(raw: unknown): AnnouncedPrices {
+  const out: AnnouncedPrices = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [market, byQty] of Object.entries(raw as Record<string, unknown>)) {
+    if (!/^[A-Z]{2}$/.test(market) || !byQty || typeof byQty !== "object") continue;
+    for (const [qty, value] of Object.entries(byQty as Record<string, unknown>)) {
+      const price = Number(value);
+      if (!/^[1-9]$/.test(qty) || !Number.isFinite(price) || price <= 0) continue;
+      (out[market] ??= {})[qty] = money(price);
+    }
+  }
+  return out;
+}
+
+export function announcedPriceFor(prices: AnnouncedPrices, destination: string, quantity: number) {
+  const value = prices[destination.toUpperCase()]?.[String(quantity)];
+  return value != null && value > 0 ? value : null;
+}
+
+/**
+ * The client pays exactly the announced total: product, commission and handling stay as
+ * computed, the transport line absorbs the difference (it is what was negotiated).
+ */
+export function applyAnnouncedPrice(breakdown: CogsBreakdown, price: number): CogsBreakdown {
+  const shipping = money(price - breakdown.product - breakdown.commission - breakdown.handling);
+  return {
+    ...breakdown,
+    shipping,
+    discount: money(breakdown.shippingBase - shipping),
+    cogs: money(price),
+    cogsPerUnit: money(price / breakdown.quantity),
+    announced: true,
   };
 }

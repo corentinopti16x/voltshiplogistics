@@ -4,9 +4,12 @@ import { resolveClientPricing } from "@/lib/domain/pricing-tiers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   COGS_MATRIX_QUANTITIES,
+  announcedPriceFor,
+  applyAnnouncedPrice,
   calculateCogs,
   listRateOptions,
   normalizeDestination,
+  parseAnnouncedPrices,
   parseDestinationMarkets,
   parseParcelDimensions,
   type CarrierLineRef,
@@ -246,6 +249,8 @@ export async function calculateProductCogsMatrix(
   const channel = effective.channel as ShippingChannel;
   // Dimensions (cm) from quote_json, same keys as the ECCANG mapping → volumetric weight.
   const dimensionsCm = parseParcelDimensions(product.quote_json);
+  // Prices promised to the client (fiche produit → « Prix annoncés ») win over the rule.
+  const announcedPrices = parseAnnouncedPrices(product.quote_json?.announced_prices);
   // Admin rules: blocked lines are removed from every selection (and from the options list).
   const allowedLines = allowedLinesFromRules(cells, rules);
 
@@ -272,10 +277,14 @@ export async function calculateProductCogsMatrix(
         preference: selection.preference,
         forced: selection.forced,
         options: listRateOptions(cells, { ...common, quantity: 1 }),
-        cells: quantities.map((quantity) => ({
-          quantity,
-          breakdown: calculateCogs({ ...common, cells, clientPrice, quantity, ...profile }),
-        })),
+        cells: quantities.map((quantity) => {
+          const computed = calculateCogs({ ...common, cells, clientPrice, quantity, ...profile });
+          const announced = announcedPriceFor(announcedPrices, destination, quantity);
+          return {
+            quantity,
+            breakdown: computed && announced != null ? applyAnnouncedPrice(computed, announced) : computed,
+          };
+        }),
       };
     }),
   };

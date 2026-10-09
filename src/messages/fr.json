@@ -1460,7 +1460,9 @@
       "syncNow": "Synchroniser",
       "importTitle": "Import des produits",
       "importHelp": "Choisis une boutique. Les variantes sont regroupées par produit ; les produits à 30 ventes ou plus sur 90 jours (toutes variantes confondues) sont pré-cochés.",
-      "show": "Afficher"
+      "show": "Afficher",
+      "market": "Pays de livraison",
+      "marketPlaceholder": "Pays…"
     },
     "shopForms": {
       "searchPlaceholder": "Rechercher un produit ou un SKU…",
@@ -1783,6 +1785,12 @@
       "flagging": "Signalement…",
       "flagProblem": "Signaler le problème",
       "productFlagged": "Produit signalé."
+    },
+    "announced": {
+      "title": "Prix annoncés au client",
+      "lead": "Total par colis (produit + transport + handling, en €) promis au client. Quand une case est remplie, l'app facture exactement ce prix pour ce pays et cette quantité, et la marge Voltship se calcule dessus. Case vide = règle du palier.",
+      "save": "Enregistrer",
+      "otherMarket": "Autre pays"
     }
   },
   "support": {

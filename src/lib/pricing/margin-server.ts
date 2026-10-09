@@ -13,11 +13,14 @@ import { getAuthContext } from "@/lib/auth/context";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   COGS_MATRIX_QUANTITIES,
+  announcedPriceFor,
+  applyAnnouncedPrice,
   calculateCogs,
   discountedShipping,
   FLAT_HANDLING,
   handlingForQuantity,
   findRateCell,
+  parseAnnouncedPrices,
   parseParcelDimensions,
   type RateCell,
   type ShippingChannel,
@@ -160,7 +163,7 @@ function marginForParcel(
   const unitWeightG = product.weight_g ?? 0;
   const dimensionsCm = parseParcelDimensions(product.quote_json);
   // Same engine as the client quote: product × n, commission on product, one parcel, handling once.
-  const breakdown = ready
+  const computed = ready
     ? calculateCogs({
         clientPrice: Number(product.client_price),
         weightG: unitWeightG,
@@ -175,6 +178,8 @@ function marginForParcel(
         ...profile,
       })
     : null;
+  const announced = announcedPriceFor(parseAnnouncedPrices(product.quote_json?.announced_prices), destination, quantity);
+  const breakdown = computed && announced != null ? applyAnnouncedPrice(computed, announced) : computed;
   // Same cell selection as calculateCogs (findRateCell on the billed parcel weight) to read
   // the internal carrier cost of the cell the client price came from.
   const parcelWeightG = unitWeightG * quantity;
@@ -416,7 +421,7 @@ function marginForOrder(
   const commission = productTotal * (Math.max(0, profile.commissionPct) / 100);
   const cell = parcelWeightG > 0 ? findRateCell(cells, { weightG: parcelWeightG, channel, destination }) : null;
   const discount = Math.min(100, Math.max(0, profile.logisticsDiscountPct)) / 100;
-  const client = cell
+  const computedClient = cell
     ? {
         product: productTotal,
         commission,
@@ -428,6 +433,18 @@ function marginForOrder(
         ),
       }
     : null;
+  // One product in the parcel and a price promised for this quantity: the client pays it.
+  const single = new Set(priced.map((line) => line.product.id)).size === 1;
+  const announced = single
+    ? announcedPriceFor(parseAnnouncedPrices(lead.quote_json?.announced_prices), destination, units)
+    : null;
+  const client =
+    computedClient && announced != null
+      ? {
+          ...computedClient,
+          shipping: announced - computedClient.product - computedClient.commission - computedClient.handling,
+        }
+      : computedClient;
   let factoryCostRmb: number | null = 0;
   for (const line of priced) {
     const unit = factoryPrices.get(line.product.id) ?? null;

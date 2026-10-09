@@ -152,3 +152,43 @@ export async function saveShopifyAppCredentialsAction(formData: FormData): Promi
   if (error) throw new Error(error.message);
   revalidatePath("/admin/shops");
 }
+
+/**
+ * Delivery country of a store. Products imported from it (not edited by hand) are moved to
+ * that market so their COGS, quotes and margins use the right grid.
+ */
+export async function setShopMarketAction(shopId: string, formData: FormData): Promise<void> {
+  const { ctx } = await requireAdmin();
+  if (!ctx) throw new Error("Admin access required.");
+  const market = String(formData.get("market") ?? "").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(market)) throw new Error("Pays invalide.");
+  const admin = createAdminClient();
+  const { error } = await admin.from("shops").update({ market }).eq("id", shopId);
+  if (error) throw new Error(error.message);
+  const { data: links } = await admin
+    .from("shopify_products_cache")
+    .select("imported_product_id")
+    .eq("shop_id", shopId)
+    .not("imported_product_id", "is", null);
+  const ids = [...new Set((links ?? []).map((row) => row.imported_product_id as string))];
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data: products } = await admin
+      .from("products_cache")
+      .select("id, quote_json, migration_state")
+      .in("id", ids.slice(i, i + 200));
+    for (const product of products ?? []) {
+      if (product.migration_state !== "imported_auto" && product.migration_state !== "imported_pending") continue;
+      const quote = (product.quote_json ?? {}) as Record<string, unknown>;
+      const request = (quote._request && typeof quote._request === "object" ? quote._request : {}) as Record<string, unknown>;
+      if (request.destination_markets === market && !quote.destination) continue;
+      const { destination: _old, ...rest } = quote;
+      void _old;
+      await admin
+        .from("products_cache")
+        .update({ quote_json: { ...rest, _request: { ...request, destination_markets: market } } })
+        .eq("id", product.id);
+    }
+  }
+  revalidatePath("/admin/shops");
+  revalidatePath("/[locale]/admin/margin", "layout");
+}
