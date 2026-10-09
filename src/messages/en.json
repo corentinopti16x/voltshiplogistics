@@ -1484,7 +1484,13 @@
       "importHelp": "Choose a store. Variants are grouped by product; products with 30 or more sales over 90 days (all variants combined) are pre-selected.",
       "show": "Show",
       "market": "Delivery country",
-      "marketPlaceholder": "Country…"
+      "marketPlaceholder": "Country…",
+      "noMarket": "Country not set",
+      "mainMarket": "Main country",
+      "extraMarket": "Also ships here",
+      "extraMarkets": "+ Other countries",
+      "extraMarketsHelp": "Countries the store also ships to (COGS computed for each).",
+      "francophoneHint": "French store: usually also tick the French-speaking countries ({list})."
     },
     "shopForms": {
       "searchPlaceholder": "Search a product or SKU…",

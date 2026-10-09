@@ -1484,7 +1484,13 @@
       "importHelp": "Choisis une boutique. Les variantes sont regroupées par produit ; les produits à 30 ventes ou plus sur 90 jours (toutes variantes confondues) sont pré-cochés.",
       "show": "Afficher",
       "market": "Pays de livraison",
-      "marketPlaceholder": "Pays…"
+      "marketPlaceholder": "Pays…",
+      "noMarket": "Pays à définir",
+      "mainMarket": "Pays principal",
+      "extraMarket": "Livre aussi ce pays",
+      "extraMarkets": "+ Autres pays",
+      "extraMarketsHelp": "Pays où la boutique livre aussi (COGS calculé pour chacun).",
+      "francophoneHint": "Boutique FR : coche souvent aussi les pays francophones ({list})."
     },
     "shopForms": {
       "searchPlaceholder": "Rechercher un produit ou un SKU…",

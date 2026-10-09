@@ -3,6 +3,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { saveShopifyAppCredentialsAction, setShopMarketAction, syncShopAction } from "@/app/actions/shopify";
 import { ShopifyImportForm } from "@/components/admin/shopify-import-form";
 import { DisconnectShopButton } from "@/components/admin/disconnect-shop-button";
+import {
+  EXTRA_MARKETS,
+  FRANCOPHONE_MARKETS,
+  MAIN_MARKETS,
+  marketLabel,
+  parseShopMarkets,
+} from "@/lib/shopify/shop-markets";
 
 export default async function AdminShopsPage({
   searchParams,
@@ -44,6 +51,10 @@ export default async function AdminShopsPage({
       .order("shopify_domain"),
   ]);
 
+  // Store name (« ECDF USA ») from its app credentials, by domain.
+  const shopNames = new Map(
+    (apps ?? []).map((app) => [app.shopify_domain as string, (app.label as string | null) ?? ""]),
+  );
   const importRows = (products ?? []).map((product) => ({
     id: product.id,
     shopifyProductId: product.shopify_product_id,
@@ -203,7 +214,38 @@ export default async function AdminShopsPage({
                 className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-sm"
               >
                 <div>
-                  <p className="font-medium">{shop.shopify_domain}</p>
+                  <p className="flex flex-wrap items-center gap-2 font-medium">
+                    {shopNames.get(shop.shopify_domain) ? (
+                      <span>{shopNames.get(shop.shopify_domain)}</span>
+                    ) : null}
+                    <span className={shopNames.get(shop.shopify_domain) ? "text-xs font-normal text-[var(--muted)]" : ""}>
+                      {shop.shopify_domain}
+                    </span>
+                    {(() => {
+                      const client = Array.isArray(shop.clients) ? shop.clients[0] : shop.clients;
+                      const name = (client as { name?: string } | null)?.name;
+                      return name ? <span className="text-xs font-normal text-[var(--muted)]">→ {name}</span> : null;
+                    })()}
+                  </p>
+                  <p className="mt-1 flex flex-wrap gap-1">
+                    {parseShopMarkets(shop.market as string | null).length === 0 ? (
+                      <span className="rounded-full bg-[#fde8e6] px-2 py-0.5 text-[11px] font-semibold text-[#b42318]">
+                        {t("noMarket")}
+                      </span>
+                    ) : (
+                      parseShopMarkets(shop.market as string | null).map((code, index) => (
+                        <span
+                          key={code}
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                            index === 0 ? "bg-[var(--navy)] text-white" : "bg-[var(--bg)] text-[var(--ink)] ring-1 ring-[var(--line)]"
+                          }`}
+                          title={index === 0 ? t("mainMarket") : t("extraMarket")}
+                        >
+                          {marketLabel(code)}
+                        </span>
+                      ))
+                    )}
+                  </p>
                   <p className="text-xs text-[var(--muted)]">
                     {shop.status} ·{" "}
                     {t("lastSync", {
@@ -217,20 +259,44 @@ export default async function AdminShopsPage({
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
-                  <form action={setShopMarketAction.bind(null, shop.id)} className="flex items-center gap-1">
+                  <form action={setShopMarketAction.bind(null, shop.id)} className="flex flex-wrap items-center gap-1">
                     <select
                       name="market"
-                      defaultValue={(shop.market as string | null) ?? ""}
+                      defaultValue={parseShopMarkets(shop.market as string | null)[0] ?? ""}
                       aria-label={t("market")}
                       className="rounded-md border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-xs"
                     >
                       <option value="">{t("marketPlaceholder")}</option>
-                      {["FR", "IT", "DE", "ES", "BE", "NL", "PT", "AT", "CH", "GB", "US", "CA", "AU"].map((code) => (
+                      {MAIN_MARKETS.map((code) => (
                         <option key={code} value={code}>
-                          {code}
+                          {marketLabel(code)}
                         </option>
                       ))}
                     </select>
+                    <details className="relative">
+                      <summary className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1.5 text-xs">
+                        {t("extraMarkets")}
+                      </summary>
+                      <div className="absolute right-0 z-10 mt-1 w-60 rounded-xl border border-[var(--line)] bg-[var(--card)] p-3 shadow-lg">
+                        <p className="mb-2 text-[11px] text-[var(--muted)]">{t("extraMarketsHelp")}</p>
+                        <div className="grid grid-cols-3 gap-1">
+                          {EXTRA_MARKETS.map((code) => (
+                            <label key={code} className="flex items-center gap-1 text-xs">
+                              <input
+                                type="checkbox"
+                                name="extra"
+                                value={code}
+                                defaultChecked={parseShopMarkets(shop.market as string | null).slice(1).includes(code)}
+                              />
+                              {marketLabel(code)}
+                            </label>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-[11px] text-[var(--faint)]">
+                          {t("francophoneHint", { list: FRANCOPHONE_MARKETS.join(", ") })}
+                        </p>
+                      </div>
+                    </details>
                     <button className="cursor-pointer rounded-md border border-[var(--line)] px-2 py-1.5 text-xs hover:bg-white">
                       OK
                     </button>

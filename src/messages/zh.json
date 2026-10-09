@@ -27,7 +27,13 @@
       "importHelp": "请选择店铺。变体按商品归组；近 90 天销量达到 30 件及以上（所有变体合计）的商品将被预先勾选。",
       "show": "显示",
       "market": "配送国家",
-      "marketPlaceholder": "国家…"
+      "marketPlaceholder": "国家…",
+      "noMarket": "未设置国家",
+      "mainMarket": "主要国家",
+      "extraMarket": "也发货到此国家",
+      "extraMarkets": "+ 其他国家",
+      "extraMarketsHelp": "店铺也发货的国家（每个国家单独计算成本）。",
+      "francophoneHint": "法国店铺：通常也勾选法语国家（{list}）。"
     },
     "shopForms": {
       "searchPlaceholder": "搜索商品或 SKU…",
