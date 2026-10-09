@@ -17,6 +17,22 @@ describe("transport after the palier discount", () => {
   });
 });
 
+describe("handling per palier", () => {
+  it("stays fixed for Platinium / Gold (handlingGrows false)", () => {
+    const flat = calculateCogs({
+      clientPrice: 1,
+      weightG: 80,
+      channel: "standard",
+      destination: "FR",
+      cells: [{ gridVersion: "V", carrier: "C", destination: "FR", channel: "standard", weightMinG: 1, weightMaxG: 1000, price: 5 }],
+      quantity: 4,
+      handlingFee: 1,
+      handlingGrows: false,
+    });
+    expect(flat?.handling).toBe(1);
+  });
+});
+
 describe("Magnesium Complex — Maxime Ultra VIP, France", () => {
   const cell = (min: number, max: number, rmb: number): RateCell => ({
     gridVersion: "V2",

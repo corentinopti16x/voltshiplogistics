@@ -114,6 +114,8 @@ export function sameLine(a: CarrierLineRef | null | undefined, b: CarrierLineRef
 /** Extra handling above the 1-unit fee, by parcel size (see PricingSettings). */
 export type HandlingLadder = { step2: number; step3: number; extraUnit: number };
 
+export const FLAT_HANDLING: HandlingLadder = { step2: 0, step3: 0, extraUnit: 0 };
+
 export const DEFAULT_HANDLING_LADDER: HandlingLadder = { step2: 0.25, step3: 0.5, extraUnit: 0.25 };
 
 /** Handling for a parcel of `quantity` units: base fee + 0,25 € per extra unit by default (1 → 1,25 → 1,50 → 1,75 €). */
@@ -149,8 +151,10 @@ export type PricingInput = {
   carrierPreference?: CarrierLineRef | null;
   /** When set, only these lines (`lineKey`) may be picked — admin "Autorisée" rules. */
   allowedLines?: Set<string> | null;
-  /** Handling grows with the parcel size (default 1 € / 1,30 € / 1,50 €). */
+  /** Handling grows with the parcel size (default +0,25 € per extra unit). */
   handlingLadder?: HandlingLadder | null;
+  /** False = fixed handling per parcel (Platinium / Gold); default true. */
+  handlingGrows?: boolean | null;
   /**
    * RMB per EUR of the carrier cost: with the cell's internal carrier cost, the palier
    * discount never takes the client transport below what the carrier costs Voltship.
@@ -373,7 +377,11 @@ export function calculateCogs(input: PricingInput): CogsBreakdown | null {
   const product = money(input.clientPrice * quantity);
   const shippingBase = money(cell.price);
   // Handling (picking + packing) is charged per order and grows with the parcel size.
-  const handling = handlingForQuantity(input.handlingFee ?? 0, quantity, input.handlingLadder);
+  const handling = handlingForQuantity(
+    input.handlingFee ?? 0,
+    quantity,
+    input.handlingGrows === false ? FLAT_HANDLING : input.handlingLadder,
+  );
   const commissionRate = Math.max(0, input.commissionPct ?? 0) / 100;
   const discountRate = Math.min(100, Math.max(0, input.logisticsDiscountPct ?? 0)) / 100;
   const commission = money(product * commissionRate);

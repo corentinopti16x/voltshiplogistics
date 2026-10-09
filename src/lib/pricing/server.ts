@@ -31,6 +31,8 @@ export type ClientPricingProfile = {
   commissionPct: number;
   handlingFee: number;
   logisticsDiscountPct: number;
+  /** Handling grows with the parcel (Ultra VIP / VIP) or stays fixed (Platinium / Gold). */
+  handlingGrows?: boolean;
 };
 
 export type LiveProductQuote = {

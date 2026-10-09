@@ -15,6 +15,7 @@ import {
   COGS_MATRIX_QUANTITIES,
   calculateCogs,
   discountedShipping,
+  FLAT_HANDLING,
   handlingForQuantity,
   findRateCell,
   parseParcelDimensions,
@@ -420,7 +421,11 @@ function marginForOrder(
         product: productTotal,
         commission,
         shipping: discountedShipping(cell.price, discount, cell.carrierCostRmb, settings.fx_rmb_per_eur),
-        handling: handlingForQuantity(profile.handlingFee, units, handlingLadderFrom(settings)),
+        handling: handlingForQuantity(
+          profile.handlingFee,
+          units,
+          profile.handlingGrows === false ? FLAT_HANDLING : handlingLadderFrom(settings),
+        ),
       }
     : null;
   let factoryCostRmb: number | null = 0;

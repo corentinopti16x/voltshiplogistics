@@ -1068,9 +1068,9 @@
           "savedDefault": "Règle par défaut enregistrée.",
           "handlingCost": "Coût réel préparation € / commande (interne)",
           "fxMarket": "Taux de change marché RMB / EUR (interne)",
-          "handlingStep2": "Handling en plus pour 2 unités (€)",
-          "handlingStep3": "Handling en plus pour 3 unités (€)",
-          "handlingExtraUnit": "Handling en plus par unité au-delà de 3 (€)"
+          "handlingStep2": "Handling en plus pour 2 unités — Ultra VIP / VIP (€)",
+          "handlingStep3": "Handling en plus pour 3 unités — Ultra VIP / VIP (€)",
+          "handlingExtraUnit": "Handling en plus par unité au-delà de 3 — Ultra VIP / VIP (€)"
         },
         "summary": {
           "cells": "Cellules",
