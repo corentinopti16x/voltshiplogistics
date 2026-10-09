@@ -1,6 +1,7 @@
 "use server";
 
 import { autoImportShopProducts } from "@/lib/shopify/import-product";
+import { formatShopMarkets } from "@/lib/shopify/shop-markets";
 import { revalidatePath } from "next/cache";
 import { getAuthContext } from "@/lib/auth/context";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -160,8 +161,13 @@ export async function saveShopifyAppCredentialsAction(formData: FormData): Promi
 export async function setShopMarketAction(shopId: string, formData: FormData): Promise<void> {
   const { ctx } = await requireAdmin();
   if (!ctx) throw new Error("Admin access required.");
-  const market = String(formData.get("market") ?? "").trim().toUpperCase();
-  if (!/^[A-Z]{2}$/.test(market)) throw new Error("Pays invalide.");
+  const main = String(formData.get("market") ?? "").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(main)) throw new Error("Pays invalide.");
+  // Main country + every other country the store also ships to (e.g. FR + BE, CH, LU).
+  const market = formatShopMarkets(
+    main,
+    formData.getAll("extra").map((value) => String(value)),
+  );
   const admin = createAdminClient();
   const { error } = await admin.from("shops").update({ market }).eq("id", shopId);
   if (error) throw new Error(error.message);

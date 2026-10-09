@@ -1,4 +1,5 @@
 import "server-only";
+import { parseShopMarkets } from "./shop-markets";
 
 import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -31,10 +32,11 @@ export async function importShopifyVariantGroup(
   const id = randomUUID();
   // Products are priced for the store's delivery country (Admin › Boutiques), FR by default.
   const { data: shop } = await admin.from("shops").select("market").eq("id", row.shop_id).maybeSingle();
-  const market = typeof shop?.market === "string" && /^[A-Z]{2}$/.test(shop.market) ? shop.market : "FR";
+  // Main country first, then the other countries the store ships to ("FR,BE,CH,LU").
+  const markets = parseShopMarkets(typeof shop?.market === "string" ? shop.market : null);
   const request = {
     description: `Imported from Shopify product ${row.shopify_product_id} (${variants.length} variant(s)).`,
-    destination_markets: market,
+    destination_markets: markets.length > 0 ? markets.join(",") : "FR",
     notes: "Winning-product migration. Sourcer backfill required.",
   };
   let airtableRecordId = `pending:${id}`;
