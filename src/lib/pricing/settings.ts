@@ -34,6 +34,8 @@ export type PricingSettings = {
   handling_step2_eur: number;
   handling_step3_eur: number;
   handling_extra_unit_eur: number;
+  /** Alert (admin Marge) when a locked « prix annoncé » leaves less margin per parcel than this. */
+  announced_margin_alert_eur: number;
 };
 
 export const PRICING_SETTINGS_KEY = "pricing_settings";
@@ -49,6 +51,7 @@ export const DEFAULT_PRICING_SETTINGS: PricingSettings = {
   handling_step2_eur: 0.15,
   handling_step3_eur: 0.3,
   handling_extra_unit_eur: 0.15,
+  announced_margin_alert_eur: 0.5,
 };
 
 export type NumericPricingSetting = Exclude<keyof PricingSettings, "volumetric_divisors">;
@@ -63,6 +66,7 @@ const BOUNDS: Record<NumericPricingSetting, [number, number]> = {
   handling_step2_eur: [0, 50],
   handling_step3_eur: [0, 50],
   handling_extra_unit_eur: [0, 50],
+  announced_margin_alert_eur: [0, 50],
 };
 
 /** Merge a partial / unknown payload over the defaults, clamping to sane bounds. */

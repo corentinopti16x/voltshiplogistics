@@ -20,8 +20,13 @@ import {
   FLAT_HANDLING,
   handlingForQuantity,
   findRateCell,
+  activeAnnouncedPrices,
+  classifyAnnouncedPrice,
   parseAnnouncedPrices,
+  parseAnnouncedUntil,
   parseParcelDimensions,
+  todayIso,
+  type AnnouncedAlertStatus,
   type RateCell,
   type ShippingChannel,
 } from "@/lib/domain/pricing";
@@ -178,7 +183,7 @@ function marginForParcel(
         ...profile,
       })
     : null;
-  const announced = announcedPriceFor(parseAnnouncedPrices(product.quote_json?.announced_prices), destination, quantity);
+  const announced = announcedPriceFor(activeAnnouncedPrices(product.quote_json), destination, quantity);
   const breakdown = computed && announced != null ? applyAnnouncedPrice(computed, announced) : computed;
   // Same cell selection as calculateCogs (findRateCell on the billed parcel weight) to read
   // the internal carrier cost of the cell the client price came from.
@@ -436,7 +441,7 @@ function marginForOrder(
   // One product in the parcel and a price promised for this quantity: the client pays it.
   const single = new Set(priced.map((line) => line.product.id)).size === 1;
   const announced = single
-    ? announcedPriceFor(parseAnnouncedPrices(lead.quote_json?.announced_prices), destination, units)
+    ? announcedPriceFor(activeAnnouncedPrices(lead.quote_json), destination, units)
     : null;
   const client =
     computedClient && announced != null
@@ -672,4 +677,107 @@ export async function loadMarginSummary(windowDays = 30): Promise<MarginSummary>
     ),
     byClient,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Locked prices (« Prix annoncés ») under watch
+// ---------------------------------------------------------------------------
+
+export type AnnouncedPriceAlert = {
+  productId: string;
+  productTitle: string;
+  clientId: string;
+  clientName: string;
+  market: string;
+  quantity: number;
+  /** Total per parcel promised to the client. */
+  price: number;
+  /** What the live palier rule would bill today (null when it cannot be computed). */
+  rulePrice: number | null;
+  /** Voltship margin per parcel at the locked price on the live grid. */
+  margin: number | null;
+  until: string | null;
+  status: AnnouncedAlertStatus;
+};
+
+/**
+ * Every locked price checked against the LIVE grid: when a carrier raises its prices (new
+ * grid imported), the locked total does not move and the transport line absorbs the rise,
+ * so the margin can fall under the alert threshold or below zero. Sorted worst first.
+ */
+export async function loadAnnouncedPriceAlerts(): Promise<{ threshold: number; rows: AnnouncedPriceAlert[] }> {
+  await assertVoltshipAdmin();
+  const admin = createAdminClient();
+  const [products, settings, activeGridVersion] = await Promise.all([
+    loadAdminProducts({}),
+    readPricingSettings(admin),
+    getActiveGridVersion(),
+  ]);
+  const locked = products.filter((product) => Object.keys(parseAnnouncedPrices(product.quote_json?.announced_prices)).length > 0);
+  const threshold = settings.announced_margin_alert_eur;
+  if (locked.length === 0) return { threshold, rows: [] };
+
+  const clientIds = [...new Set(locked.map((product) => product.client_id))];
+  const [factoryPrices, clientRows, profiles] = await Promise.all([
+    loadFactoryPrices(locked.map((product) => product.id)),
+    admin.from("clients").select("id, name").in("id", clientIds),
+    Promise.all(clientIds.map(async (id) => [id, await getClientPricingProfile(id)] as const)),
+  ]);
+  const clientNames = new Map((clientRows.data ?? []).map((row) => [row.id as string, String(row.name ?? "")]));
+  const profileOf = new Map(profiles);
+  const markets = [
+    ...new Set(locked.flatMap((product) => Object.keys(parseAnnouncedPrices(product.quote_json?.announced_prices)))),
+  ];
+  const channels = [...new Set(locked.map((product) => product.shipping_channel).filter(Boolean))] as string[];
+  const cells = activeGridVersion ? await loadInternalRateCells(activeGridVersion, markets, channels) : [];
+  const today = todayIso();
+
+  const rows: AnnouncedPriceAlert[] = [];
+  for (const product of locked) {
+    const prices = parseAnnouncedPrices(product.quote_json?.announced_prices);
+    const until = parseAnnouncedUntil(product.quote_json?.announced_until);
+    const ctx: ProductContext = {
+      product,
+      factoryPriceRmb: factoryPrices.get(product.id) ?? null,
+      profile: profileOf.get(product.client_id)!,
+      cells,
+    };
+    // Same product without its locked prices = what the palier rule bills today.
+    const ruleCtx: ProductContext = {
+      ...ctx,
+      product: { ...product, quote_json: { ...(product.quote_json ?? {}), announced_prices: {} } },
+    };
+    for (const [market, byQty] of Object.entries(prices)) {
+      for (const [qty, price] of Object.entries(byQty)) {
+        const quantity = Number(qty);
+        const atLocked = marginForParcel(ctx, market, quantity, settings);
+        const atRule = marginForParcel(ruleCtx, market, quantity, settings);
+        const priced = !atLocked.flags.includes("no_rate");
+        const margin = priced ? atLocked.margin.total : null;
+        rows.push({
+          productId: product.id,
+          productTitle: product.title,
+          clientId: product.client_id,
+          clientName: clientNames.get(product.client_id) ?? "",
+          market,
+          quantity,
+          price,
+          rulePrice: atRule.flags.includes("no_rate") ? null : atRule.clientPays.total,
+          margin,
+          until: until[market] ?? null,
+          status: classifyAnnouncedPrice({ until: until[market] ?? null, today, margin, threshold }),
+        });
+      }
+    }
+  }
+  const order: AnnouncedAlertStatus[] = ["loss", "low_margin", "expired", "expiring", "no_data", "ok"];
+  rows.sort(
+    (a, b) =>
+      order.indexOf(a.status) - order.indexOf(b.status) ||
+      (a.margin ?? 0) - (b.margin ?? 0) ||
+      a.productTitle.localeCompare(b.productTitle) ||
+      a.market.localeCompare(b.market) ||
+      a.quantity - b.quantity,
+  );
+  return { threshold, rows };
 }

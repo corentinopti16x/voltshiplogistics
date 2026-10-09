@@ -9,7 +9,7 @@ import {
   calculateCogs,
   listRateOptions,
   normalizeDestination,
-  parseAnnouncedPrices,
+  activeAnnouncedPrices,
   parseDestinationMarkets,
   parseParcelDimensions,
   type CarrierLineRef,
@@ -250,7 +250,7 @@ export async function calculateProductCogsMatrix(
   // Dimensions (cm) from quote_json, same keys as the ECCANG mapping → volumetric weight.
   const dimensionsCm = parseParcelDimensions(product.quote_json);
   // Prices promised to the client (fiche produit → « Prix annoncés ») win over the rule.
-  const announcedPrices = parseAnnouncedPrices(product.quote_json?.announced_prices);
+  const announcedPrices = activeAnnouncedPrices(product.quote_json);
   // Admin rules: blocked lines are removed from every selection (and from the options list).
   const allowedLines = allowedLinesFromRules(cells, rules);
 

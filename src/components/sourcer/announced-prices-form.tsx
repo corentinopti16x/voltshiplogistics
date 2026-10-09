@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { saveAnnouncedPricesAction } from "@/app/actions/announced-prices";
-import { parseAnnouncedPrices } from "@/lib/domain/pricing";
+import { announcedExpired, parseAnnouncedPrices, parseAnnouncedUntil } from "@/lib/domain/pricing";
 
 const QUANTITIES = [1, 2, 3, 4, 5] as const;
 
@@ -16,6 +16,7 @@ export async function AnnouncedPricesForm({
 }) {
   const t = await getTranslations("sourcer.announced");
   const prices = parseAnnouncedPrices(quoteJson?.announced_prices);
+  const until = parseAnnouncedUntil(quoteJson?.announced_until);
   const rows = [...new Set([...markets, ...Object.keys(prices)])];
   return (
     <section className="rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
@@ -39,7 +40,11 @@ export async function AnnouncedPricesForm({
                 />
               </label>
             ))}
+            <UntilField defaultValue={until[market]} label={t("until")} />
             <button className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm font-semibold">{t("save")}</button>
+            {announcedExpired(until, market) ? (
+              <span className="pb-2 text-xs font-semibold text-[#b42318]">{t("expired")}</span>
+            ) : null}
           </form>
         ))}
         <form action={saveAnnouncedPricesAction} className="flex flex-wrap items-end gap-2">
@@ -64,9 +69,24 @@ export async function AnnouncedPricesForm({
               />
             </label>
           ))}
+          <UntilField label={t("until")} />
           <button className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm font-semibold">{t("save")}</button>
         </form>
       </div>
     </section>
+  );
+}
+
+function UntilField({ defaultValue, label }: { defaultValue?: string; label: string }) {
+  return (
+    <label className="flex w-36 flex-col gap-1 text-xs text-[var(--muted)]">
+      {label}
+      <input
+        type="date"
+        name="until"
+        defaultValue={defaultValue ?? ""}
+        className="rounded-lg border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-sm text-[var(--ink)]"
+      />
+    </label>
   );
 }

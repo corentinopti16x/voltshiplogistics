@@ -40,3 +40,27 @@ describe("prix annoncés", () => {
     expect(Math.round((announced.product + announced.commission + announced.shipping + announced.handling) * 100) / 100).toBe(9.75);
   });
 });
+
+describe("announced price expiry and alerts", () => {
+  it("drops a market once its guarantee date is past", async () => {
+    const { activeAnnouncedPrices } = await import("./pricing");
+    const quote = {
+      announced_prices: { IT: { "1": 9.75 }, FR: { "1": 8 } },
+      announced_until: { IT: "2026-12-31", FR: "2026-10-01" },
+    };
+    expect(activeAnnouncedPrices(quote, "2026-12-31")).toEqual({ IT: { "1": 9.75 } });
+    expect(activeAnnouncedPrices(quote, "2027-01-01")).toEqual({});
+    expect(activeAnnouncedPrices({ announced_prices: { IT: { "1": 9.75 } } }, "2030-01-01")).toEqual({ IT: { "1": 9.75 } });
+  });
+
+  it("classifies a locked price against the live margin", async () => {
+    const { classifyAnnouncedPrice } = await import("./pricing");
+    const base = { today: "2026-10-09", threshold: 0.5 };
+    expect(classifyAnnouncedPrice({ ...base, until: "2026-10-01", margin: 2 })).toBe("expired");
+    expect(classifyAnnouncedPrice({ ...base, until: null, margin: -0.2 })).toBe("loss");
+    expect(classifyAnnouncedPrice({ ...base, until: null, margin: 0.3 })).toBe("low_margin");
+    expect(classifyAnnouncedPrice({ ...base, until: "2026-10-20", margin: 1.2 })).toBe("expiring");
+    expect(classifyAnnouncedPrice({ ...base, until: "2026-12-31", margin: 1.2 })).toBe("ok");
+    expect(classifyAnnouncedPrice({ ...base, until: null, margin: null })).toBe("no_data");
+  });
+});

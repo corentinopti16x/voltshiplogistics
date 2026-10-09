@@ -28,6 +28,7 @@ const SETTING_KEYS: NumericPricingSetting[] = [
   "handling_step2_eur",
   "handling_step3_eur",
   "handling_extra_unit_eur",
+  "announced_margin_alert_eur",
 ];
 
 function pricingLabel(line: ParsedLine, t: ReturnType<typeof useTranslations>) {
@@ -340,6 +341,7 @@ export function RateImportReviewPanel({ initial }: { initial: RateImportReview }
                 ["handling_step2_eur", t("step2.settings.handlingStep2"), "0.05"],
                 ["handling_step3_eur", t("step2.settings.handlingStep3"), "0.05"],
                 ["handling_extra_unit_eur", t("step2.settings.handlingExtraUnit"), "0.05"],
+                ["announced_margin_alert_eur", t("step2.settings.announcedAlert"), "0.05"],
               ] as const
             ).map(([key, label, step]) => (
               <label key={key} className="flex flex-col gap-1 text-sm">

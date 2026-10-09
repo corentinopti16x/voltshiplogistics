@@ -430,7 +430,8 @@
           "fxMarket": "市场汇率 RMB / EUR（内部）",
           "handlingStep2": "2 件额外操作费 (€，所有等级)",
           "handlingStep3": "3 件额外操作费 (€，所有等级)",
-          "handlingExtraUnit": "超过 3 件每件额外操作费 (€，所有等级)"
+          "handlingExtraUnit": "超过 3 件每件额外操作费 (€，所有等级)",
+          "announcedAlert": "锁定价格利润预警线（每包裹最低利润，€）"
         },
         "summary": {
           "cells": "价格单元",
@@ -580,6 +581,27 @@
         "margin": "毛利",
         "unpriced": "未计价（产品资料不完整或 SKU 未知）。",
         "toComplete": "去完善 →"
+      },
+      "announced": {
+        "title": "需关注的锁定价格",
+        "lead": "每个报价按当前运价表重新核算。物流商涨价时客户价格不变，利润减少：每包裹低于 {threshold} 时预警。过了有效期后按等级规则计费。",
+        "empty": "没有锁定价格。",
+        "product": "产品",
+        "market": "国家 · 数量",
+        "locked": "锁定价格",
+        "rule": "当前规则价格",
+        "margin": "每包裹利润",
+        "until": "有效期至",
+        "status": "状态",
+        "noDate": "无日期",
+        "statuses": {
+          "loss": "亏损",
+          "low_margin": "利润过低",
+          "expired": "已过期",
+          "expiring": "即将过期",
+          "no_data": "缺少数据",
+          "ok": "正常"
+        }
       }
     },
     "finance": {
@@ -954,7 +976,9 @@
       "title": "向客户报的价格",
       "lead": "每个包裹的总价（产品 + 运输 + 操作费，欧元）。填写后，该国家和数量按此价格计费，并据此计算利润。留空 = 按等级规则。",
       "save": "保存",
-      "otherMarket": "其他国家"
+      "otherMarket": "其他国家",
+      "until": "有效期至",
+      "expired": "已过期：按等级规则计费"
     }
   },
   "app": {

@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Link, redirect } from "@/i18n/routing";
 import { getAuthContext } from "@/lib/auth/context";
 import {
+  loadAnnouncedPriceAlerts,
   loadEstimatedShopifyOrderMargins,
   loadMarginSummary,
   MarginAccessError,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/pricing/margin-server";
 import { formatAmount } from "@/lib/format";
 import { ConfidentialTag, KpiTile, Pct, SignedAmount, SourceLabel } from "@/components/admin/margin-ui";
+import { AnnouncedAlertsSection } from "@/components/admin/announced-alerts";
 
 // Confidential: voltship_admin only (the admin layout redirects everyone else; the
 // loader throws for any other role as a second line of defence).
@@ -24,8 +26,9 @@ export default async function AdminMarginPage() {
     return null;
   }
   let summary;
+  let announced;
   try {
-    summary = await loadMarginSummary(WINDOW_DAYS);
+    [summary, announced] = await Promise.all([loadMarginSummary(WINDOW_DAYS), loadAnnouncedPriceAlerts()]);
   } catch (error) {
     if (error instanceof MarginAccessError) {
       redirect({ href: "/home", locale });
@@ -104,6 +107,8 @@ export default async function AdminMarginPage() {
         <KpiTile label={t("split.transport")} value={<SignedAmount value={totals.transport} locale={locale} />} />
         <KpiTile label={t("split.handling")} value={<SignedAmount value={totals.handling} locale={locale} />} />
       </section>
+
+      <AnnouncedAlertsSection rows={announced.rows} threshold={announced.threshold} locale={locale} />
 
       <section className="mt-8 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--card)]">
         <div className="p-6">

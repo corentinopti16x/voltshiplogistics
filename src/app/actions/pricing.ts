@@ -344,6 +344,11 @@ export async function savePricingSettingsAction(
       "handling_extra_unit_eur",
       DEFAULT_PRICING_SETTINGS.handling_extra_unit_eur,
     ),
+    announced_margin_alert_eur: numberField(
+      formData,
+      "announced_margin_alert_eur",
+      DEFAULT_PRICING_SETTINGS.announced_margin_alert_eur,
+    ),
   });
   const admin = createAdminClient();
   const { error: writeError } = await writePricingSettings(admin, settings);
@@ -574,6 +579,7 @@ function sanitizeOverrides(raw: unknown): ImportOverrides {
       "handling_step2_eur",
       "handling_step3_eur",
       "handling_extra_unit_eur",
+      "announced_margin_alert_eur",
     ] as const) {
       const value = Number(settings[key]);
       if (Number.isFinite(value)) cleanSettings[key] = value;

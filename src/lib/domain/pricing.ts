@@ -593,6 +593,67 @@ export function announcedPriceFor(prices: AnnouncedPrices, destination: string, 
   return value != null && value > 0 ? value : null;
 }
 
+/** Last day (YYYY-MM-DD, inclusive) each market's announced prices are guaranteed. */
+export type AnnouncedUntil = Record<string, string>;
+
+export function parseAnnouncedUntil(raw: unknown): AnnouncedUntil {
+  const out: AnnouncedUntil = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [market, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (/^[A-Z]{2}$/.test(market) && typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      out[market] = value;
+    }
+  }
+  return out;
+}
+
+export function todayIso(now: Date = new Date()) {
+  return now.toISOString().slice(0, 10);
+}
+
+/** True once the guarantee date of the market is past (no date = guaranteed until removed). */
+export function announcedExpired(until: AnnouncedUntil, market: string, today: string = todayIso()) {
+  const last = until[market.toUpperCase()];
+  return last != null && last < today;
+}
+
+/**
+ * Announced prices still guaranteed today (quote_json.announced_prices minus the markets whose
+ * `announced_until` date is past): an expired market falls back to the live palier rule.
+ */
+export function activeAnnouncedPrices(quoteJson: Record<string, unknown> | null | undefined, today: string = todayIso()) {
+  const prices = parseAnnouncedPrices(quoteJson?.announced_prices);
+  const until = parseAnnouncedUntil(quoteJson?.announced_until);
+  for (const market of Object.keys(prices)) if (announcedExpired(until, market, today)) delete prices[market];
+  return prices;
+}
+
+export type AnnouncedAlertStatus = "expired" | "loss" | "low_margin" | "expiring" | "no_data" | "ok";
+
+/** Days before the guarantee date from which an announced price is flagged « expire bientôt ». */
+export const ANNOUNCED_EXPIRY_WARNING_DAYS = 14;
+
+/**
+ * Health of one locked price: expired, selling at a loss, under the alert threshold, close
+ * to its guarantee date, impossible to compute (product data / rate missing) or fine.
+ */
+export function classifyAnnouncedPrice(input: {
+  until: string | null;
+  today: string;
+  margin: number | null;
+  threshold: number;
+}): AnnouncedAlertStatus {
+  if (input.until && input.until < input.today) return "expired";
+  if (input.margin == null) return "no_data";
+  if (input.margin < 0) return "loss";
+  if (input.margin < input.threshold) return "low_margin";
+  if (input.until) {
+    const days = (Date.parse(`${input.until}T00:00:00Z`) - Date.parse(`${input.today}T00:00:00Z`)) / 86_400_000;
+    if (days <= ANNOUNCED_EXPIRY_WARNING_DAYS) return "expiring";
+  }
+  return "ok";
+}
+
 /**
  * The client pays exactly the announced total: product, commission and handling stay as
  * computed, the transport line absorbs the difference (it is what was negotiated).
