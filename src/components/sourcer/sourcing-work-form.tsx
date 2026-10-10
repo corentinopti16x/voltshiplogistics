@@ -151,6 +151,15 @@ export function SourcingWorkForm({
                 </span>
               ) : null}
             </label>
+            <label className="flex items-start gap-2 self-end text-xs text-[var(--muted)]">
+              <input
+                type="checkbox"
+                name="battery_internal"
+                defaultChecked={product.quote_json?.battery_internal === true}
+                className="mt-0.5"
+              />
+              <span>{t("batteryInternal")}</span>
+            </label>
             <Input
               name="production_lead_days"
               label={t("productionLead")}

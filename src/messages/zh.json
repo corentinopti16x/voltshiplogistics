@@ -979,7 +979,8 @@
       "reason": "原因",
       "flagging": "提交中…",
       "flagProblem": "标记问题",
-      "productFlagged": "产品已标记为有问题。"
+      "productFlagged": "产品已标记为有问题。",
+      "batteryInternal": "内置电池（可充电）。只有这类产品可走华翰内电美国线。"
     },
     "title": "采购待办队列",
     "soon": "按请求时间从早到晚处理。填写报价字段后，向客户发送最终 COGS（商品成本）。",

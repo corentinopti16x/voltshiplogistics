@@ -156,6 +156,11 @@ export type PricingInput = {
   /** False = fixed handling per parcel (Platinium / Gold); default true. */
   handlingGrows?: boolean | null;
   /**
+   * The battery is built into the product (rechargeable device). Lines reserved to built-in
+   * batteries (Huahan 内电) are only offered then; otherwise they are never picked.
+   */
+  batteryInternal?: boolean | null;
+  /**
    * RMB per EUR of the carrier cost: with the cell's internal carrier cost, the palier
    * discount never takes the client transport below what the carrier costs Voltship.
    */
@@ -249,7 +254,18 @@ type CellQuery = Pick<
   | "volumetricDivisors"
   | "carrierPreference"
   | "allowedLines"
+  | "batteryInternal"
 >;
+
+/** quote_json.battery_internal — ticked on the sourcer sheet (« Batterie intégrée »). */
+export function hasInternalBattery(quoteJson: Record<string, unknown> | null | undefined) {
+  return quoteJson?.battery_internal === true;
+}
+
+/** Line reserved to products with a built-in battery (Huahan 智尚选-内电 to the USA). */
+export function isInternalBatteryOnlyLine(cell: Pick<RateCell, "lineName">) {
+  return /内电/.test(cell.lineName ?? "");
+}
 
 function matchingCells(cells: RateCell[], input: CellQuery) {
   const destination = normalizeDestination(input.destination);
@@ -266,6 +282,7 @@ function matchingCells(cells: RateCell[], input: CellQuery) {
     if (cell.destination.trim().toUpperCase() !== destination || cell.channel !== input.channel) return false;
     if (input.preferredCarrier && cell.carrier !== input.preferredCarrier) return false;
     if (input.allowedLines && !input.allowedLines.has(lineKey(cell.carrier, cell.lineName))) return false;
+    if (input.batteryInternal !== true && isInternalBatteryOnlyLine(cell)) return false;
     const weight = billed(cell.carrier);
     return weight >= cell.weightMinG && weight <= cell.weightMaxG;
   });

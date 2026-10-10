@@ -42,9 +42,8 @@ export function CarrierSelector({
   const [savedMarket, setSavedMarket] = useState<string | null>(null);
 
   const priceSuffix = (option: RateOption) =>
-    `${formatAmount(option.price, locale)}${option.deliveryRange ? ` · ${option.deliveryRange}` : ""}${
-      option.iossRequired ? ` · ${t("ioss")}` : ""
-    }`;
+    // IOSS is Voltship's own number for every EU parcel: never shown to the client.
+    `${formatAmount(option.price, locale)}${option.deliveryRange ? ` · ${option.deliveryRange}` : ""}`;
   const optionLabel = (option: RateOption) => `${carrierLineLabel(option)} · ${priceSuffix(option)}`;
 
   const change = (market: string, value: string) => {

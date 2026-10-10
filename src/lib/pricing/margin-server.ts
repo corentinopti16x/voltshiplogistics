@@ -16,6 +16,7 @@ import {
   announcedPriceFor,
   applyAnnouncedPrice,
   calculateCogs,
+  hasInternalBattery,
   discountedShipping,
   FLAT_HANDLING,
   handlingForQuantity,
@@ -180,6 +181,7 @@ function marginForParcel(
         volumetricDivisors: settings.volumetric_divisors,
         handlingLadder: handlingLadderFrom(settings),
         fxRmbPerEur: settings.fx_rmb_per_eur,
+        batteryInternal: hasInternalBattery(product.quote_json),
         ...profile,
       })
     : null;
@@ -197,6 +199,7 @@ function marginForParcel(
           volumetricDivisors: settings.volumetric_divisors,
           channel,
           destination,
+          batteryInternal: hasInternalBattery(product.quote_json),
         })
       : null;
   return computeVoltshipMargin({
@@ -424,7 +427,12 @@ function marginForOrder(
   // Product side: client price × qty per line, commission on the product total.
   const productTotal = priced.reduce((sum, line) => sum + Number(line.product.client_price) * line.quantity, 0);
   const commission = productTotal * (Math.max(0, profile.commissionPct) / 100);
-  const cell = parcelWeightG > 0 ? findRateCell(cells, { weightG: parcelWeightG, channel, destination }) : null;
+  const cell = parcelWeightG > 0 ? findRateCell(cells, {
+          weightG: parcelWeightG,
+          channel,
+          destination,
+          batteryInternal: hasInternalBattery(lead.quote_json),
+        }) : null;
   const discount = Math.min(100, Math.max(0, profile.logisticsDiscountPct)) / 100;
   const computedClient = cell
     ? {

@@ -1817,7 +1817,8 @@
       "reason": "Reason",
       "flagging": "Flagging…",
       "flagProblem": "Flag problem",
-      "productFlagged": "Product flagged."
+      "productFlagged": "Product flagged.",
+      "batteryInternal": "Battery built into the device (rechargeable). Only these products can ship with Huahan 内电 to the US."
     },
     "announced": {
       "title": "Prices announced to the client",

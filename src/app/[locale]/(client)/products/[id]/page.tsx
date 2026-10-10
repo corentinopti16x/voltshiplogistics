@@ -151,7 +151,8 @@ export default async function ProductDetailPage({
             price: formatAmount(breakdown.shippingBase, locale),
             delivery: breakdown.deliveryRange ? ` · ${breakdown.deliveryRange}` : "",
           }),
-          badge: breakdown.iossRequired ? t("quote.iossRequired") : null,
+          // IOSS: Voltship's number for every EU parcel — nothing for the client to provide.
+          badge: null,
           hint:
             breakdown.selectionReason === "fallback_preferred_unavailable"
               ? t("carrier.fallbackHint")
@@ -367,11 +368,6 @@ export default async function ProductDetailPage({
                     price: formatAmount(acceptedSnapshot.shippingBase, locale),
                     delivery: acceptedSnapshot.deliveryRange ? ` · ${acceptedSnapshot.deliveryRange}` : "",
                   })}
-                  {acceptedSnapshot.iossRequired ? (
-                    <Badge tone="blue" className="ml-2 align-middle">
-                      {t("quote.iossRequired")}
-                    </Badge>
-                  ) : null}
                 </p>
               </div>
             ) : null}

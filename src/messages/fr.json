@@ -1817,7 +1817,8 @@
       "reason": "Motif",
       "flagging": "Signalement…",
       "flagProblem": "Signaler le problème",
-      "productFlagged": "Produit signalé."
+      "productFlagged": "Produit signalé.",
+      "batteryInternal": "Batterie intégrée à l'appareil (rechargeable). Seuls ces produits peuvent partir en Huahan 内电 vers les US."
     },
     "announced": {
       "title": "Prix annoncés au client",

@@ -331,3 +331,17 @@ describe("billed weight (volumetric, USA minimum, IOSS)", () => {
     });
   });
 });
+
+describe("Huahan 内电 reserved to built-in batteries", () => {
+  it("is never picked unless the product has a built-in battery", async () => {
+    const { findRateCell } = await import("./pricing");
+    const base = { gridVersion: "v", destination: "US", channel: "electronics_battery" as const, weightMinG: 1, weightMaxG: 500 };
+    const cells = [
+      { ...base, carrier: "Huahan", lineName: "Huahan 智尚选-内电 PK0590", price: 4 },
+      { ...base, carrier: "YunExpress", lineName: "YunExpress 商派特惠带电 YTSPTHDD", price: 5 },
+    ];
+    const query = { weightG: 150, channel: "electronics_battery" as const, destination: "US" };
+    expect(findRateCell(cells, query)?.carrier).toBe("YunExpress");
+    expect(findRateCell(cells, { ...query, batteryInternal: true })?.carrier).toBe("Huahan");
+  });
+});
