@@ -3,21 +3,14 @@
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { setCarrierPreferenceAction } from "@/app/actions/client";
+import { setProductCarrierStaffAction } from "@/app/actions/sourcing";
 import { carrierLineLabel } from "@/lib/domain/carrier-rules";
-import { lineKey, type CarrierLineRef, type RateOption, type SelectionReason } from "@/lib/domain/pricing";
+import { lineKey, type CarrierLineRef, type RateOption } from "@/lib/domain/pricing";
+import type { CarrierSelectorMarket } from "@/lib/pricing/matrix-view";
 import { Badge } from "@/components/ui/badge";
 import { formatAmount } from "@/lib/format";
 
-export type CarrierSelectorMarket = {
-  destination: string;
-  /** Lines able to ship 1 unit (blocked lines already removed), cheapest first. */
-  options: RateOption[];
-  /** Effective preference (forced or chosen); null = cheapest (auto). */
-  preference: CarrierLineRef | null;
-  forced: boolean;
-  /** Reason of the single-unit selection (null when no rate matches). */
-  selectionReason: SelectionReason | null;
-};
+export type { CarrierSelectorMarket };
 
 const AUTO = "__auto__";
 
@@ -30,10 +23,13 @@ export function CarrierSelector({
   productId,
   markets,
   canEdit,
+  staff = false,
 }: {
   productId: string;
   markets: CarrierSelectorMarket[];
   canEdit: boolean;
+  /** Voltship staff sheet: saves through the sourcer action (any client's product). */
+  staff?: boolean;
 }) {
   const t = useTranslations("products.carrier");
   const locale = useLocale();
@@ -59,7 +55,9 @@ export function CarrierSelector({
             return option ? { carrier: option.carrier, lineName: option.lineName } : null;
           })();
     startTransition(async () => {
-      const result = await setCarrierPreferenceAction(productId, market, selection);
+      const result = staff
+        ? await setProductCarrierStaffAction(productId, market, selection)
+        : await setCarrierPreferenceAction(productId, market, selection);
       if (!result.ok) setError(result.error ?? t("error"));
       else setSavedMarket(market);
     });
@@ -126,7 +124,7 @@ export function CarrierSelector({
         );
       })}
       {error ? <p className="text-[12px] text-[var(--rust-ink)]">{error}</p> : null}
-      <p className="text-[12px] text-[var(--muted)]">{canEdit ? t("note") : t("readOnly")}</p>
+      <p className="text-[12px] text-[var(--muted)]">{staff ? t("staffNote") : canEdit ? t("note") : t("readOnly")}</p>
     </div>
   );
 }

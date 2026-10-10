@@ -14,6 +14,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { ProductRow, SourcingStatus } from "@/lib/products/types";
 import type { ShippingChannel } from "@/lib/domain/pricing";
 import { nextVoltshipSku } from "@/lib/products/todo-core";
+import { parseClientNote, parsePackPieces, withSheetExtras } from "@/lib/products/extras";
+import {
+  CARRIER_PREF_KEY,
+  parseCarrierPreferences,
+  type CarrierPreferences,
+} from "@/lib/domain/carrier-rules";
+import { lineKey, normalizeDestination, type CarrierLineRef } from "@/lib/domain/pricing";
+import { loadCarrierRules } from "@/lib/pricing/server";
 
 export type SourcingActionResult = {
   ok: boolean;
@@ -102,6 +110,10 @@ function parseDraft(formData: FormData) {
     sku: nullableText(formData, "sku"),
     /** « Batterie intégrée » : unlocks the lines reserved to built-in batteries (Huahan 内电). */
     batteryInternal: formData.get("battery_internal") === "on",
+    /** « Vendu en set » : pieces shipped per unit sold (1 = alone). Null = invalid input. */
+    packPieces: parsePackPieces(formData.get("pack_pieces")),
+    /** Note shown to the client on his product page. */
+    clientNote: parseClientNote(formData.get("client_note")),
     internal: {
       factory_purchase_price: nullableNumber(formData, "factory_purchase_price"),
       supplier_name: nullableText(formData, "supplier_name"),
@@ -130,6 +142,7 @@ function validateDraft(draft: ReturnType<typeof parseDraft>) {
     return "Invalid shipping channel.";
   }
   if (!statuses.includes(draft.client.sourcing_status)) return "Invalid sourcing status.";
+  if (draft.packPieces == null) return "Pieces per set must be a whole number between 1 and 50.";
   return null;
 }
 
@@ -162,12 +175,13 @@ async function persistDraft(
 ) {
   await writeAirtable(product, draft);
   const admin = createAdminClient();
+  const extras = sheetQuote(product, draft);
   const { error: productError } = await admin
     .from("products_cache")
     .update({
       ...draft.client,
       ...(draft.sku ? { sku: draft.sku.slice(0, 80) } : {}),
-      quote_json: { ...(product.quote_json ?? {}), battery_internal: draft.batteryInternal },
+      quote_json: extras.quote,
       last_synced_at: new Date().toISOString(),
     })
     .eq("id", product.id)
@@ -182,6 +196,28 @@ async function persistDraft(
     updated_at: new Date().toISOString(),
   });
   if (workError) throw workError;
+
+  // New or edited note for the client: in-app notification linking to the product.
+  if (extras.noteChanged && draft.clientNote) {
+    await createNotification({
+      clientId: product.client_id,
+      type: "product_note",
+      channels: ["in_app"],
+      payload: {
+        productId: product.id,
+        productTitle: product.title,
+        message: `Voltship note on ${product.title}: ${draft.clientNote.slice(0, 160)}`,
+      },
+    }).catch(() => null);
+  }
+}
+
+function sheetQuote(product: ProductRow, draft: ReturnType<typeof parseDraft>) {
+  return withSheetExtras(product.quote_json, {
+    batteryInternal: draft.batteryInternal,
+    packPieces: draft.packPieces ?? 1,
+    clientNote: draft.clientNote,
+  });
 }
 
 export async function saveSourcingDraftAction(
@@ -242,7 +278,7 @@ export async function sendQuoteAction(
   const candidate = {
     ...product,
     ...draft.client,
-    quote_json: { ...(product.quote_json ?? {}), battery_internal: draft.batteryInternal },
+    quote_json: sheetQuote(product, draft).quote,
   } as ProductRow;
   const quote = await calculateLiveProductQuote(candidate);
   if (!quote.breakdown) {
@@ -348,5 +384,51 @@ export async function flagSourcingAction(
     };
   }
   revalidateSourcing(productId);
+  return { ok: true };
+}
+
+/**
+ * Staff (sourcer / Voltship admin) sets the carrier line of a product for one market, the
+ * same preference the client can choose on his product page (quote_json._carrier_pref).
+ * Lines forced or blocked by the client's carrier rules are respected. null = cheapest.
+ */
+export async function setProductCarrierStaffAction(
+  productId: string,
+  market: string,
+  selection: CarrierLineRef | null,
+): Promise<SourcingActionResult> {
+  const { ctx, error } = await requireSourcer();
+  if (!ctx) return { ok: false, error: error ?? "Sourcer access required." };
+  const code = normalizeDestination(String(market ?? ""), "");
+  if (!code) return { ok: false, error: "Unknown market." };
+  let next: CarrierLineRef | null = null;
+  if (selection != null) {
+    const carrier = typeof selection.carrier === "string" ? selection.carrier.trim() : "";
+    if (!carrier) return { ok: false, error: "Choose a carrier line." };
+    const lineName = typeof selection.lineName === "string" ? selection.lineName.trim() : "";
+    next = { carrier, lineName: lineName || null };
+  }
+  const { admin, product } = await loadProduct(productId);
+  if (!product) return { ok: false, error: "Product not found." };
+  const rules = await loadCarrierRules(product.client_id);
+  if (rules.forced[code]) return { ok: false, error: "This market has a forced line in the client's carrier rules." };
+  if (next && rules.blocked.includes(lineKey(next.carrier, next.lineName))) {
+    return { ok: false, error: "This line is blocked for this client." };
+  }
+  const quote = { ...(product.quote_json ?? {}) };
+  const preferences: CarrierPreferences = { ...parseCarrierPreferences(quote) };
+  if (next) preferences[code] = next;
+  else delete preferences[code];
+  const { error: updateError } = await admin
+    .from("products_cache")
+    .update({
+      quote_json: { ...quote, [CARRIER_PREF_KEY]: Object.keys(preferences).length > 0 ? preferences : null },
+    })
+    .eq("id", product.id)
+    .eq("client_id", product.client_id);
+  if (updateError) return { ok: false, error: updateError.message };
+  revalidateSourcing(product.id);
+  revalidatePath("/sourcer/products");
+  revalidatePath("/[locale]/sourcer/products", "page");
   return { ok: true };
 }

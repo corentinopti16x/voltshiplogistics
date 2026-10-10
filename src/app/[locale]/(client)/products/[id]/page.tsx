@@ -24,8 +24,10 @@ import { calculateProductCogsMatrix, liveQuoteFromMatrix } from "@/lib/pricing/s
 import { calculateProductEstimate } from "@/lib/products/overview";
 import { loadShopifyImagesForProducts } from "@/lib/shopify/images";
 import { loadClientRecurrence } from "@/lib/shopify/recurrence";
-import { CogsMatrix, type CogsMatrixMarketView } from "@/components/client/cogs-matrix";
-import { CarrierSelector, type CarrierSelectorMarket } from "@/components/client/carrier-selector";
+import { CogsMatrix } from "@/components/client/cogs-matrix";
+import { CarrierSelector } from "@/components/client/carrier-selector";
+import { matrixViews } from "@/lib/pricing/matrix-view";
+import { clientNote, packPieces } from "@/lib/products/extras";
 import { ProductImageCarousel } from "@/components/client/product-image-carousel";
 import { LifecycleBadge } from "@/components/client/lifecycle-badge";
 import { SourcingPipeline } from "@/components/client/sourcing-pipeline";
@@ -74,32 +76,11 @@ export default async function ProductDetailPage({
   const readyForQuote = liveQuote.breakdown != null;
   const images = shopifyImages.get(product.id) ?? [];
   const productRecurrence = product.sku ? recurrence?.products.get(product.sku) ?? null : null;
-  const matrixMarkets: CogsMatrixMarketView[] = matrix.markets.map((market) => ({
-    destination: market.destination,
-    cells: market.cells.map((cell) => ({
-      quantity: cell.quantity,
-      cogs: cell.breakdown?.cogs ?? null,
-      cogsPerUnit: cell.breakdown?.cogsPerUnit ?? null,
-      weightG: cell.breakdown?.weightG ?? null,
-      billedWeightG: cell.breakdown?.billedWeightG ?? null,
-      iossRequired: cell.breakdown?.iossRequired === true,
-      carrier: cell.breakdown?.carrier ?? null,
-      lineName: cell.breakdown?.lineName ?? null,
-      weightMinG: cell.breakdown?.weightMinG ?? null,
-      weightMaxG: cell.breakdown?.weightMaxG ?? null,
-      shipping: cell.breakdown?.shipping ?? null,
-      deliveryRange: cell.breakdown?.deliveryRange ?? null,
-    })),
-  }));
-
-  // Carrier line per market: options at the single-unit billed weight, blocked lines removed.
-  const carrierMarkets: CarrierSelectorMarket[] = matrix.markets.map((market) => ({
-    destination: market.destination,
-    options: market.options,
-    preference: market.preference,
-    forced: market.forced,
-    selectionReason: market.cells.find((cell) => cell.quantity === 1)?.breakdown?.selectionReason ?? null,
-  }));
+  // Carrier line per market (options at the single-unit billed weight, blocked lines removed)
+  // and the COGS matrix, both showing which carrier ships each market.
+  const { matrixMarkets, carrierMarkets } = matrixViews(matrix);
+  const pieces = packPieces(product.quote_json);
+  const note = clientNote(product.quote_json);
   const canChooseCarrier = isTenantUser(ctx);
 
   let profile = DEFAULT_FINANCIAL_PROFILE;
@@ -205,6 +186,9 @@ export default async function ProductDetailPage({
               {isMigratedProduct(product) ? `✓ ${t("live")}` : t(`simpleStage.${simpleStage(step)}`)}
             </Badge>
             {product.sku ? <span className="text-[12px] text-white/70">{product.sku}</span> : null}
+            {pieces > 1 ? (
+              <Badge tone="gold">{t("setBadge", { count: pieces })}</Badge>
+            ) : null}
           </div>
           <h1 className="font-display text-[clamp(26px,3.6vw,40px)] leading-[1.1] font-extrabold tracking-[-0.02em]">
             {product.title}
@@ -214,6 +198,21 @@ export default async function ProductDetailPage({
           ) : null}
         </div>
       </div>
+
+      {note ? (
+        <section
+          aria-labelledby="voltship-note-title"
+          className="rounded-[16px] border border-[var(--blue-soft)] bg-[var(--blue-soft)]/40 px-5 py-4"
+        >
+          <h2 id="voltship-note-title" className="text-[13px] font-bold text-[var(--blue-ink)]">
+            {t("clientNote.title")}
+            {note.at ? (
+              <span className="ml-2 font-medium text-[var(--muted)]">{formatDate(note.at, locale)}</span>
+            ) : null}
+          </h2>
+          <p className="mt-1 text-[14px] whitespace-pre-line text-[var(--ink)]">{note.text}</p>
+        </section>
+      ) : null}
 
       <LifecycleBanner
         status={product.lifecycle_status}
@@ -401,6 +400,7 @@ export default async function ProductDetailPage({
               liveQuote.activeGridVersion,
             )}
             missingReason={matrix.missingReason}
+            packPieces={pieces}
           />
 
           <EconomicsCalculator
