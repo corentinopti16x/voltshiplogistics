@@ -253,7 +253,9 @@ function marginForParcel(
       : null;
   return computeVoltshipMargin({
     quantity,
-    client: breakdown,
+    // The box is packaging re-billed at cost: its price sits with the product side, against
+    // its RMB cost in the factory cost, so it nets to ~0 in the margin.
+    client: breakdown ? { ...breakdown, product: breakdown.product + (breakdown.box ?? 0) } : null,
     factoryCostRmb: ctx.factoryPriceRmb == null ? null : (ctx.factoryPriceRmb + boxRmb) * quantity,
     carrierCostRmb: cell?.carrierCostRmb ?? null,
     carrierCostSource: cell?.carrierCostRmb != null ? "grid" : null,
@@ -505,11 +507,10 @@ function marginForOrder(
     ) + settings.packaging_weight_g;
   const parcelWeightG = order.billed_weight_g ?? computedWeightG;
   const units = priced.reduce((sum, line) => sum + line.quantity, 0);
-  // Product side: (client price + box) × qty per line, commission on the product total.
-  const productTotal = priced.reduce(
-    (sum, line) => sum + (Number(line.product.client_price) + extrasOf(line.product).boxPrice) * line.quantity,
-    0,
-  );
+  // Product side: client price × qty per line, commission on the product total. Boxes are
+  // packaging billed at cost (no commission).
+  const productTotal = priced.reduce((sum, line) => sum + Number(line.product.client_price) * line.quantity, 0);
+  const boxTotal = priced.reduce((sum, line) => sum + extrasOf(line.product).boxPrice * line.quantity, 0);
   const commission = productTotal * (Math.max(0, profile.commissionPct) / 100);
   const cell = parcelWeightG > 0 ? findRateCell(cells, {
           weightG: parcelWeightG,
@@ -521,7 +522,8 @@ function marginForOrder(
   const discount = Math.min(100, Math.max(0, profile.logisticsDiscountPct)) / 100;
   const computedClient = cell
     ? {
-        product: productTotal,
+        // Boxes re-billed at cost sit with the product side (their RMB cost is in the factory cost).
+        product: productTotal + boxTotal,
         commission,
         shipping: discountedShipping(cell.price, discount, cell.carrierCostRmb, settings.fx_rmb_per_eur),
         handling: handlingForQuantity(

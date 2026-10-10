@@ -479,8 +479,8 @@
         "magnetic": "magnétique",
         "sensitive_other": "sensible (ingérable)"
       },
-      "box": "Boîte",
-      "boxNote": "emballage du produit",
+      "box": "Emballage (boîte)",
+      "boxNote": "boîte du produit",
       "packagingIncluded": "emballage {weight} g inclus"
     },
     "stock": {
@@ -641,7 +641,7 @@
       "ratesChanged": "Tarifs mis à jour depuis ton devis",
       "missingGrid": "La grille tarifaire n'est pas encore active.",
       "missingProduct": "Prix, poids et canal sont renseignés par Voltship — la matrice apparaîtra ensuite.",
-      "formulaNote": "COGS(n) = n × prix produit (+ boîte s’il y en a une, + commission) + transport d’un colis de n × poids unitaire + emballage + préparation une fois par commande. Le devis accepté reste la référence contractuelle pour 1 unité.",
+      "formulaNote": "COGS(n) = n × prix produit (+ commission) + boîte d’emballage s’il y en a une + transport d’un colis de n × poids unitaire + emballage + préparation une fois par commande. Le devis accepté reste la référence contractuelle pour 1 unité.",
       "roasNote": "ROAS break-even puis ROAS cible à {margin} % de marge, calculés sur l'AOV (prix de vente × n) et le COGS de la commande.",
       "cellDetail": "{carrier}{line} · {tier} · colis {price}{delivery}",
       "iossRequired": "IOSS requis",
@@ -1868,10 +1868,10 @@
       "clientNotePlaceholder": "Ex. : vendu par set de 2, gravure incluse ; délai usine 7 jours…",
       "clientNoteHint": "S’affiche en haut de la fiche produit du client, avec la date. Il reçoit une notification à chaque nouvelle note. Les notes internes (encadré jaune) restent privées.",
       "weightHint": "Produit seul, sans emballage : l’emballage du colis (réglage Tarification) et la boîte éventuelle sont ajoutés automatiquement.",
-      "boxTitle": "Boîte (seulement si le produit est vendu dans une boîte achetée en plus)",
-      "boxIntro": "Laisser vide si pas de boîte. Le prix de la boîte est ajouté au prix produit facturé au client (à chaque unité vendue), son poids à chaque unité du colis.",
+      "boxTitle": "Boîte d’emballage (seulement si le produit en a besoin)",
+      "boxIntro": "Laisser vide si pas de boîte. La boîte est un emballage, pas un produit : elle est facturée au client sur une ligne « Emballage (boîte) », au prix coûtant et sans commission, à chaque unité vendue. Son poids s’ajoute à chaque unité du colis.",
       "boxPrice": "Prix de la boîte",
-      "boxBilled": "Facturé {eur} € au client par unité (taux {rate}).",
+      "boxBilled": "Facturé {eur} € au client par unité, sans commission (taux {rate}).",
       "boxWeight": "Poids de la boîte",
       "boxWeightHint": "Par unité vendue."
     },

@@ -184,7 +184,10 @@ export type PricingInput = {
   fxRmbPerEur?: number | null;
   /** Packaging weight added once per parcel (grams). */
   packagingWeightG?: number | null;
-  /** Box bought for the product (€ per unit sold), billed with the product. 0/absent = no box. */
+  /**
+   * Box the product ships in (€ per unit sold), when it needs one: billed as packaging,
+   * on its own line, without commission. 0/absent = no box.
+   */
   boxPrice?: number | null;
   /** Weight of that box (grams per unit sold). */
   boxWeightG?: number | null;
@@ -207,9 +210,9 @@ export type CogsBreakdown = {
   iossRequired: boolean;
   /** Unit product price (negotiated factory price). */
   clientPrice: number;
-  /** Product component for the whole order: (clientPrice + box) × quantity. */
+  /** Product component for the whole order: clientPrice × quantity. */
   product: number;
-  /** Part of `product` paid for the boxes (box price × quantity); 0 without box. */
+  /** Packaging boxes for the whole order (box price × quantity), no commission; 0 without box. */
   box?: number;
   /** Packaging weight included in `weightG` (once per parcel). */
   packagingWeightG?: number;
@@ -426,7 +429,7 @@ export function calculateCogs(input: PricingInput): CogsBreakdown | null {
 
   const boxPrice = Math.max(0, Number(input.boxPrice) || 0);
   const box = money(boxPrice * quantity);
-  const product = money((input.clientPrice + boxPrice) * quantity);
+  const product = money(input.clientPrice * quantity);
   const shippingBase = money(cell.price);
   // Handling (picking + packing) is charged per order and grows with the parcel size.
   const handling = handlingForQuantity(
@@ -439,7 +442,7 @@ export function calculateCogs(input: PricingInput): CogsBreakdown | null {
   const commission = money(product * commissionRate);
   const shipping = discountedShipping(shippingBase, discountRate, cell.carrierCostRmb, input.fxRmbPerEur);
   const discount = money(shippingBase - shipping);
-  const cogs = money(product + commission + shipping + handling);
+  const cogs = money(product + commission + shipping + handling + box);
 
   return {
     gridVersion: cell.gridVersion,
@@ -711,7 +714,9 @@ export function classifyAnnouncedPrice(input: {
  * computed, the transport line absorbs the difference (it is what was negotiated).
  */
 export function applyAnnouncedPrice(breakdown: CogsBreakdown, price: number): CogsBreakdown {
-  const shipping = money(price - breakdown.product - breakdown.commission - breakdown.handling);
+  const shipping = money(
+    price - breakdown.product - breakdown.commission - breakdown.handling - (breakdown.box ?? 0),
+  );
   return {
     ...breakdown,
     shipping,

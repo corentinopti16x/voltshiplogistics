@@ -479,8 +479,8 @@
         "magnetic": "magnetic",
         "sensitive_other": "sensitive (ingestible)"
       },
-      "box": "Box",
-      "boxNote": "product packaging",
+      "box": "Packaging (box)",
+      "boxNote": "product box",
       "packagingIncluded": "packaging {weight} g included"
     },
     "stock": {
@@ -641,7 +641,7 @@
       "ratesChanged": "Rates updated since your quote",
       "missingGrid": "The rate grid is not active yet.",
       "missingProduct": "Price, weight and channel are filled in by Voltship — the matrix shows up after that.",
-      "formulaNote": "COGS(n) = n × product price (+ box if any, + commission) + transport of one parcel of n × unit weight + packaging + handling once per order. The accepted quote stays the contractual reference for 1 unit.",
+      "formulaNote": "COGS(n) = n × product price (+ commission) + packaging box if any + transport of one parcel of n × unit weight + packaging + handling once per order. The accepted quote stays the contractual reference for 1 unit.",
       "roasNote": "Break-even ROAS, then target ROAS at {margin}% margin, computed on the AOV (selling price × n) and the order COGS.",
       "cellDetail": "{carrier}{line} · {tier} · parcel {price}{delivery}",
       "iossRequired": "IOSS required",
@@ -1868,10 +1868,10 @@
       "clientNotePlaceholder": "E.g. sold as a set of 2, engraving included; factory lead time 7 days…",
       "clientNoteHint": "Shown at the top of the client’s product page with its date. The client gets a notification for each new note. Internal notes (yellow box) stay private.",
       "weightHint": "Product alone, without packaging: the parcel packaging (Pricing setting) and the box, if any, are added automatically.",
-      "boxTitle": "Box (only if the product ships in a box bought separately)",
-      "boxIntro": "Leave empty when there is no box. The box price is added to the product price billed to the client (per unit sold), its weight to each unit of the parcel.",
+      "boxTitle": "Packaging box (only if the product needs one)",
+      "boxIntro": "Leave empty when there is no box. The box is packaging, not a product: it is billed to the client on a “Packaging (box)” line, at cost and without commission, per unit sold. Its weight is added to each unit of the parcel.",
       "boxPrice": "Box price",
-      "boxBilled": "Billed €{eur} to the client per unit (rate {rate}).",
+      "boxBilled": "Billed €{eur} to the client per unit, no commission (rate {rate}).",
       "boxWeight": "Box weight",
       "boxWeightHint": "Per unit sold."
     },

@@ -39,8 +39,25 @@ describe("packaging and box", () => {
     expect(boxed?.weightG).toBe(280);
     expect(boxed?.shippingBase).toBe(7);
     expect(boxed?.box).toBe(0.8);
-    expect(boxed?.product).toBe(4.8);
+    // The box is packaging: not in the product line, no commission on it.
+    expect(boxed?.product).toBe(4);
     expect(boxed?.cogs).toBe(12.95);
+  });
+
+  it("keeps the box out of the commission", () => {
+    const withCommission = calculateCogs({
+      clientPrice: 2,
+      weightG: 90,
+      channel: "standard",
+      destination: "FR",
+      cells,
+      commissionPct: 10,
+      boxPrice: 0.4,
+      boxWeightG: 40,
+    });
+    expect(withCommission?.commission).toBe(0.2);
+    expect(withCommission?.box).toBe(0.4);
+    expect(withCommission?.cogs).toBe(7.6);
   });
 
   it("reads the box of a product and converts its price", () => {
