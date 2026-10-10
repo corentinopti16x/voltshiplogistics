@@ -116,6 +116,19 @@ export default async function ProductDetailPage({
           hint: null as string | null,
           value: Number(product.client_price),
         },
+        ...(breakdown.box && breakdown.box > 0
+          ? [
+              {
+                key: "box",
+                label: t("quote.box"),
+                note: t("quote.boxNote"),
+                detail: null as string | null,
+                badge: null as string | null,
+                hint: null as string | null,
+                value: breakdown.box,
+              },
+            ]
+          : []),
         {
           key: "shipping",
           label: t("quote.shippingLine"),
@@ -124,14 +137,19 @@ export default async function ProductDetailPage({
               ? ` · ${t("quote.billedWeight", { weight: breakdown.billedWeightG })}`
               : ""
           }`,
+
           // Carrier + line, weight tier, parcel price and delivery range always come from the grid cell.
-          detail: t("quote.shippingDetail", {
+          detail: `${t("quote.shippingDetail", {
             carrier: breakdown.carrier,
             line: breakdown.lineName ? ` ${breakdown.lineName}` : "",
             tier: formatWeightTier(breakdown.weightMinG, breakdown.weightMaxG),
             price: formatAmount(breakdown.shippingBase, locale),
             delivery: breakdown.deliveryRange ? ` · ${breakdown.deliveryRange}` : "",
-          }),
+          })}${
+            breakdown.packagingWeightG
+              ? ` · ${t("quote.packagingIncluded", { weight: breakdown.packagingWeightG })}`
+              : ""
+          }`,
           // IOSS: Voltship's number for every EU parcel — nothing for the client to provide.
           badge: null,
           hint:
@@ -259,6 +277,8 @@ export default async function ProductDetailPage({
                         className={`block h-full rounded-full ${
                           line.key === "product"
                             ? "bg-[#1B4677]"
+                            : line.key === "box"
+                              ? "bg-[#3A6EA5]"
                             : line.key === "shipping"
                               ? "bg-[#5C8BC7]"
                               : "bg-[var(--gold)]"

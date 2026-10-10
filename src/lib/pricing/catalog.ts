@@ -23,6 +23,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { ProductRow } from "@/lib/products/types";
 import { getActiveGridVersion, getProductMarkets, loadRateCellsFor, type ClientPricingProfile } from "./server";
 import { handlingLadderFrom, readPricingSettings } from "./settings";
+import { parcelExtras } from "@/lib/products/extras";
 
 export type CatalogMarketQuote = {
   destination: string;
@@ -107,6 +108,7 @@ export async function calculateCatalogQuotes(products: ProductRow[]): Promise<Ma
         handlingLadder: handlingLadderFrom(settings),
         fxRmbPerEur: settings.fx_rmb_per_eur,
         batteryInternal: hasInternalBattery(product.quote_json),
+        ...parcelExtras(product.quote_json, settings),
         ...profile,
       });
       const announced = announcedPriceFor(announcedPrices, destination, 1);

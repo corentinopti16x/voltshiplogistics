@@ -95,6 +95,23 @@ export function billedWeightG(input: BilledWeightInput) {
   return Math.round(billed);
 }
 
+/** Packaging added once per parcel (mailer bag, filler, label) when no setting is given. */
+export const DEFAULT_PACKAGING_WEIGHT_G = 20;
+
+/**
+ * Actual parcel weight: n × (unit weight + box weight) + packaging once per parcel.
+ * The box (when the product ships in a bought box) is per unit; the packaging is per order.
+ */
+export function parcelWeightG(
+  unitWeightG: number,
+  quantity: number,
+  extras: { boxWeightG?: number | null; packagingWeightG?: number | null } = {},
+) {
+  const box = Math.max(0, Number(extras.boxWeightG) || 0);
+  const packaging = Math.max(0, Number(extras.packagingWeightG) || 0);
+  return (unitWeightG + box) * quantity + packaging;
+}
+
 /** A carrier service line: carrier + line name (null line for legacy single-line grids). */
 export type CarrierLineRef = { carrier: string; lineName: string | null };
 
@@ -165,6 +182,12 @@ export type PricingInput = {
    * discount never takes the client transport below what the carrier costs Voltship.
    */
   fxRmbPerEur?: number | null;
+  /** Packaging weight added once per parcel (grams). */
+  packagingWeightG?: number | null;
+  /** Box bought for the product (€ per unit sold), billed with the product. 0/absent = no box. */
+  boxPrice?: number | null;
+  /** Weight of that box (grams per unit sold). */
+  boxWeightG?: number | null;
 };
 
 export type CogsBreakdown = {
@@ -174,7 +197,7 @@ export type CogsBreakdown = {
   channel: ShippingChannel;
   /** Units in the parcel (1 for a single-unit quote). */
   quantity: number;
-  /** Actual parcel weight (quantity × unit weight). */
+  /** Actual parcel weight: quantity × (unit weight + box) + packaging. */
   weightG: number;
   /** Weight the carrier bills: max(actual, volumetric), USA ≥ 50 g. Equals weightG without dimensions. */
   billedWeightG: number;
@@ -184,8 +207,12 @@ export type CogsBreakdown = {
   iossRequired: boolean;
   /** Unit product price (negotiated factory price). */
   clientPrice: number;
-  /** Product component for the whole order: clientPrice × quantity. */
+  /** Product component for the whole order: (clientPrice + box) × quantity. */
   product: number;
+  /** Part of `product` paid for the boxes (box price × quantity); 0 without box. */
+  box?: number;
+  /** Packaging weight included in `weightG` (once per parcel). */
+  packagingWeightG?: number;
   shippingBase: number;
   shipping: number;
   handling: number;
@@ -374,13 +401,17 @@ export function calculateCogs(input: PricingInput): CogsBreakdown | null {
     return null;
   }
 
-  // One parcel for the whole order: the rate bracket is picked for n × unit weight.
-  const parcelWeightG = input.weightG * quantity;
-  const selected = selectRateCell(input.cells, { ...input, weightG: parcelWeightG, quantity });
+  // One parcel for the whole order: the rate bracket is picked for n × (unit + box) + packaging.
+  const packagingWeightG = Math.max(0, Number(input.packagingWeightG) || 0);
+  const parcelWeight = parcelWeightG(input.weightG, quantity, {
+    boxWeightG: input.boxWeightG,
+    packagingWeightG,
+  });
+  const selected = selectRateCell(input.cells, { ...input, weightG: parcelWeight, quantity });
   if (!selected) return null;
   const { cell } = selected;
   const billed = billedWeightG({
-    actualG: parcelWeightG,
+    actualG: parcelWeight,
     quantity,
     dimensionsCm: input.dimensionsCm,
     carrier: cell.carrier,
@@ -393,7 +424,9 @@ export function calculateCogs(input: PricingInput): CogsBreakdown | null {
     volumetricDivisorFor(cell.carrier, input.volumetricDivisors ?? DEFAULT_VOLUMETRIC_DIVISORS),
   );
 
-  const product = money(input.clientPrice * quantity);
+  const boxPrice = Math.max(0, Number(input.boxPrice) || 0);
+  const box = money(boxPrice * quantity);
+  const product = money((input.clientPrice + boxPrice) * quantity);
   const shippingBase = money(cell.price);
   // Handling (picking + packing) is charged per order and grows with the parcel size.
   const handling = handlingForQuantity(
@@ -414,12 +447,14 @@ export function calculateCogs(input: PricingInput): CogsBreakdown | null {
     destination: cell.destination.toUpperCase(),
     channel: cell.channel,
     quantity,
-    weightG: parcelWeightG,
+    weightG: parcelWeight,
     billedWeightG: billed,
     volumetricWeightG: volumetric,
     iossRequired: cell.iossRequired === true,
     clientPrice: money(input.clientPrice),
     product,
+    box,
+    packagingWeightG,
     shippingBase,
     shipping,
     handling,

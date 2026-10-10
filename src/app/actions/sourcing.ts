@@ -14,7 +14,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { ProductRow, SourcingStatus } from "@/lib/products/types";
 import type { ShippingChannel } from "@/lib/domain/pricing";
 import { nextVoltshipSku } from "@/lib/products/todo-core";
-import { parseClientNote, parsePackPieces, withSheetExtras } from "@/lib/products/extras";
+import { parseBoxField, parseClientNote, parsePackPieces, withSheetExtras } from "@/lib/products/extras";
 import {
   CARRIER_PREF_KEY,
   parseCarrierPreferences,
@@ -114,6 +114,9 @@ function parseDraft(formData: FormData) {
     packPieces: parsePackPieces(formData.get("pack_pieces")),
     /** Note shown to the client on his product page. */
     clientNote: parseClientNote(formData.get("client_note")),
+    /** Box bought for the product: price (¥ per unit) and weight (g per unit); null = no box. */
+    boxPriceRmb: parseBoxField(formData.get("box_price_rmb")),
+    boxWeightG: parseBoxField(formData.get("box_weight_g")),
     internal: {
       factory_purchase_price: nullableNumber(formData, "factory_purchase_price"),
       supplier_name: nullableText(formData, "supplier_name"),
@@ -143,6 +146,9 @@ function validateDraft(draft: ReturnType<typeof parseDraft>) {
   }
   if (!statuses.includes(draft.client.sourcing_status)) return "Invalid sourcing status.";
   if (draft.packPieces == null) return "Pieces per set must be a whole number between 1 and 50.";
+  if (Number.isNaN(draft.boxPriceRmb) || Number.isNaN(draft.boxWeightG)) {
+    return "Box price and weight must be positive numbers.";
+  }
   return null;
 }
 
@@ -217,6 +223,8 @@ function sheetQuote(product: ProductRow, draft: ReturnType<typeof parseDraft>) {
     batteryInternal: draft.batteryInternal,
     packPieces: draft.packPieces ?? 1,
     clientNote: draft.clientNote,
+    boxPriceRmb: draft.boxPriceRmb,
+    boxWeightG: draft.boxWeightG,
   });
 }
 

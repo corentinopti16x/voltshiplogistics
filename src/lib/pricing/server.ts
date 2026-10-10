@@ -13,6 +13,7 @@ import {
   activeAnnouncedPrices,
   parseDestinationMarkets,
   parseParcelDimensions,
+  parcelWeightG,
   type CarrierLineRef,
   type CogsBreakdown,
   type RateCell,
@@ -30,6 +31,7 @@ import {
 } from "@/lib/domain/carrier-rules";
 import { getProductRequest, type ProductRow } from "@/lib/products/types";
 import { handlingLadderFrom, readPricingSettings } from "./settings";
+import { parcelExtras } from "@/lib/products/extras";
 
 export type ClientPricingProfile = {
   commissionPct: number;
@@ -288,6 +290,8 @@ export async function calculateProductCogsMatrix(
   const announcedPrices = activeAnnouncedPrices(product.quote_json);
   // Admin rules: blocked lines are removed from every selection (and from the options list).
   const allowedLines = allowedLinesFromRules(cells, rules);
+  // Box bought for the product (price + weight per unit) and packaging once per parcel.
+  const extras = parcelExtras(product.quote_json, settings);
 
   return {
     activeGridVersion,
@@ -307,12 +311,13 @@ export async function calculateProductCogsMatrix(
         handlingLadder: handlingLadderFrom(settings),
         fxRmbPerEur: settings.fx_rmb_per_eur,
         batteryInternal: hasInternalBattery(product.quote_json),
+        ...extras,
       };
       return {
         destination,
         preference: selection.preference,
         forced: selection.forced,
-        options: listRateOptions(cells, { ...common, quantity: 1 }),
+        options: listRateOptions(cells, { ...common, weightG: parcelWeightG(unitWeightG, 1, extras), quantity: 1 }),
         cells: quantities.map((quantity) => {
           const computed = calculateCogs({ ...common, cells, clientPrice, quantity, ...profile });
           const announced = announcedPriceFor(announcedPrices, destination, quantity);

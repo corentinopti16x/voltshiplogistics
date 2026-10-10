@@ -9,7 +9,7 @@ import { unitsSold90d, type SalesVariant } from "@/lib/products/sales90";
 import { calculateCatalogQuotes } from "@/lib/pricing/catalog";
 import { carrierLineLabel } from "@/lib/domain/carrier-rules";
 import { hasInternalBattery } from "@/lib/domain/pricing";
-import { clientNote, packPieces } from "@/lib/products/extras";
+import { clientNote, packPieces, productBox } from "@/lib/products/extras";
 import { formatAmount } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -235,6 +235,14 @@ export default async function CatalogPage({
                         {pieces > 1 ? (
                           <span className="rounded bg-[#f3e6bf] px-1.5 py-0.5 text-[11px] font-semibold">
                             {t("set", { count: pieces })}
+                          </span>
+                        ) : null}
+                        {productBox(row.quote_json) ? (
+                          <span className="rounded bg-[var(--card-soft)] px-1.5 py-0.5 text-[11px] ring-1 ring-[var(--line)]">
+                            {t("box", {
+                              price: String(productBox(row.quote_json)?.priceRmb ?? 0),
+                              weight: String(productBox(row.quote_json)?.weightG ?? 0),
+                            })}
                           </span>
                         ) : null}
                         {hasInternalBattery(row.quote_json) ? (

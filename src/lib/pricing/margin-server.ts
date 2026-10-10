@@ -21,6 +21,7 @@ import {
   FLAT_HANDLING,
   handlingForQuantity,
   findRateCell,
+  parcelWeightG as parcelWeightOf,
   activeAnnouncedPrices,
   classifyAnnouncedPrice,
   parseAnnouncedPrices,
@@ -48,6 +49,7 @@ import {
 } from "@/lib/domain/carrier-rules";
 import { handlingLadderFrom, readPricingSettings, type PricingSettings } from "@/lib/pricing/settings";
 import { CLIENT_PRODUCT_SELECT, serializeClientProduct } from "@/lib/products/visibility";
+import { parcelExtras, productBox } from "@/lib/products/extras";
 import type { ProductRow } from "@/lib/products/types";
 import { unpackOrderLines, type OrderShipping } from "@/lib/shopify/order-cache";
 import {
@@ -209,6 +211,9 @@ function marginForParcel(
   const channel = (product.shipping_channel ?? "standard") as ShippingChannel;
   const unitWeightG = product.weight_g ?? 0;
   const dimensionsCm = parseParcelDimensions(product.quote_json);
+  // Box (bought per unit, billed with the product) + packaging once per parcel.
+  const extras = parcelExtras(product.quote_json, settings);
+  const boxRmb = productBox(product.quote_json)?.priceRmb ?? 0;
   // Same engine as the client quote: product × n, commission on product, one parcel, handling once.
   const computed = ready
     ? calculateCogs({
@@ -223,6 +228,7 @@ function marginForParcel(
         handlingLadder: handlingLadderFrom(settings),
         fxRmbPerEur: settings.fx_rmb_per_eur,
         batteryInternal: hasInternalBattery(product.quote_json),
+        ...extras,
         ...choice,
         ...profile,
       })
@@ -231,9 +237,9 @@ function marginForParcel(
   const breakdown = computed && announced != null ? applyAnnouncedPrice(computed, announced) : computed;
   // Same cell selection as calculateCogs (findRateCell on the billed parcel weight) to read
   // the internal carrier cost of the cell the client price came from.
-  const parcelWeightG = unitWeightG * quantity;
+  const parcelWeightG = parcelWeightOf(unitWeightG, quantity, extras);
   const cell =
-    breakdown && parcelWeightG > 0
+    breakdown && unitWeightG > 0
       ? findRateCell(cells, {
           weightG: parcelWeightG,
           quantity,
@@ -248,7 +254,7 @@ function marginForParcel(
   return computeVoltshipMargin({
     quantity,
     client: breakdown,
-    factoryCostRmb: ctx.factoryPriceRmb == null ? null : ctx.factoryPriceRmb * quantity,
+    factoryCostRmb: ctx.factoryPriceRmb == null ? null : (ctx.factoryPriceRmb + boxRmb) * quantity,
     carrierCostRmb: cell?.carrierCostRmb ?? null,
     carrierCostSource: cell?.carrierCostRmb != null ? "grid" : null,
     taxIncluded: cell?.taxIncluded !== false,
@@ -490,11 +496,20 @@ function marginForOrder(
   const lead = priced[0].product;
   const channel = (lead.shipping_channel ?? "standard") as ShippingChannel;
   const destination = getProductMarkets(lead)[0];
-  const computedWeightG = priced.reduce((sum, line) => sum + (line.product.weight_g ?? 0) * line.quantity, 0);
+  // Each line: (unit weight + box) × qty; packaging once per parcel.
+  const extrasOf = (product: ProductRow) => parcelExtras(product.quote_json, settings);
+  const computedWeightG =
+    priced.reduce(
+      (sum, line) => sum + parcelWeightOf(line.product.weight_g ?? 0, line.quantity, { boxWeightG: extrasOf(line.product).boxWeightG }),
+      0,
+    ) + settings.packaging_weight_g;
   const parcelWeightG = order.billed_weight_g ?? computedWeightG;
   const units = priced.reduce((sum, line) => sum + line.quantity, 0);
-  // Product side: client price × qty per line, commission on the product total.
-  const productTotal = priced.reduce((sum, line) => sum + Number(line.product.client_price) * line.quantity, 0);
+  // Product side: (client price + box) × qty per line, commission on the product total.
+  const productTotal = priced.reduce(
+    (sum, line) => sum + (Number(line.product.client_price) + extrasOf(line.product).boxPrice) * line.quantity,
+    0,
+  );
   const commission = productTotal * (Math.max(0, profile.commissionPct) / 100);
   const cell = parcelWeightG > 0 ? findRateCell(cells, {
           weightG: parcelWeightG,
@@ -535,7 +550,7 @@ function marginForOrder(
       factoryCostRmb = null;
       break;
     }
-    factoryCostRmb += unit * line.quantity;
+    factoryCostRmb += (unit + (productBox(line.product.quote_json)?.priceRmb ?? 0)) * line.quantity;
   }
   const realCarrier = extractCarrierCostRmb(order.fee_json);
   const margin = computeVoltshipMargin({

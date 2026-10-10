@@ -96,7 +96,11 @@
         "weight": "重量",
         "price": "价格（EUR）",
         "delivery": "时效"
-      }
+      },
+      "packagingTitle": "每个包裹的包装重量",
+      "packagingLead": "每个订单加一次的袋子 / 纸箱 / 面单重量，适用于所有产品。",
+      "packagingLabel": "每个包裹的包装重量",
+      "packagingSave": "保存"
     },
     "pricingForms": {
       "saved": "已保存。",
@@ -999,14 +1003,21 @@
       "piecesUnit": "件",
       "packPiecesHint": "1 = 单件销售。如果 Shopify 卖出 1 个 = 需发 2 件（2 件套），填 2。",
       "packPiecesSetHint": "{count} 件套：Shopify 卖出 1 个 = 仓库（ECCANG）需拣 {count} 件。",
-      "setWeightHint": "整套重量（{count} 件 + 包装）。",
+      "setWeightHint": "整套重量（{count} 件），不含包装和盒子：会自动加上。",
       "setPriceHint": "整套价格（{count} 件），即客户每售出一个单位支付的价格。",
       "setFactoryHint": "整套工厂价（{count} 件）。",
       "perPiece": "即每件 ¥{value}。",
       "clientNote": "给客户的备注",
       "clientNoteBadge": "客户可见",
       "clientNotePlaceholder": "例如：2 件套销售，含刻字；工厂交期 7 天…",
-      "clientNoteHint": "显示在客户产品页顶部（带日期），每条新备注客户都会收到通知。内部备注（黄色框）仅内部可见。"
+      "clientNoteHint": "显示在客户产品页顶部（带日期），每条新备注客户都会收到通知。内部备注（黄色框）仅内部可见。",
+      "weightHint": "仅产品重量，不含包装：包裹包装（定价设置）和盒子（如有）会自动加上。",
+      "boxTitle": "盒子（仅当产品需要另外购买盒子时）",
+      "boxIntro": "没有盒子请留空。盒子价格按每个售出单位加到向客户收取的产品价格中，盒子重量加到包裹的每个单位。",
+      "boxPrice": "盒子价格",
+      "boxBilled": "每单位向客户收取 {eur} €（汇率 {rate}）。",
+      "boxWeight": "盒子重量",
+      "boxWeightHint": "每个售出单位。"
     },
     "title": "采购待办队列",
     "soon": "按请求时间从早到晚处理。填写报价字段后，向客户发送最终 COGS（商品成本）。",
@@ -1066,7 +1077,8 @@
         "forced": "指定",
         "fallback": "所选不可用 → 自动"
       },
-      "announced": "已承诺价格"
+      "announced": "已承诺价格",
+      "box": "盒子 ¥{price} · {weight} g"
     }
   },
   "app": {

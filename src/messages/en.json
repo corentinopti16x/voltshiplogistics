@@ -478,7 +478,10 @@
         "liquid_perfume": "liquid / perfume",
         "magnetic": "magnetic",
         "sensitive_other": "sensitive (ingestible)"
-      }
+      },
+      "box": "Box",
+      "boxNote": "product packaging",
+      "packagingIncluded": "packaging {weight} g included"
     },
     "stock": {
       "title": "Stock",
@@ -638,7 +641,7 @@
       "ratesChanged": "Rates updated since your quote",
       "missingGrid": "The rate grid is not active yet.",
       "missingProduct": "Price, weight and channel are filled in by Voltship — the matrix shows up after that.",
-      "formulaNote": "COGS(n) = n × product price (+ commission) + shipping for one parcel of n × unit weight + handling once per order. The accepted quote stays the contractual figure for 1 unit.",
+      "formulaNote": "COGS(n) = n × product price (+ box if any, + commission) + transport of one parcel of n × unit weight + packaging + handling once per order. The accepted quote stays the contractual reference for 1 unit.",
       "roasNote": "Break-even ROAS, then target ROAS at {margin}% margin, computed on the AOV (selling price × n) and the order COGS.",
       "cellDetail": "{carrier}{line} · {tier} · parcel {price}{delivery}",
       "iossRequired": "IOSS required",
@@ -1577,7 +1580,11 @@
         "weight": "Weight",
         "price": "Price (EUR)",
         "delivery": "Delivery"
-      }
+      },
+      "packagingTitle": "Packaging added to every parcel",
+      "packagingLead": "Weight of the bag / carton / label added once per order, for every product. It counts when picking the weight bracket, so in transport, margin and carrier. Set 0 to add nothing.",
+      "packagingLabel": "Packaging weight per parcel",
+      "packagingSave": "Save"
     },
     "pricingForms": {
       "saved": "Saved.",
@@ -1852,14 +1859,21 @@
       "piecesUnit": "pcs",
       "packPiecesHint": "1 = sold alone. Set 2 if one Shopify unit = 2 pieces to ship (set of 2).",
       "packPiecesSetHint": "Set of {count}: 1 unit sold on Shopify = {count} pieces to pick at the warehouse (ECCANG).",
-      "setWeightHint": "Weight of the whole set ({count} pcs + packaging).",
+      "setWeightHint": "Weight of the whole set ({count} pcs), without packaging or box: they are added automatically.",
       "setPriceHint": "Price of the whole set ({count} pcs): what the client pays per unit sold.",
       "setFactoryHint": "Factory price of the whole set ({count} pcs).",
       "perPiece": "That is ¥{value} per piece.",
       "clientNote": "Note to the client",
       "clientNoteBadge": "Visible to the client",
       "clientNotePlaceholder": "E.g. sold as a set of 2, engraving included; factory lead time 7 days…",
-      "clientNoteHint": "Shown at the top of the client’s product page with its date. The client gets a notification for each new note. Internal notes (yellow box) stay private."
+      "clientNoteHint": "Shown at the top of the client’s product page with its date. The client gets a notification for each new note. Internal notes (yellow box) stay private.",
+      "weightHint": "Product alone, without packaging: the parcel packaging (Pricing setting) and the box, if any, are added automatically.",
+      "boxTitle": "Box (only if the product ships in a box bought separately)",
+      "boxIntro": "Leave empty when there is no box. The box price is added to the product price billed to the client (per unit sold), its weight to each unit of the parcel.",
+      "boxPrice": "Box price",
+      "boxBilled": "Billed €{eur} to the client per unit (rate {rate}).",
+      "boxWeight": "Box weight",
+      "boxWeightHint": "Per unit sold."
     },
     "announced": {
       "title": "Prices announced to the client",
@@ -1917,7 +1931,8 @@
         "forced": "forced",
         "fallback": "choice unavailable → auto"
       },
-      "announced": "announced price"
+      "announced": "announced price",
+      "box": "Box ¥{price} · {weight} g"
     }
   },
   "support": {

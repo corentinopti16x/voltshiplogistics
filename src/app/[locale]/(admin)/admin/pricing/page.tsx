@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { activateRateGridFormAction } from "@/app/actions/pricing";
+import { activateRateGridFormAction, savePackagingWeightAction } from "@/app/actions/pricing";
 import { ButtonLink } from "@/components/ui/button";
 import { CreateGridForm, RateCellForm, RateGridCsvForm } from "@/components/admin/pricing-forms";
 import { readPricingSettings } from "@/lib/pricing/settings";
@@ -59,7 +59,37 @@ export default async function AdminPricingPage() {
         </ButtonLink>
       </div>
 
-      <section className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
+      <section className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6" id="packaging">
+        <h2 className="text-sm font-semibold">{tp("packagingTitle")}</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">{tp("packagingLead")}</p>
+        <form action={savePackagingWeightAction} className="mt-4 flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-[var(--muted)]">{tp("packagingLabel")}</span>
+            <span className="flex items-stretch overflow-hidden rounded-md border border-[var(--line)] bg-white">
+              <input
+                name="packaging_weight_g"
+                type="number"
+                min="0"
+                max="2000"
+                step="1"
+                defaultValue={settings.packaging_weight_g}
+                className="tabular w-28 px-3 py-2 outline-none"
+              />
+              <span className="flex items-center border-l border-[var(--line)] bg-[var(--card-soft)] px-2.5 text-xs font-semibold text-[var(--muted)]">
+                g
+              </span>
+            </span>
+          </label>
+          <button
+            type="submit"
+            className="cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white"
+          >
+            {tp("packagingSave")}
+          </button>
+        </form>
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
         <h2 className="text-sm font-semibold">{tp("newGrid")}</h2>
         <div className="mt-4">
           <CreateGridForm />
