@@ -12,6 +12,8 @@ import {
   isExcludedOrder,
   packOrderLines,
   resolveShopifyFulfillment,
+  shippingFromFulfillments,
+  shippingStatusOf,
   unpackOrderLines,
 } from "@/lib/shopify/order-cache";
 import {
@@ -137,6 +139,9 @@ export async function POST(request: Request) {
             units: order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0),
             review,
             name: order.name ?? null,
+            shipping:
+              shippingFromFulfillments(order.fulfillments, shippingStatusOf(order.fulfillment_status)) ??
+              previousOrder.shipping,
           },
         ),
         updated_at: new Date().toISOString(),

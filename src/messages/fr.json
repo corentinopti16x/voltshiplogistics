@@ -1220,7 +1220,15 @@
         "cost": "Coût Voltship",
         "margin": "Marge",
         "unpriced": "Non chiffrée (fiche produit incomplète ou SKU inconnu).",
-        "toComplete": "À compléter →"
+        "toComplete": "À compléter →",
+        "shipping": "Expédition",
+        "tracking": "Suivi",
+        "statuses": {
+          "fulfilled": "Expédiée",
+          "partial": "Partielle",
+          "unfulfilled": "À expédier",
+          "unknown": "—"
+        }
       },
       "announced": {
         "title": "Prix bloqués à surveiller",
@@ -1716,7 +1724,8 @@
         "status": "Statut",
         "missing": "Manquant",
         "created": "Créé le",
-        "sales90": "Ventes 90 j"
+        "sales90": "Ventes 90 j",
+        "sales7": "Ventes 7 j"
       },
       "noSku": "Pas de SKU",
       "ready": "Complet",
@@ -1740,7 +1749,10 @@
       "zeroHidden": "{count, plural, one {# produit Shopify sans vente sur 90 jours masqué.} other {# produits Shopify sans vente sur 90 jours masqués.}}",
       "zeroShown": "Produits Shopify sans vente sur 90 jours affichés.",
       "showZero": "Les afficher",
-      "hideZero": "Les masquer"
+      "hideZero": "Les masquer",
+      "trendNew": "nouveau",
+      "trendHint": "{previous} les 7 jours d'avant",
+      "marginLink": "Marge →"
     },
     "product": {
       "backToTodo": "← À compléter",

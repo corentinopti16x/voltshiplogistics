@@ -586,7 +586,15 @@
         "cost": "Voltship 成本",
         "margin": "毛利",
         "unpriced": "未计价（产品资料不完整或 SKU 未知）。",
-        "toComplete": "去完善 →"
+        "toComplete": "去完善 →",
+        "shipping": "发货",
+        "tracking": "追踪号",
+        "statuses": {
+          "fulfilled": "已发货",
+          "partial": "部分发货",
+          "unfulfilled": "待发货",
+          "unknown": "—"
+        }
       },
       "announced": {
         "title": "需关注的锁定价格",
@@ -878,7 +886,8 @@
         "status": "状态",
         "missing": "缺少项",
         "created": "创建日期",
-        "sales90": "90 天销量"
+        "sales90": "90 天销量",
+        "sales7": "7 天销量"
       },
       "noSku": "无 SKU",
       "ready": "已齐全",
@@ -902,7 +911,10 @@
       "zeroHidden": "已隐藏 {count} 个 90 天无销量的 Shopify 产品。",
       "zeroShown": "正在显示 90 天无销量的 Shopify 产品。",
       "showZero": "显示",
-      "hideZero": "隐藏"
+      "hideZero": "隐藏",
+      "trendNew": "新",
+      "trendHint": "前 7 天：{previous}",
+      "marginLink": "利润 →"
     },
     "product": {
       "backToTodo": "← 待完善",

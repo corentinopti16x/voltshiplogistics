@@ -40,7 +40,7 @@ import {
 import { handlingLadderFrom, readPricingSettings, type PricingSettings } from "@/lib/pricing/settings";
 import { CLIENT_PRODUCT_SELECT, serializeClientProduct } from "@/lib/products/visibility";
 import type { ProductRow } from "@/lib/products/types";
-import { unpackOrderLines } from "@/lib/shopify/order-cache";
+import { unpackOrderLines, type OrderShipping } from "@/lib/shopify/order-cache";
 import {
   computeVoltshipMargin,
   extractCarrierCostRmb,
@@ -347,6 +347,8 @@ export type OrderMargin = {
   margin: VoltshipMargin | null;
   /** "real" when the carrier cost comes from ECCANG fees, "estimated" from the grid, null unknown. */
   carrierSource: "real" | "estimated" | null;
+  /** Fulfillment + tracking: ECCANG parcel, else what Shopify says; null when unknown. */
+  shipping: (OrderShipping & { source: "eccang" | "shopify" }) | null;
 };
 
 export type ClientSummaryRow = {
@@ -381,7 +383,27 @@ type EccangOrderLite = {
   /** External ECCANG orders (created by the client himself): lines come from ECCANG. */
   items_json?: Array<{ sku: string; quantity: number }> | null;
   label?: string | null;
+  /** ECCANG parcel: tracking number + carrier. */
+  tracking_no?: string | null;
+  carrier_code?: string | null;
+  /** Shopify order: fulfillment status + tracking from the order cache. */
+  shipping?: OrderShipping | null;
 };
+
+/** Shipping state shown on the per-order margin: ECCANG parcel when there is one, else Shopify. */
+function orderShippingOf(order: EccangOrderLite): OrderMargin["shipping"] {
+  if (!order.reference_no.startsWith("shopify:")) {
+    return {
+      status: order.shipped_at ? "fulfilled" : "unfulfilled",
+      trackingNumbers: order.tracking_no ? [order.tracking_no] : [],
+      company: order.carrier_code ?? null,
+      url: null,
+      shippedAt: order.shipped_at,
+      source: "eccang",
+    };
+  }
+  return order.shipping ? { ...order.shipping, source: "shopify" } : null;
+}
 
 /**
  * Margin of one shipped parcel. The client side is priced with the live grid (same
@@ -415,6 +437,7 @@ function marginForOrder(
     shippedAt: order.shipped_at,
     billedWeightG: order.billed_weight_g,
     lines: matched.map((line) => ({ sku: line.sku, quantity: line.quantity, productId: line.product?.id ?? null })),
+    shipping: orderShippingOf(order),
   };
   if (priced.length === 0) return { ...base, margin: null, carrierSource: null };
 
@@ -584,7 +607,9 @@ export async function loadShippedOrderMargins(range: { sinceIso: string; untilIs
   const admin = createAdminClient();
   let query = admin
     .from("eccang_orders")
-    .select("id, client_id, shop_id, shopify_order_id, reference_no, billed_weight_g, fee_json, shipped_at, items_json")
+    .select(
+      "id, client_id, shop_id, shopify_order_id, reference_no, billed_weight_g, fee_json, shipped_at, items_json, tracking_no, carrier_code",
+    )
     .eq("status", "D")
     .gte("shipped_at", range.sinceIso);
   if (range.untilIso) query = query.lt("shipped_at", range.untilIso);
@@ -639,6 +664,7 @@ export async function loadEstimatedShopifyOrderMargins(range: {
       billed_weight_g: null,
       fee_json: null,
       shipped_at: `${row.order_date}T12:00:00.000Z`,
+      shipping: unpacked.shipping,
     };
   });
   return {

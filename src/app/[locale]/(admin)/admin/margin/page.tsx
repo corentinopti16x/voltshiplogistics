@@ -188,12 +188,14 @@ export default async function AdminMarginPage() {
           <p className="border-t border-[var(--line)] p-6 text-sm text-[var(--muted)]">{t("byOrder.empty")}</p>
         ) : (
           <div className="max-h-[640px] overflow-auto">
-            <table className="w-full min-w-[980px] text-left text-sm">
+            <table className="w-full min-w-[1180px] text-left text-sm">
               <thead className="sticky top-0 border-y border-[var(--line)] bg-[var(--card)] text-xs text-[var(--muted)]">
                 <tr>
                   <th className="px-4 py-3">{t("byOrder.date")}</th>
                   <th className="px-4 py-3">{t("byOrder.client")}</th>
                   <th className="px-4 py-3">{t("byOrder.order")}</th>
+                  <th className="px-4 py-3">{t("byOrder.shipping")}</th>
+                  <th className="px-4 py-3">{t("byOrder.tracking")}</th>
                   <th className="px-4 py-3 text-right">{t("byOrder.units")}</th>
                   <th className="px-4 py-3 text-right">{t("byOrder.clientPays")}</th>
                   <th className="px-4 py-3 text-right">{t("byOrder.cost")}</th>
@@ -213,6 +215,55 @@ export default async function AdminMarginPage() {
                       </td>
                       <td className="px-4 py-2.5">{summaryClientName(order.clientId)}</td>
                       <td className="px-4 py-2.5 font-medium">{order.label}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        {order.shipping ? (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                              order.shipping.status === "fulfilled"
+                                ? "bg-[#e7f5ec] text-[#1f7a3d]"
+                                : order.shipping.status === "partial"
+                                  ? "bg-[#fff1d6] text-[#8a5a00]"
+                                  : "bg-[var(--bg)] text-[var(--muted)] ring-1 ring-[var(--line)]"
+                            }`}
+                            title={order.shipping.source === "eccang" ? "ECCANG" : "Shopify"}
+                          >
+                            {t(`byOrder.statuses.${order.shipping.status}`)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-[var(--faint)]">{t("byOrder.statuses.unknown")}</span>
+                        )}
+                        {order.shipping?.shippedAt ? (
+                          <span className="block text-[11px] text-[var(--faint)]">
+                            {new Date(order.shipping.shippedAt).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-GB")}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs">
+                        {order.shipping && order.shipping.trackingNumbers.length > 0 ? (
+                          <>
+                            {order.shipping.url ? (
+                              <a
+                                href={order.shipping.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-mono font-medium underline"
+                              >
+                                {order.shipping.trackingNumbers[0]}
+                              </a>
+                            ) : (
+                              <span className="font-mono font-medium">{order.shipping.trackingNumbers[0]}</span>
+                            )}
+                            {order.shipping.trackingNumbers.length > 1 ? (
+                              <span className="text-[var(--muted)]"> +{order.shipping.trackingNumbers.length - 1}</span>
+                            ) : null}
+                            {order.shipping.company ? (
+                              <span className="block text-[11px] text-[var(--muted)]">{order.shipping.company}</span>
+                            ) : null}
+                          </>
+                        ) : (
+                          <span className="text-[var(--faint)]">—</span>
+                        )}
+                      </td>
                       <td className="tabular px-4 py-2.5 text-right">
                         {order.lines.reduce((sum, line) => sum + line.quantity, 0)}
                       </td>

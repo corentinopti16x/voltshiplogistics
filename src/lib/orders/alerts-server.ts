@@ -187,6 +187,7 @@ export async function applyOrderReview(
         units,
         review,
         name: order.name,
+        shipping: order.shipping,
       }),
       updated_at: new Date().toISOString(),
     })

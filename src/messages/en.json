@@ -1220,7 +1220,15 @@
         "cost": "Voltship cost",
         "margin": "Margin",
         "unpriced": "Not priced (incomplete product sheet or unknown SKU).",
-        "toComplete": "To complete →"
+        "toComplete": "To complete →",
+        "shipping": "Shipping",
+        "tracking": "Tracking",
+        "statuses": {
+          "fulfilled": "Shipped",
+          "partial": "Partial",
+          "unfulfilled": "To ship",
+          "unknown": "—"
+        }
       },
       "announced": {
         "title": "Locked prices to watch",
@@ -1716,7 +1724,8 @@
         "status": "Status",
         "missing": "Missing",
         "created": "Created",
-        "sales90": "Sales 90 d"
+        "sales90": "Sales 90 d",
+        "sales7": "Sales 7 d"
       },
       "noSku": "No SKU",
       "ready": "Ready",
@@ -1740,7 +1749,10 @@
       "zeroHidden": "{count, plural, one {# Shopify product with no sale in 90 days hidden.} other {# Shopify products with no sale in 90 days hidden.}}",
       "zeroShown": "Shopify products with no sale in 90 days shown.",
       "showZero": "Show them",
-      "hideZero": "Hide them"
+      "hideZero": "Hide them",
+      "trendNew": "new",
+      "trendHint": "{previous} the 7 days before",
+      "marginLink": "Margin →"
     },
     "product": {
       "backToTodo": "← To complete",
