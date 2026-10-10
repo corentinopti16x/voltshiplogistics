@@ -6,10 +6,16 @@ import { Link } from "@/i18n/routing";
 import { ProductPhoto } from "@/components/client/product-photo";
 import { SourcerShell } from "@/components/sourcer/sourcer-shell";
 import type { ProductRow } from "@/lib/products/types";
-import { isShopifyImport, unitsSold90d, type SalesVariant } from "@/lib/products/sales90";
+import {
+  isShopifyImport,
+  productSkuKeys,
+  sevenDayTrends,
+  unitsSold90d,
+  type SalesVariant,
+} from "@/lib/products/sales90";
 
-type SortKey = "created" | "sales" | "title" | "client" | "status";
-const SORT_KEYS: SortKey[] = ["created", "sales", "title", "client", "status"];
+type SortKey = "created" | "sales" | "sales7" | "title" | "client" | "status";
+const SORT_KEYS: SortKey[] = ["created", "sales", "sales7", "title", "client", "status"];
 
 export default async function SourcerPage({
   params,
@@ -75,6 +81,26 @@ export default async function SourcerPage({
     }
   }
   const sales = unitsSold90d(allRows, variants);
+  // Last 7 days vs the 7 before (daily sales cache), for the trend column.
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const since = new Date(now.getTime() - 13 * 86_400_000).toISOString().slice(0, 10);
+  const daily: Array<{ client_id: string; sku: string; date: string; units_sold: number | null }> = [];
+  if (clientIds.length > 0) {
+    for (let from = 0; from < 100000; from += 1000) {
+      const { data: page } = await admin
+        .from("sales_cache")
+        .select("client_id, sku, date, units_sold")
+        .in("client_id", clientIds)
+        .gte("date", since)
+        .order("id")
+        .range(from, from + 999);
+      daily.push(...((page ?? []) as typeof daily));
+      if (!page || page.length < 1000) break;
+    }
+  }
+  const trends = sevenDayTrends(allRows, productSkuKeys(allRows, variants), daily, today);
+  const isAdmin = ctx.role === "voltship_admin";
   // Shopify pages imported automatically with no sale in 90 days are hidden by default
   // (briefs sent by the client always stay).
   const showZero = filters.zero === "1";
@@ -82,7 +108,8 @@ export default async function SourcerPage({
     (row) => isShopifyImport(row.migration_state) && (sales.get(row.id) ?? 0) === 0,
   ).length;
   const sort: SortKey = SORT_KEYS.includes(filters.sort as SortKey) ? (filters.sort as SortKey) : "created";
-  const dir = filters.dir === "desc" || filters.dir === "asc" ? filters.dir : sort === "sales" ? "desc" : "asc";
+  const dir =
+    filters.dir === "desc" || filters.dir === "asc" ? filters.dir : sort === "sales" || sort === "sales7" ? "desc" : "asc";
   const rows = allRows.filter((row) => {
     if (!showZero && isShopifyImport(row.migration_state) && (sales.get(row.id) ?? 0) === 0) return false;
     if (query && !`${row.title} ${row.sku ?? ""} ${row.clients?.name ?? ""}`.toLowerCase().includes(query)) {
@@ -96,6 +123,8 @@ export default async function SourcerPage({
     switch (sort) {
       case "sales":
         return (sales.get(a.id) ?? 0) - (sales.get(b.id) ?? 0);
+      case "sales7":
+        return (trends.get(a.id)?.last7 ?? 0) - (trends.get(b.id)?.last7 ?? 0);
       case "title":
         return a.title.localeCompare(b.title);
       case "client":
@@ -123,7 +152,13 @@ export default async function SourcerPage({
   };
   const sortHeader = (col: SortKey, label: string, align?: "right") => {
     const active = sort === col;
-    const nextDir = active ? (dir === "asc" ? "desc" : "asc") : col === "sales" || col === "created" ? "desc" : "asc";
+    const nextDir = active
+      ? dir === "asc"
+        ? "desc"
+        : "asc"
+      : col === "sales" || col === "sales7" || col === "created"
+        ? "desc"
+        : "asc";
     return (
       <th key={col} className={`px-4 py-3 ${align === "right" ? "text-right" : ""}`}>
         <Link
@@ -214,6 +249,7 @@ export default async function SourcerPage({
                 {sortHeader("client", t("columns.client"))}
                 {sortHeader("status", t("columns.status"))}
                 <th className="px-4 py-3">{t("columns.missing")}</th>
+                {sortHeader("sales7", t("columns.sales7"), "right")}
                 {sortHeader("sales", t("columns.sales90"), "right")}
                 {sortHeader("created", t("columns.created"))}
               </tr>
@@ -238,6 +274,14 @@ export default async function SourcerPage({
                       <Link href={`/sourcer/${row.id}`} className="font-medium hover:underline">
                         {row.title}
                       </Link>
+                      {isAdmin ? (
+                        <Link
+                          href={`/admin/margin/products/${row.id}`}
+                          className="ml-2 rounded-md border border-[var(--line)] px-1.5 py-0.5 text-[11px] text-[var(--muted)] hover:text-[var(--ink)]"
+                        >
+                          {t("marginLink")}
+                        </Link>
+                      ) : null}
                       <p className="text-xs text-[var(--muted)]">{row.sku ?? t("noSku")}</p>
                     </td>
                     <td className="px-4 py-3">{row.clients?.name ?? "—"}</td>
@@ -248,6 +292,33 @@ export default async function SourcerPage({
                       {missing.length
                         ? missing.map((item) => t(`missing.${item}`)).join(t("listSeparator"))
                         : t("ready")}
+                    </td>
+                    <td className="tabular px-4 py-3 text-right">
+                      {(() => {
+                        const trend = trends.get(row.id);
+                        if (!trend || (trend.last7 === 0 && trend.previous7 === 0)) {
+                          return <span className="text-[var(--faint)]">0</span>;
+                        }
+                        const up = trend.pct != null && trend.pct > 0;
+                        const down = trend.pct != null && trend.pct < 0;
+                        return (
+                          <>
+                            <span className="font-medium">{trend.last7.toLocaleString(locale)}</span>
+                            <span
+                              className={`block text-[11px] font-semibold ${
+                                trend.isNew || up ? "text-[#1f7a3d]" : down ? "text-[#b42318]" : "text-[var(--muted)]"
+                              }`}
+                              title={t("trendHint", { previous: trend.previous7 })}
+                            >
+                              {trend.isNew
+                                ? t("trendNew")
+                                : trend.pct == null
+                                  ? "—"
+                                  : `${up ? "▲ +" : down ? "▼ " : "= "}${trend.pct} %`}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </td>
                     <td className="tabular px-4 py-3 text-right font-medium">
                       {(sales.get(row.id) ?? 0).toLocaleString(locale)}

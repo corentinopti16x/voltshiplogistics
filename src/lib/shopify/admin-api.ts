@@ -21,6 +21,9 @@ import {
   isExcludedOrder,
   packOrderLines,
   pickProductImages,
+  shippingFromFulfillments,
+  shippingStatusOf,
+  type OrderShipping,
 } from "@/lib/shopify/order-cache";
 
 const apiVersion = process.env.SHOPIFY_API_VERSION || "2026-07";
@@ -30,6 +33,16 @@ export type ShopifyOrder = {
   created_at: string;
   cancelled_at: string | null;
   fulfillment_status?: string | null;
+  /** Shipments (tracking) — cached in the order meta for the admin per-order view. */
+  fulfillments?: Array<{
+    created_at?: string | null;
+    status?: string | null;
+    tracking_company?: string | null;
+    tracking_number?: string | null;
+    tracking_numbers?: Array<string | null> | null;
+    tracking_url?: string | null;
+    tracking_urls?: Array<string | null> | null;
+  }> | null;
   line_items: Array<{
     sku: string | null;
     /** Used as SKU fallback (SHOPIFY-<variant id>) when the variant has no SKU. */
@@ -104,6 +117,11 @@ export async function shopifyRequest<T>(
 type FulfillmentNode = {
   legacyResourceId: string;
   displayFulfillmentStatus: string;
+  fulfillments?: Array<{
+    createdAt?: string | null;
+    status?: string | null;
+    trackingInfo?: Array<{ number?: string | null; company?: string | null; url?: string | null }> | null;
+  }> | null;
 };
 
 type FulfillmentPayload = {
@@ -121,15 +139,22 @@ export async function loadShopifyFulfillmentMap(
   accessToken: string,
   since: Date,
 ) {
-  const map = new Map<string, boolean>();
+  const map = new Map<string, { fulfilled: boolean; shipping: OrderShipping | null }>();
   let cursor: string | null = null;
   const search = `created_at:>='${since.toISOString()}'`;
-  const query = `query OrderFulfillment($cursor: String, $search: String!) {
+  const queryFor = (withTracking: boolean) => `query OrderFulfillment($cursor: String, $search: String!) {
     orders(first: 100, after: $cursor, query: $search, sortKey: CREATED_AT) {
       pageInfo { hasNextPage endCursor }
-      nodes { legacyResourceId displayFulfillmentStatus }
+      nodes {
+        legacyResourceId
+        displayFulfillmentStatus
+        ${withTracking ? "fulfillments(first: 5) { createdAt status trackingInfo(first: 5) { number company url } }" : ""}
+      }
     }
   }`;
+  // Tracking is a bonus: if the shop's token cannot read it, keep the status-only query
+  // instead of failing the whole order sync.
+  let withTracking = true;
 
   for (;;) {
     let payload: FulfillmentPayload | null = null;
@@ -140,7 +165,7 @@ export async function loadShopifyFulfillmentMap(
           "X-Shopify-Access-Token": accessToken,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ query, variables: { cursor, search } }),
+        body: JSON.stringify({ query: queryFor(withTracking), variables: { cursor, search } }),
         cache: "no-store",
       });
       payload = (await response.json()) as FulfillmentPayload;
@@ -152,6 +177,11 @@ export async function loadShopifyFulfillmentMap(
         continue;
       }
       if (!response.ok || payload.errors?.length || !payload.data) {
+        if (withTracking) {
+          withTracking = false;
+          attempt -= 1;
+          continue;
+        }
         throw new Error(
           payload.errors?.[0]?.message ?? `Shopify fulfillment query failed (${response.status}).`,
         );
@@ -160,7 +190,19 @@ export async function loadShopifyFulfillmentMap(
     }
     if (!payload?.data) throw new Error("Shopify fulfillment query was throttled.");
     for (const node of payload.data.orders.nodes) {
-      map.set(node.legacyResourceId, node.displayFulfillmentStatus === "FULFILLED");
+      map.set(node.legacyResourceId, {
+        fulfilled: node.displayFulfillmentStatus === "FULFILLED",
+        shipping: shippingFromFulfillments(
+          (node.fulfillments ?? []).map((f) => ({
+            created_at: f.createdAt ?? null,
+            status: f.status ?? null,
+            tracking_numbers: (f.trackingInfo ?? []).map((info) => info.number ?? null),
+            tracking_company: (f.trackingInfo ?? []).map((info) => info.company).find(Boolean) ?? null,
+            tracking_urls: (f.trackingInfo ?? []).map((info) => info.url ?? null),
+          })),
+          shippingStatusOf(node.displayFulfillmentStatus),
+        ),
+      });
     }
     if (!payload.data.orders.pageInfo.hasNextPage) break;
     cursor = payload.data.orders.pageInfo.endCursor;
@@ -441,7 +483,7 @@ export async function backfillShopifyOrders(input: {
   const fulfillment = await loadShopifyFulfillmentMap(input.shop, input.accessToken, since);
   let path =
     `orders.json?status=any&limit=250&created_at_min=${encodeURIComponent(since.toISOString())}` +
-    "&fields=id,order_number,name,created_at,cancelled_at,fulfillment_status,total_price,total_line_items_price,total_discounts,discount_codes,currency,line_items,customer,email,contact_email";
+    "&fields=id,order_number,name,created_at,cancelled_at,fulfillment_status,fulfillments,total_price,total_line_items_price,total_discounts,discount_codes,currency,line_items,customer,email,contact_email";
   const counts = new Map<string, number>();
   const orderRows: Array<Record<string, unknown>> = [];
   const alertCandidates: AlertCandidate[] = [];
@@ -480,8 +522,11 @@ export async function backfillShopifyOrders(input: {
         customer_email_key: hashCustomerEmail(order.email ?? order.contact_email),
         line_items_json: packOrderLines(
           normalizedLines,
-          fulfillment.get(String(order.id)) ?? isShopifyFulfilled(order.fulfillment_status),
+          fulfillment.get(String(order.id))?.fulfilled ?? isShopifyFulfilled(order.fulfillment_status),
           {
+            shipping:
+              fulfillment.get(String(order.id))?.shipping ??
+              shippingFromFulfillments(order.fulfillments, shippingStatusOf(order.fulfillment_status)),
             amount: order.total_price,
             currency: order.currency,
             units: order.line_items.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0),

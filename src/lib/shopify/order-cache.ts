@@ -3,6 +3,68 @@ import { createHash } from "crypto";
 
 export type OrderLine = { sku: string; quantity: number; title?: string; price?: number };
 
+/** Shipping state of an order as Shopify reports it (fulfillment + tracking). */
+export type OrderShipping = {
+  /** fulfilled = every item shipped, partial = some, unfulfilled = none yet. */
+  status: "fulfilled" | "partial" | "unfulfilled";
+  trackingNumbers: string[];
+  company: string | null;
+  url: string | null;
+  /** First fulfillment date (ISO), when shipped. */
+  shippedAt: string | null;
+};
+
+/** Shopify fulfillment status (REST "fulfilled"/"partial"/null or GraphQL FULFILLED/PARTIALLY_FULFILLED…). */
+export function shippingStatusOf(raw: string | null | undefined): OrderShipping["status"] | null {
+  const value = (raw ?? "").trim().toLowerCase();
+  if (!value) return null;
+  if (value === "fulfilled") return "fulfilled";
+  if (value === "partial" || value === "partially_fulfilled") return "partial";
+  if (value === "unfulfilled" || value === "null" || value === "unshipped") return "unfulfilled";
+  return null;
+}
+
+/** REST order `fulfillments` (webhook / orders.json) → tracking numbers, carrier, first ship date. */
+export function shippingFromFulfillments(
+  fulfillments:
+    | Array<{
+        created_at?: string | null;
+        status?: string | null;
+        tracking_company?: string | null;
+        tracking_number?: string | null;
+        tracking_numbers?: Array<string | null> | null;
+        tracking_url?: string | null;
+        tracking_urls?: Array<string | null> | null;
+      }>
+    | null
+    | undefined,
+  status: OrderShipping["status"] | null,
+): OrderShipping | null {
+  const active = (fulfillments ?? []).filter((f) => !f.status || !/cancel|error|failure/i.test(f.status));
+  const numbers = [
+    ...new Set(
+      active
+        .flatMap((f) => [...(f.tracking_numbers ?? []), f.tracking_number ?? null])
+        .filter((n): n is string => typeof n === "string" && n.trim() !== "")
+        .map((n) => n.trim()),
+    ),
+  ].slice(0, 5);
+  const company = active.map((f) => f.tracking_company).find((c) => c && c.trim())?.trim() ?? null;
+  const url =
+    active.flatMap((f) => [...(f.tracking_urls ?? []), f.tracking_url ?? null]).find((u) => u && /^https?:\/\//.test(u)) ??
+    null;
+  const dates = active.map((f) => f.created_at).filter((d): d is string => Boolean(d)).sort();
+  const resolved = status ?? (active.length > 0 ? "fulfilled" : null);
+  if (!resolved && numbers.length === 0) return null;
+  return {
+    status: resolved ?? "unfulfilled",
+    trackingNumbers: numbers,
+    company,
+    url,
+    shippedAt: dates[0] ?? null,
+  };
+}
+
 /**
  * Anonymised customer identifier for recurrence stats (no read_customers scope needed):
  * SHA-256 of the Shopify customer id when present, else of the lowercased e-mail.
@@ -127,6 +189,8 @@ export function packOrderLines(
     review?: OrderReview | null;
     /** Shopify order name ("#1042"), shown in the admin per-order margin. */
     name?: string | null;
+    /** Fulfillment status + tracking (admin per-order margin). */
+    shipping?: OrderShipping | null;
   } | null,
 ) {
   const amount = Number(total?.amount);
@@ -138,6 +202,15 @@ export function packOrderLines(
   if (total?.units != null && Number.isFinite(total.units)) meta.units = total.units;
   if (total?.review) meta.review = total.review;
   if (total?.name) meta.name = String(total.name).slice(0, 40);
+  if (total?.shipping) {
+    meta.ship = {
+      s: total.shipping.status,
+      t: total.shipping.trackingNumbers.slice(0, 5).map((n) => n.slice(0, 60)),
+      c: total.shipping.company?.slice(0, 60) ?? null,
+      u: total.shipping.url?.slice(0, 300) ?? null,
+      at: total.shipping.shippedAt,
+    };
+  }
   if (total && isExcludedOrder(total.amount, total.units ?? 0, total.review)) meta.suspicious = true;
   return [{ _order: meta }, ...lines];
 }
@@ -156,6 +229,8 @@ export function unpackOrderLines(value: unknown): {
   review: OrderReview | null;
   /** Shopify order name ("#1042") when recorded. */
   name: string | null;
+  /** Fulfillment status + tracking, when recorded. */
+  shipping: OrderShipping | null;
 } {
   if (!Array.isArray(value)) {
     return {
@@ -167,6 +242,7 @@ export function unpackOrderLines(value: unknown): {
       suspicious: false,
       review: null,
       name: null,
+      shipping: null,
     };
   }
   let suspicious = false;
@@ -176,6 +252,7 @@ export function unpackOrderLines(value: unknown): {
   let total: number | null = null;
   let currency: string | null = null;
   let name: string | null = null;
+  let shipping: OrderShipping | null = null;
   const lines: OrderLine[] = [];
   for (const item of value) {
     if (!item || typeof item !== "object") continue;
@@ -192,6 +269,7 @@ export function unpackOrderLines(value: unknown): {
         suspicious?: unknown;
         review?: unknown;
         name?: unknown;
+        ship?: { s?: unknown; t?: unknown; c?: unknown; u?: unknown; at?: unknown };
       };
     };
     if (row._order && typeof row._order === "object") {
@@ -200,6 +278,17 @@ export function unpackOrderLines(value: unknown): {
       if (row._order.total != null && Number.isFinite(amount)) total = amount;
       if (typeof row._order.currency === "string") currency = row._order.currency;
       if (typeof row._order.name === "string") name = row._order.name;
+      const ship = row._order.ship;
+      if (ship && typeof ship === "object") {
+        const status = shippingStatusOf(typeof ship.s === "string" ? ship.s : null);
+        shipping = {
+          status: status ?? "unfulfilled",
+          trackingNumbers: Array.isArray(ship.t) ? ship.t.filter((n): n is string => typeof n === "string") : [],
+          company: typeof ship.c === "string" ? ship.c : null,
+          url: typeof ship.u === "string" ? ship.u : null,
+          shippedAt: typeof ship.at === "string" ? ship.at : null,
+        };
+      }
       if (row._order.suspicious === true) suspicious = true;
       if (row._order.review === "legit" || row._order.review === "abuse") review = row._order.review;
       if (row._order.units != null && Number.isFinite(Number(row._order.units))) {
@@ -213,7 +302,7 @@ export function unpackOrderLines(value: unknown): {
     if (row.price != null && Number.isFinite(Number(row.price))) line.price = Number(row.price);
     lines.push(line);
   }
-  return { fulfilled, lines, total, currency, units, suspicious, review, name };
+  return { fulfilled, lines, total, currency, units, suspicious, review, name, shipping };
 }
 
 export function isShopifyFulfilled(status: string | null | undefined) {

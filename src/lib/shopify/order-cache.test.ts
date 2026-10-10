@@ -22,6 +22,7 @@ describe("shopify order cache", () => {
       suspicious: false,
       review: null,
       name: null,
+      shipping: null,
     });
   });
 
@@ -60,6 +61,7 @@ describe("shopify order cache", () => {
       suspicious: false,
       review: null,
       name: null,
+      shipping: null,
     });
   });
 
@@ -105,5 +107,29 @@ describe("shopify order cache", () => {
     expect(pickProductImages(product, 3)).toEqual(["p3", "p1", "p2", "p4"]);
     expect(pickProductImages({ image: { src: "only" } }, null)).toEqual(["only"]);
     expect(pickProductImages({}, null)).toEqual([]);
+  });
+});
+
+describe("order shipping meta", () => {
+  it("keeps status and tracking through pack/unpack", async () => {
+    const { packOrderLines, unpackOrderLines, shippingFromFulfillments, shippingStatusOf } = await import("./order-cache");
+    const shipping = shippingFromFulfillments(
+      [
+        { created_at: "2026-10-05T10:00:00Z", tracking_company: "YunExpress", tracking_numbers: ["YT123"], tracking_urls: ["https://t.17track.net/YT123"] },
+        { created_at: "2026-10-06T10:00:00Z", status: "cancelled", tracking_numbers: ["OLD"] },
+      ],
+      shippingStatusOf("fulfilled"),
+    );
+    expect(shipping).toEqual({
+      status: "fulfilled",
+      trackingNumbers: ["YT123"],
+      company: "YunExpress",
+      url: "https://t.17track.net/YT123",
+      shippedAt: "2026-10-05T10:00:00Z",
+    });
+    const unpacked = unpackOrderLines(packOrderLines([{ sku: "A", quantity: 1 }], true, { amount: 10, shipping }));
+    expect(unpacked.shipping).toEqual(shipping);
+    expect(shippingFromFulfillments([], shippingStatusOf(null))).toBeNull();
+    expect(shippingStatusOf("PARTIALLY_FULFILLED")).toBe("partial");
   });
 });
