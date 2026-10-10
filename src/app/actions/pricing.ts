@@ -326,29 +326,24 @@ export async function savePricingSettingsAction(
   const { ctx, error } = await requireAdmin();
   if (!ctx) return { ok: false, error: error ?? "Admin access required." };
 
+  // Start from the saved settings: fields that are not in this form (packaging weight,
+  // volumetric divisors…) keep their value instead of falling back to the defaults.
+  const current = await readPricingSettings(createAdminClient());
+  const field = (key: Exclude<keyof PricingSettings, "volumetric_divisors">) =>
+    formData.has(key) ? numberField(formData, key, current[key] ?? DEFAULT_PRICING_SETTINGS[key]) : current[key];
   const settings = parsePricingSettings({
-    fx_rmb_per_eur: numberField(formData, "fx_rmb_per_eur", DEFAULT_PRICING_SETTINGS.fx_rmb_per_eur),
-    margin_pct: numberField(formData, "margin_pct", DEFAULT_PRICING_SETTINGS.margin_pct),
-    min_margin_eur_per_parcel: numberField(
-      formData,
-      "min_margin_eur_per_parcel",
-      DEFAULT_PRICING_SETTINGS.min_margin_eur_per_parcel,
-    ),
-    eu_parcel_tax_eur: numberField(formData, "eu_parcel_tax_eur", DEFAULT_PRICING_SETTINGS.eu_parcel_tax_eur),
-    handling_cost_eur: numberField(formData, "handling_cost_eur", DEFAULT_PRICING_SETTINGS.handling_cost_eur),
-    fx_market_rate: numberField(formData, "fx_market_rate", DEFAULT_PRICING_SETTINGS.fx_market_rate),
-    handling_step2_eur: numberField(formData, "handling_step2_eur", DEFAULT_PRICING_SETTINGS.handling_step2_eur),
-    handling_step3_eur: numberField(formData, "handling_step3_eur", DEFAULT_PRICING_SETTINGS.handling_step3_eur),
-    handling_extra_unit_eur: numberField(
-      formData,
-      "handling_extra_unit_eur",
-      DEFAULT_PRICING_SETTINGS.handling_extra_unit_eur,
-    ),
-    announced_margin_alert_eur: numberField(
-      formData,
-      "announced_margin_alert_eur",
-      DEFAULT_PRICING_SETTINGS.announced_margin_alert_eur,
-    ),
+    ...current,
+    fx_rmb_per_eur: field("fx_rmb_per_eur"),
+    margin_pct: field("margin_pct"),
+    min_margin_eur_per_parcel: field("min_margin_eur_per_parcel"),
+    eu_parcel_tax_eur: field("eu_parcel_tax_eur"),
+    handling_cost_eur: field("handling_cost_eur"),
+    fx_market_rate: field("fx_market_rate"),
+    handling_step2_eur: field("handling_step2_eur"),
+    handling_step3_eur: field("handling_step3_eur"),
+    handling_extra_unit_eur: field("handling_extra_unit_eur"),
+    announced_margin_alert_eur: field("announced_margin_alert_eur"),
+    packaging_weight_g: field("packaging_weight_g"),
   });
   const admin = createAdminClient();
   const { error: writeError } = await writePricingSettings(admin, settings);
@@ -364,6 +359,34 @@ export async function savePricingSettingsAction(
   revalidatePath("/admin/pricing/update");
   revalidatePath("/admin/margin");
   return { ok: true };
+}
+
+/**
+ * Packaging weight added to every parcel (Tarification page). Only this key changes; the
+ * other pricing settings are kept as saved.
+ */
+export async function savePackagingWeightAction(formData: FormData): Promise<void> {
+  const { ctx } = await requireAdmin();
+  if (!ctx) return;
+  const admin = createAdminClient();
+  const current = await readPricingSettings(admin);
+  const settings = parsePricingSettings({
+    ...current,
+    packaging_weight_g: numberField(formData, "packaging_weight_g", current.packaging_weight_g),
+  });
+  const { error } = await writePricingSettings(admin, settings);
+  if (error) return;
+  await writeAudit({
+    actorUserId: ctx.userId,
+    action: "pricing.settings.packaging",
+    entity: "pricing_meta",
+    diff: { packaging_weight_g: settings.packaging_weight_g },
+  });
+  revalidatePricing();
+  revalidatePath("/admin/margin");
+  revalidatePath("/sourcer/products");
+  revalidatePath("/[locale]/products/[id]", "page");
+  revalidatePath("/[locale]/sourcer/[id]", "page");
 }
 
 // ---------------------------------------------------------------------------

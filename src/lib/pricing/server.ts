@@ -13,6 +13,7 @@ import {
   activeAnnouncedPrices,
   parseDestinationMarkets,
   parseParcelDimensions,
+  parcelWeightG,
   type CarrierLineRef,
   type CogsBreakdown,
   type RateCell,
@@ -30,6 +31,7 @@ import {
 } from "@/lib/domain/carrier-rules";
 import { getProductRequest, type ProductRow } from "@/lib/products/types";
 import { handlingLadderFrom, readPricingSettings } from "./settings";
+import { parcelExtras } from "@/lib/products/extras";
 
 export type ClientPricingProfile = {
   commissionPct: number;
@@ -129,16 +131,50 @@ export async function loadRateCells(
   destinations: string[],
   channel: string,
 ): Promise<RateCell[]> {
+  return loadRateCellsFor(gridVersion, destinations, [channel]);
+}
+
+/**
+ * Rate cells of the grid for these destinations × channels, paged (PostgREST returns at
+ * most 1 000 rows per request and a grid has thousands of cells).
+ */
+export async function loadRateCellsFor(
+  gridVersion: string,
+  destinations: string[],
+  channels: string[],
+): Promise<RateCell[]> {
+  if (destinations.length === 0 || channels.length === 0) return [];
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("rate_grid_cells")
-    .select(
-      "grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, ioss_required, carrier_cost_rmb",
-    )
-    .eq("grid_version", gridVersion)
-    .in("destination", destinations)
-    .eq("channel", channel);
-  return (data ?? []).map((cell) => ({
+  type Row = {
+    grid_version: string;
+    carrier: string;
+    destination: string;
+    channel: string;
+    weight_min_g: number;
+    weight_max_g: number;
+    price: number;
+    delivery_range: string | null;
+    line_name: string | null;
+    ioss_required: boolean | null;
+    carrier_cost_rmb: number | null;
+  };
+  const data: Row[] = [];
+  for (let from = 0; from < 100_000; from += 1000) {
+    const { data: page, error } = await admin
+      .from("rate_grid_cells")
+      .select(
+        "id, grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, ioss_required, carrier_cost_rmb",
+      )
+      .eq("grid_version", gridVersion)
+      .in("destination", destinations)
+      .in("channel", channels)
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw error;
+    data.push(...((page ?? []) as Row[]));
+    if (!page || page.length < 1000) break;
+  }
+  return data.map((cell) => ({
     gridVersion: cell.grid_version,
     carrier: cell.carrier,
     destination: cell.destination,
@@ -254,6 +290,8 @@ export async function calculateProductCogsMatrix(
   const announcedPrices = activeAnnouncedPrices(product.quote_json);
   // Admin rules: blocked lines are removed from every selection (and from the options list).
   const allowedLines = allowedLinesFromRules(cells, rules);
+  // Box bought for the product (price + weight per unit) and packaging once per parcel.
+  const extras = parcelExtras(product.quote_json, settings);
 
   return {
     activeGridVersion,
@@ -273,12 +311,13 @@ export async function calculateProductCogsMatrix(
         handlingLadder: handlingLadderFrom(settings),
         fxRmbPerEur: settings.fx_rmb_per_eur,
         batteryInternal: hasInternalBattery(product.quote_json),
+        ...extras,
       };
       return {
         destination,
         preference: selection.preference,
         forced: selection.forced,
-        options: listRateOptions(cells, { ...common, quantity: 1 }),
+        options: listRateOptions(cells, { ...common, weightG: parcelWeightG(unitWeightG, 1, extras), quantity: 1 }),
         cells: quantities.map((quantity) => {
           const computed = calculateCogs({ ...common, cells, clientPrice, quantity, ...profile });
           const announced = announcedPriceFor(announcedPrices, destination, quantity);

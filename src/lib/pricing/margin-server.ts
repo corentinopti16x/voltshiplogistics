@@ -21,6 +21,7 @@ import {
   FLAT_HANDLING,
   handlingForQuantity,
   findRateCell,
+  parcelWeightG as parcelWeightOf,
   activeAnnouncedPrices,
   classifyAnnouncedPrice,
   parseAnnouncedPrices,
@@ -35,10 +36,20 @@ import {
   getActiveGridVersion,
   getClientPricingProfile,
   getProductMarkets,
+  loadCarrierRules,
   type ClientPricingProfile,
 } from "@/lib/pricing/server";
+import {
+  EMPTY_CARRIER_RULES,
+  allowedLinesFromRules,
+  parseCarrierPreferences,
+  parseCarrierRules,
+  resolveCarrierSelection,
+  type CarrierRules,
+} from "@/lib/domain/carrier-rules";
 import { handlingLadderFrom, readPricingSettings, type PricingSettings } from "@/lib/pricing/settings";
 import { CLIENT_PRODUCT_SELECT, serializeClientProduct } from "@/lib/products/visibility";
+import { parcelExtras, productBox } from "@/lib/products/extras";
 import type { ProductRow } from "@/lib/products/types";
 import { unpackOrderLines, type OrderShipping } from "@/lib/shopify/order-cache";
 import {
@@ -75,15 +86,31 @@ async function loadInternalRateCells(
 ): Promise<RateCell[]> {
   if (destinations.length === 0 || channels.length === 0) return [];
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("rate_grid_cells")
-    .select(
-      "grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, carrier_cost_rmb, tax_included, ioss_required",
-    )
-    .eq("grid_version", gridVersion)
-    .in("destination", destinations)
-    .in("channel", channels);
-  return (data ?? []).map((cell) => ({
+  // Paged: a grid has thousands of cells and PostgREST returns 1 000 rows per request.
+  const data: Array<Record<string, unknown> & {
+    grid_version: string;
+    carrier: string;
+    destination: string;
+    channel: string;
+    delivery_range: string | null;
+    line_name: string | null;
+  }> = [];
+  for (let from = 0; from < 100_000; from += 1000) {
+    const { data: page, error } = await admin
+      .from("rate_grid_cells")
+      .select(
+        "id, grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, carrier_cost_rmb, tax_included, ioss_required",
+      )
+      .eq("grid_version", gridVersion)
+      .in("destination", destinations)
+      .in("channel", channels)
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw error;
+    data.push(...((page ?? []) as typeof data));
+    if (!page || page.length < 1000) break;
+  }
+  return data.map((cell) => ({
     gridVersion: cell.grid_version,
     carrier: cell.carrier,
     destination: cell.destination,
@@ -154,7 +181,22 @@ type ProductContext = {
   factoryPriceRmb: number | null;
   profile: ClientPricingProfile;
   cells: RateCell[];
+  /** Client carrier rules (forced / blocked lines); the product's own choice is in quote_json. */
+  rules?: CarrierRules;
 };
+
+/**
+ * Line choice of a product on a market — exactly what the client's product page uses:
+ * forced line, else the chosen line (`_carrier_pref`), else the cheapest allowed line.
+ */
+function carrierChoice(product: ProductRow, destination: string, cells: RateCell[], rules?: CarrierRules) {
+  const effective = rules ?? EMPTY_CARRIER_RULES;
+  const selection = resolveCarrierSelection(effective, parseCarrierPreferences(product.quote_json), destination);
+  return {
+    carrierPreference: selection.preference,
+    allowedLines: allowedLinesFromRules(cells, effective),
+  };
+}
 
 /** Client-facing breakdown + the matching cell's internal cost → margin, for one parcel. */
 function marginForParcel(
@@ -164,10 +206,14 @@ function marginForParcel(
   settings: PricingSettings,
 ): VoltshipMargin {
   const { product, profile, cells } = ctx;
+  const choice = carrierChoice(product, destination, cells, ctx.rules);
   const ready = product.client_price != null && product.weight_g != null && !!product.shipping_channel;
   const channel = (product.shipping_channel ?? "standard") as ShippingChannel;
   const unitWeightG = product.weight_g ?? 0;
   const dimensionsCm = parseParcelDimensions(product.quote_json);
+  // Box (bought per unit, billed with the product) + packaging once per parcel.
+  const extras = parcelExtras(product.quote_json, settings);
+  const boxRmb = productBox(product.quote_json)?.priceRmb ?? 0;
   // Same engine as the client quote: product × n, commission on product, one parcel, handling once.
   const computed = ready
     ? calculateCogs({
@@ -182,6 +228,8 @@ function marginForParcel(
         handlingLadder: handlingLadderFrom(settings),
         fxRmbPerEur: settings.fx_rmb_per_eur,
         batteryInternal: hasInternalBattery(product.quote_json),
+        ...extras,
+        ...choice,
         ...profile,
       })
     : null;
@@ -189,9 +237,9 @@ function marginForParcel(
   const breakdown = computed && announced != null ? applyAnnouncedPrice(computed, announced) : computed;
   // Same cell selection as calculateCogs (findRateCell on the billed parcel weight) to read
   // the internal carrier cost of the cell the client price came from.
-  const parcelWeightG = unitWeightG * quantity;
+  const parcelWeightG = parcelWeightOf(unitWeightG, quantity, extras);
   const cell =
-    breakdown && parcelWeightG > 0
+    breakdown && unitWeightG > 0
       ? findRateCell(cells, {
           weightG: parcelWeightG,
           quantity,
@@ -200,12 +248,15 @@ function marginForParcel(
           channel,
           destination,
           batteryInternal: hasInternalBattery(product.quote_json),
+          ...choice,
         })
       : null;
   return computeVoltshipMargin({
     quantity,
-    client: breakdown,
-    factoryCostRmb: ctx.factoryPriceRmb == null ? null : ctx.factoryPriceRmb * quantity,
+    // The box is packaging re-billed at cost: its price sits with the product side, against
+    // its RMB cost in the factory cost, so it nets to ~0 in the margin.
+    client: breakdown ? { ...breakdown, product: breakdown.product + (breakdown.box ?? 0) } : null,
+    factoryCostRmb: ctx.factoryPriceRmb == null ? null : (ctx.factoryPriceRmb + boxRmb) * quantity,
     carrierCostRmb: cell?.carrierCostRmb ?? null,
     carrierCostSource: cell?.carrierCostRmb != null ? "grid" : null,
     taxIncluded: cell?.taxIncluded !== false,
@@ -233,12 +284,13 @@ export async function loadProductMarginMatrix(productId: string): Promise<Produc
   const [product] = await loadAdminProducts({ productId, includeArchived: true });
   if (!product) return null;
   const admin = createAdminClient();
-  const [settings, activeGridVersion, profile, factoryPrices, clientRow] = await Promise.all([
+  const [settings, activeGridVersion, profile, factoryPrices, clientRow, rules] = await Promise.all([
     readPricingSettings(admin),
     getActiveGridVersion(),
     getClientPricingProfile(product.client_id),
     loadFactoryPrices([product.id]),
     admin.from("clients").select("name").eq("id", product.client_id).maybeSingle(),
+    loadCarrierRules(product.client_id),
   ]);
   const markets = getProductMarkets(product);
   const cells =
@@ -246,7 +298,7 @@ export async function loadProductMarginMatrix(productId: string): Promise<Produc
       ? await loadInternalRateCells(activeGridVersion, markets, [product.shipping_channel])
       : [];
   const factoryPriceRmb = factoryPrices.get(product.id) ?? null;
-  const ctx: ProductContext = { product, factoryPriceRmb, profile, cells };
+  const ctx: ProductContext = { product, factoryPriceRmb, profile, cells, rules };
   const quantities = [...COGS_MATRIX_QUANTITIES];
   return {
     product,
@@ -290,12 +342,13 @@ export type ClientMargin = {
 export async function loadClientMargin(clientId: string, windowDays = 30): Promise<ClientMargin> {
   await assertVoltshipAdmin();
   const admin = createAdminClient();
-  const [products, settings, activeGridVersion, profile, unitsSold] = await Promise.all([
+  const [products, settings, activeGridVersion, profile, unitsSold, rules] = await Promise.all([
     loadAdminProducts({ clientId }),
     readPricingSettings(admin),
     getActiveGridVersion(),
     getClientPricingProfile(clientId),
     loadUnitsSold(clientId, windowDays),
+    loadCarrierRules(clientId),
   ]);
   const factoryPrices = await loadFactoryPrices(products.map((product) => product.id));
   const markets = [...new Set(products.map((product) => getProductMarkets(product)[0]))];
@@ -315,7 +368,7 @@ export async function loadClientMargin(clientId: string, windowDays = 30): Promi
       market,
       factoryPriceRmb,
       unitsSold: units,
-      margin: marginForParcel({ product, factoryPriceRmb, profile, cells }, market, 1, settings),
+      margin: marginForParcel({ product, factoryPriceRmb, profile, cells, rules }, market, 1, settings),
     };
   });
   const weightedBySales = rows.some((row) => row.unitsSold > 0);
@@ -419,6 +472,7 @@ function marginForOrder(
   profile: ClientPricingProfile,
   cells: RateCell[],
   settings: PricingSettings,
+  rules?: CarrierRules,
 ): OrderMargin {
   const matched = lines.map((line) => ({
     ...line,
@@ -444,22 +498,32 @@ function marginForOrder(
   const lead = priced[0].product;
   const channel = (lead.shipping_channel ?? "standard") as ShippingChannel;
   const destination = getProductMarkets(lead)[0];
-  const computedWeightG = priced.reduce((sum, line) => sum + (line.product.weight_g ?? 0) * line.quantity, 0);
+  // Each line: (unit weight + box) × qty; packaging once per parcel.
+  const extrasOf = (product: ProductRow) => parcelExtras(product.quote_json, settings);
+  const computedWeightG =
+    priced.reduce(
+      (sum, line) => sum + parcelWeightOf(line.product.weight_g ?? 0, line.quantity, { boxWeightG: extrasOf(line.product).boxWeightG }),
+      0,
+    ) + settings.packaging_weight_g;
   const parcelWeightG = order.billed_weight_g ?? computedWeightG;
   const units = priced.reduce((sum, line) => sum + line.quantity, 0);
-  // Product side: client price × qty per line, commission on the product total.
+  // Product side: client price × qty per line, commission on the product total. Boxes are
+  // packaging billed at cost (no commission).
   const productTotal = priced.reduce((sum, line) => sum + Number(line.product.client_price) * line.quantity, 0);
+  const boxTotal = priced.reduce((sum, line) => sum + extrasOf(line.product).boxPrice * line.quantity, 0);
   const commission = productTotal * (Math.max(0, profile.commissionPct) / 100);
   const cell = parcelWeightG > 0 ? findRateCell(cells, {
           weightG: parcelWeightG,
           channel,
           destination,
           batteryInternal: hasInternalBattery(lead.quote_json),
+          ...carrierChoice(lead, destination, cells, rules),
         }) : null;
   const discount = Math.min(100, Math.max(0, profile.logisticsDiscountPct)) / 100;
   const computedClient = cell
     ? {
-        product: productTotal,
+        // Boxes re-billed at cost sit with the product side (their RMB cost is in the factory cost).
+        product: productTotal + boxTotal,
         commission,
         shipping: discountedShipping(cell.price, discount, cell.carrierCostRmb, settings.fx_rmb_per_eur),
         handling: handlingForQuantity(
@@ -488,7 +552,7 @@ function marginForOrder(
       factoryCostRmb = null;
       break;
     }
-    factoryCostRmb += unit * line.quantity;
+    factoryCostRmb += (unit + (productBox(line.product.quote_json)?.priceRmb ?? 0)) * line.quantity;
   }
   const realCarrier = extractCarrierCostRmb(order.fee_json);
   const margin = computeVoltshipMargin({
@@ -518,6 +582,7 @@ type OrderPricingContext = {
   factoryPrices: Map<string, number | null>;
   productsByClient: Map<string, Map<string, ProductRow>>;
   profiles: Map<string, ClientPricingProfile>;
+  rules: Map<string, CarrierRules>;
   names: Map<string, string>;
 };
 
@@ -527,7 +592,10 @@ async function buildOrderPricingContext(clientIds: string[]): Promise<OrderPrici
   const [settings, activeGridVersion, clientsResult] = await Promise.all([
     readPricingSettings(admin),
     getActiveGridVersion(),
-    admin.from("clients").select("id, name, pricing_tier, commission_pct, handling_fee, logistics_discount_pct").order("name"),
+    admin
+      .from("clients")
+      .select("id, name, pricing_tier, commission_pct, handling_fee, logistics_discount_pct, carrier_rules_json")
+      .order("name"),
   ]);
   const relevant = clientIds.length > 0 ? await loadAdminProducts({ clientIds, includeArchived: true }) : [];
   const factoryPrices = await loadFactoryPrices(relevant.map((product) => product.id));
@@ -545,12 +613,14 @@ async function buildOrderPricingContext(clientIds: string[]): Promise<OrderPrici
   const cells = activeGridVersion ? await loadInternalRateCells(activeGridVersion, markets, channels) : [];
 
   const profiles = new Map<string, ClientPricingProfile>();
+  const rules = new Map<string, CarrierRules>();
   const names = new Map<string, string>();
   for (const client of clientsResult.data ?? []) {
     names.set(client.id, client.name);
     profiles.set(client.id, resolveClientPricing(client));
+    rules.set(client.id, parseCarrierRules(client.carrier_rules_json));
   }
-  return { settings, activeGridVersion, cells, factoryPrices, productsByClient, profiles, names };
+  return { settings, activeGridVersion, cells, factoryPrices, productsByClient, profiles, rules, names };
 }
 
 /** Shopify line items of the given orders, keyed by `${shop_id}:${shopify_order_id}`. */
@@ -586,6 +656,7 @@ function priceOrders(
       ctx.profiles.get(order.client_id) ?? { commissionPct: 0, handlingFee: 0, logisticsDiscountPct: 0 },
       ctx.cells,
       ctx.settings,
+      ctx.rules.get(order.client_id),
     ),
   );
 }
@@ -754,10 +825,13 @@ export async function loadAnnouncedPriceAlerts(): Promise<{ threshold: number; r
   const clientIds = [...new Set(locked.map((product) => product.client_id))];
   const [factoryPrices, clientRows, profiles] = await Promise.all([
     loadFactoryPrices(locked.map((product) => product.id)),
-    admin.from("clients").select("id, name").in("id", clientIds),
+    admin.from("clients").select("id, name, carrier_rules_json").in("id", clientIds),
     Promise.all(clientIds.map(async (id) => [id, await getClientPricingProfile(id)] as const)),
   ]);
   const clientNames = new Map((clientRows.data ?? []).map((row) => [row.id as string, String(row.name ?? "")]));
+  const clientRules = new Map(
+    (clientRows.data ?? []).map((row) => [row.id as string, parseCarrierRules(row.carrier_rules_json)]),
+  );
   const profileOf = new Map(profiles);
   const markets = [
     ...new Set(locked.flatMap((product) => Object.keys(parseAnnouncedPrices(product.quote_json?.announced_prices)))),
@@ -775,6 +849,7 @@ export async function loadAnnouncedPriceAlerts(): Promise<{ threshold: number; r
       factoryPriceRmb: factoryPrices.get(product.id) ?? null,
       profile: profileOf.get(product.client_id)!,
       cells,
+      rules: clientRules.get(product.client_id),
     };
     // Same product without its locked prices = what the palier rule bills today.
     const ruleCtx: ProductContext = {

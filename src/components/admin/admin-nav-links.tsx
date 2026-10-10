@@ -14,6 +14,7 @@ const items = [
   { href: "/admin/orders", key: "orders" },
   { href: "/admin/shops", key: "shopify" },
   { href: "/admin/alerts", key: "alerts" },
+  { href: "/sourcer/products", key: "catalog" },
   { href: "/sourcer", key: "sourcing" },
 ] as const;
 
@@ -71,7 +72,9 @@ function NavItem({
   const active =
     item.href === "/admin"
       ? pathname === item.href
-      : pathname === item.href || pathname.startsWith(`${item.href}/`);
+      : item.href === "/sourcer" && pathname.startsWith("/sourcer/products")
+        ? false
+        : pathname === item.href || pathname.startsWith(`${item.href}/`);
   return (
     <Link
       href={item.href}

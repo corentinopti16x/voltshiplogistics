@@ -301,3 +301,21 @@ describe("parseCallback", () => {
     expect(parseCallback({ body: JSON.stringify({ receiving_code: "RV1" }) }).type).toBe("receiving");
   });
 });
+
+describe("toWarehouseItems sets", () => {
+  it("ships pack_pieces pieces per unit sold and merges warehouse SKUs", async () => {
+    const { toWarehouseItems } = await import("./mapping");
+    const items = toWarehouseItems(
+      [
+        { product_sku: "LIORA-SET", quantity: 2 },
+        { product_sku: "SOLO", quantity: 1 },
+      ] as Parameters<typeof toWarehouseItems>[0],
+      new Map([["LIORA-SET", "WH-BRACELET"]]),
+      new Map([["LIORA-SET", 2]]),
+    );
+    expect(items).toEqual([
+      expect.objectContaining({ product_sku: "WH-BRACELET", quantity: 4 }),
+      expect.objectContaining({ product_sku: "SOLO", quantity: 1 }),
+    ]);
+  });
+});
