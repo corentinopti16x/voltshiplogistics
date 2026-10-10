@@ -384,7 +384,11 @@ export function parseVoltshipMatrix(buffer: Buffer | Uint8Array): VoltshipMatrix
         warnings.push(`Sheet "${name}", column "${label}": no bracket could be priced, skipped.`);
         continue;
       }
-      const carrier = detectCarrier(header.all);
+      // Carrier from its own header cell first: notes can name another carrier
+      // ("sinon basculer Tongyou" on the YunExpress 商派 columns).
+      const carrier = [header.carrierText, header.tier ?? "", header.all]
+        .map((text) => (text ? detectCarrier(text) : "other"))
+        .find((found) => found !== "other") ?? "other";
       const carrierLabel = carrier === "other" ? cleanLineName(header.carrierText) : carrier;
       const tier = header.tier ? cleanTier(cleanLineName(header.tier)) : "";
       const lineName = tier ? `${carrierLabel} ${tier}`.trim() : cleanLineName(header.carrierText) || label;

@@ -100,6 +100,8 @@ function parseDraft(formData: FormData) {
       sourcing_status: sourcingStatus,
     },
     sku: nullableText(formData, "sku"),
+    /** « Batterie intégrée » : unlocks the lines reserved to built-in batteries (Huahan 内电). */
+    batteryInternal: formData.get("battery_internal") === "on",
     internal: {
       factory_purchase_price: nullableNumber(formData, "factory_purchase_price"),
       supplier_name: nullableText(formData, "supplier_name"),
@@ -165,6 +167,7 @@ async function persistDraft(
     .update({
       ...draft.client,
       ...(draft.sku ? { sku: draft.sku.slice(0, 80) } : {}),
+      quote_json: { ...(product.quote_json ?? {}), battery_internal: draft.batteryInternal },
       last_synced_at: new Date().toISOString(),
     })
     .eq("id", product.id)
@@ -236,7 +239,11 @@ export async function sendQuoteAction(
     draft.sku = nextVoltshipSku(client?.code ?? client?.name, (skus ?? []).map((row) => row.sku));
   }
 
-  const candidate = { ...product, ...draft.client } as ProductRow;
+  const candidate = {
+    ...product,
+    ...draft.client,
+    quote_json: { ...(product.quote_json ?? {}), battery_internal: draft.batteryInternal },
+  } as ProductRow;
   const quote = await calculateLiveProductQuote(candidate);
   if (!quote.breakdown) {
     return {

@@ -7,6 +7,7 @@ import {
   announcedPriceFor,
   applyAnnouncedPrice,
   calculateCogs,
+  hasInternalBattery,
   listRateOptions,
   normalizeDestination,
   activeAnnouncedPrices,
@@ -271,6 +272,7 @@ export async function calculateProductCogsMatrix(
         allowedLines,
         handlingLadder: handlingLadderFrom(settings),
         fxRmbPerEur: settings.fx_rmb_per_eur,
+        batteryInternal: hasInternalBattery(product.quote_json),
       };
       return {
         destination,

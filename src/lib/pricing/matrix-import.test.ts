@@ -325,3 +325,25 @@ describe("multi-carrier merge", () => {
     ]);
   });
 });
+
+describe("carrier detection with notes naming another carrier", () => {
+  it("keeps YunExpress for a 商派 column whose notes say « sinon basculer Tongyou »", async () => {
+    const XLSX = await import("xlsx");
+    const { parseVoltshipMatrix } = await import("./matrix-import");
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["Carrier", "TONGYOU ★ NEW", "YUNEXPRESS ★ NEW"],
+      ["Tier / Service", "美国专线特惠普 (direct 24/09)", "商派特惠普货 YTSPTHPH (plancher 29/09)"],
+      ["Delivery", "12-15 d", "6-12工作日"],
+      ["Size limits", "Taxes incluses", "⚠ ~80 % des codes postaux US seulement — sinon basculer Tongyou"],
+      ["Weight (g)", "direct", "direct"],
+      [50, 20, 18],
+      [100, 22, 19],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "USA-STANDARD");
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    const { lines } = parseVoltshipMatrix(buffer);
+    expect(lines.map((line) => line.carrier)).toEqual(["Tongyou", "YunExpress"]);
+    expect(lines[1].line_name).toBe("YunExpress 商派特惠普货 YTSPTHPH");
+  });
+});

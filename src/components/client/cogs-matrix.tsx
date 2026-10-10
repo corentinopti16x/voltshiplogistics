@@ -186,7 +186,7 @@ export function CogsMatrix({
                                 tier: `${cell.weightMinG}–${cell.weightMaxG} g`,
                                 price: formatAmount(cell.shipping, locale),
                                 delivery: cell.deliveryRange ? ` · ${cell.deliveryRange}` : "",
-                              })}${cell.iossRequired ? ` · ${t("iossRequired")}` : ""}`
+                              })}`
                             : cell.weightG != null
                               ? `${cell.weightG} g`
                               : undefined
