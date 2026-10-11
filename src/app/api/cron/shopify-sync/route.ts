@@ -1,27 +1,22 @@
 import { validCronRequest } from "@/lib/integrations/webhook-events";
-import {
-  classifyAllProducts,
-  syncConnectedShopifyShops,
-} from "@/lib/shopify/sync";
-import { refreshAutoUpsellsForShops } from "@/lib/products/upsells-server";
+import { syncConnectedShopifyShops } from "@/lib/shopify/sync";
 
+export const maxDuration = 300;
+
+/**
+ * Shopify orders and products of every connected shop: ?days=3 → light refresh every
+ * 10 minutes; without it → nightly full 90-day resync. Lifecycle (cron/lifecycle) and
+ * upsells (cron/upsells) run in their own crons so a long sync can never cut them off.
+ */
 async function run(request: Request) {
   if (!validCronRequest(request)) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
   }
   try {
-    // ?days=3 → light refresh every 10 minutes (recent orders, shipping status, prices,
-    // products, lifecycle); without it → nightly full 90-day resync.
     const daysParam = Number(new URL(request.url).searchParams.get("days"));
     const days = Number.isFinite(daysParam) && daysParam > 0 ? Math.min(90, daysParam) : undefined;
     const shops = await syncConnectedShopifyShops({ days });
-    const lifecycle = await classifyAllProducts();
-    // Products bought together become upsells of the dearer one (recent orders every 10 min,
-    // full 90-day recount at night).
-    const upsells = await refreshAutoUpsellsForShops({ days: days ?? 90 }).catch((error) => ({
-      error: error instanceof Error ? error.message : "upsells failed",
-    }));
-    return Response.json({ ok: true, shops, lifecycle, upsells });
+    return Response.json({ ok: true, shops });
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Shopify sync failed." },

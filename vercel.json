@@ -27,6 +27,18 @@
     {
       "path": "/api/cron/grid-activation",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/lifecycle",
+      "schedule": "9,19,29,39,49,59 * * * *"
+    },
+    {
+      "path": "/api/cron/upsells?days=3",
+      "schedule": "6,16,26,36,46,56 * * * *"
+    },
+    {
+      "path": "/api/cron/upsells",
+      "schedule": "45 2 * * *"
     }
   ]
 }
