@@ -53,6 +53,25 @@ async function hasUnpricedRecentOrders(shopId: string) {
   return (data ?? []).some((row) => unpackOrderLines(row.line_items_json).total == null);
 }
 
+/** Runs `task` over `items`, `limit` at a time. */
+async function eachWithConcurrency<T>(items: T[], limit: number, task: (item: T) => Promise<void>) {
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const item = items[next];
+      next += 1;
+      await task(item);
+    }
+  });
+  await Promise.all(workers);
+}
+
+/**
+ * Clients synced at the same time. The shops of one client stay one after the other (they
+ * share its products and SKU maps); each shop has its own Shopify API limits.
+ */
+const CLIENT_SYNC_CONCURRENCY = 3;
+
 export async function syncConnectedShopifyShops(options: { days?: number } = {}) {
   const admin = createAdminClient();
   const { data: shops } = await admin
@@ -62,7 +81,14 @@ export async function syncConnectedShopifyShops(options: { days?: number } = {})
     .not("access_token_encrypted", "is", null);
   let synced = 0;
   const errors: string[] = [];
-  for (const shop of shops ?? []) {
+  const byClient = new Map<string, NonNullable<typeof shops>>();
+  for (const shop of shops ?? []) byClient.set(shop.client_id, [...(byClient.get(shop.client_id) ?? []), shop]);
+  await eachWithConcurrency([...byClient.values()], CLIENT_SYNC_CONCURRENCY, async (clientShops) => {
+    for (const shop of clientShops) await syncOneShop(shop);
+  });
+  return { scanned: (shops ?? []).length, synced, errors };
+
+  async function syncOneShop(shop: NonNullable<typeof shops>[number]) {
     try {
       const accessToken = await accessTokenForConnectedShop(shop);
       // Light refresh, unless orders of the last 30 days still lack their price (cached
@@ -96,16 +122,25 @@ export async function syncConnectedShopifyShops(options: { days?: number } = {})
         .eq("id", shop.id);
     }
   }
-  return { scanned: (shops ?? []).length, synced, errors };
+}
+
+/** Every row of a query, 1000 at a time (PostgREST caps a response at 1000 rows). */
+async function allRows<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null }>) {
+  const rows: T[] = [];
+  for (let from = 0; from < 500_000; from += 1000) {
+    const { data } = await page(from, from + 999);
+    rows.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
+  return rows;
 }
 
 export async function classifyAllProducts() {
   const admin = createAdminClient();
-  const { data: products } = await admin
-    .from("products_cache")
-    .select("*")
-    .neq("lifecycle_status", "archived");
-  const clientIds = [...new Set((products ?? []).map((row) => row.client_id))];
+  const products = await allRows<ProductRow>((from, to) =>
+    admin.from("products_cache").select("*").neq("lifecycle_status", "archived").order("id").range(from, to),
+  );
+  const clientIds = [...new Set(products.map((row) => row.client_id))];
   const thresholdMap = new Map<string, unknown>();
   if (clientIds.length > 0) {
     const { data: clients } = await admin
@@ -117,33 +152,57 @@ export async function classifyAllProducts() {
     }
   }
 
+  // SKU maps and the last 120 days of sales of every client, loaded once (one query per
+  // product made the job too slow for the cron).
+  const since = new Date(Date.now() - 120 * 86400000).toISOString().slice(0, 10);
+  const mappedSkus = new Map<string, string[]>();
+  const salesBySku = new Map<string, Array<{ date: string; units: number }>>();
+  for (const clientId of clientIds) {
+    const maps = await allRows<{ airtable_record_id: string | null; shopify_sku: string | null }>((from, to) =>
+      admin
+        .from("sku_maps")
+        .select("airtable_record_id, shopify_sku")
+        .eq("client_id", clientId)
+        .order("id")
+        .range(from, to),
+    );
+    for (const row of maps) {
+      if (!row.airtable_record_id || !row.shopify_sku) continue;
+      const key = `${clientId}|${row.airtable_record_id}`;
+      mappedSkus.set(key, [...(mappedSkus.get(key) ?? []), row.shopify_sku]);
+    }
+    const sales = await allRows<{ sku: string; date: string; units_sold: number }>((from, to) =>
+      admin
+        .from("sales_cache")
+        .select("sku, date, units_sold")
+        .eq("client_id", clientId)
+        .gte("date", since)
+        .order("id")
+        .range(from, to),
+    );
+    for (const row of sales) {
+      const key = `${clientId}|${row.sku}`;
+      salesBySku.set(key, [...(salesBySku.get(key) ?? []), { date: row.date, units: Number(row.units_sold) }]);
+    }
+  }
+
   let changed = 0;
-  for (const raw of products ?? []) {
-    const product = raw as ProductRow;
+  for (const product of products) {
     // A product imported from Shopify has no SKU of its own: every variant SKU is mapped to
     // it in sku_maps. Count them all; skip products with no SKU at all (new requests).
-    const { data: mapped } = await admin
-      .from("sku_maps")
-      .select("shopify_sku")
-      .eq("client_id", product.client_id)
-      .eq("airtable_record_id", product.airtable_record_id);
     const skus = [
       ...new Set(
-        [product.sku, ...(mapped ?? []).map((row) => row.shopify_sku)].filter(
+        [product.sku, ...(mappedSkus.get(`${product.client_id}|${product.airtable_record_id}`) ?? [])].filter(
           (sku): sku is string => Boolean(sku),
         ),
       ),
     ];
     if (skus.length === 0) continue;
-    const { data: sales } = await admin
-      .from("sales_cache")
-      .select("date, units_sold")
-      .eq("client_id", product.client_id)
-      .in("sku", skus)
-      .gte("date", new Date(Date.now() - 120 * 86400000).toISOString().slice(0, 10));
     const byDate = new Map<string, number>();
-    for (const row of sales ?? []) {
-      byDate.set(row.date, (byDate.get(row.date) ?? 0) + Number(row.units_sold));
+    for (const sku of skus) {
+      for (const row of salesBySku.get(`${product.client_id}|${sku}`) ?? []) {
+        byDate.set(row.date, (byDate.get(row.date) ?? 0) + row.units);
+      }
     }
     const classified = classifyLifecycle({
       current: product.lifecycle_status,
@@ -196,7 +255,7 @@ export async function classifyAllProducts() {
     });
     changed += 1;
   }
-  return { scanned: (products ?? []).length, changed };
+  return { scanned: products.length, changed };
 }
 
 /**
