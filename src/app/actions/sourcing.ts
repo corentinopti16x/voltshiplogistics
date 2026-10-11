@@ -14,7 +14,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { ProductRow, SourcingStatus } from "@/lib/products/types";
 import type { ShippingChannel } from "@/lib/domain/pricing";
 import { nextVoltshipSku } from "@/lib/products/todo-core";
-import { parseBoxField, parseClientNote, parsePackPieces, withSheetExtras } from "@/lib/products/extras";
+import { parseBoxField, parseClientNote, parseCustomsForm, parsePackPieces, withSheetExtras } from "@/lib/products/extras";
 import {
   CARRIER_PREF_KEY,
   parseCarrierPreferences,
@@ -119,6 +119,8 @@ function parseDraft(formData: FormData) {
     boxWeightG: parseBoxField(formData.get("box_weight_g")),
     /** Packaging fixed for this product (g); empty = automatic (Tarification ladder). */
     packagingWeightG: parseBoxField(formData.get("packaging_weight_g")),
+    /** Customs / warehouse data for ECCANG (declared names, HS code, packed dimensions). */
+    customs: formData.has("declared_name_en") ? parseCustomsForm((key) => formData.get(key)) : undefined,
     internal: {
       factory_purchase_price: nullableNumber(formData, "factory_purchase_price"),
       supplier_name: nullableText(formData, "supplier_name"),
@@ -228,6 +230,7 @@ function sheetQuote(product: ProductRow, draft: ReturnType<typeof parseDraft>) {
     boxPriceRmb: draft.boxPriceRmb,
     boxWeightG: draft.boxWeightG,
     packagingWeightG: draft.packagingWeightG,
+    customs: draft.customs,
   });
 }
 

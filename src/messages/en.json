@@ -1922,7 +1922,17 @@
       "parcelPreview": "1-unit parcel: {content} g + packaging {packaging} g = {total} g",
       "packagingOverride": "Specific packaging",
       "packagingAuto": "Auto",
-      "packagingOverrideHint": "Empty = automatic by parcel size (Pricing). Fill only if this product has special packaging."
+      "packagingOverrideHint": "Empty = automatic by parcel size (Pricing). Fill only if this product has special packaging.",
+      "customsTitle": "Customs & warehouse (ECCANG)",
+      "customsIntro": "Sent to ECCANG with the product and printed on carrier labels. Declared value: {value} USD for every product.",
+      "declaredNameZh": "Declared name (Chinese)",
+      "declaredNameEn": "Declared name (English)",
+      "declaredNameEnHint": "50 characters max, generic name (not the brand)",
+      "hsCode": "HS code",
+      "lengthCm": "Packed length",
+      "widthCm": "Packed width",
+      "heightCm": "Packed height",
+      "dimensionsHint": "The 3 dimensions also count for the shipping volumetric weight."
     },
     "announced": {
       "title": "Prices announced to the client",

@@ -19,8 +19,10 @@ import {
   clientNote,
   packPieces,
   productBox,
+  productCustoms,
   productPackagingG,
 } from "@/lib/products/extras";
+import { ECCANG_DECLARED_VALUE_USD } from "@/lib/eccang/mapping";
 
 const initial: SourcingActionResult = { ok: false };
 // No "liquid" choice: the carrier grid has no liquid sheet, liquids go in Cosmétique.
@@ -76,6 +78,7 @@ export function SourcingWorkForm({
   const storedPackaging = productPackagingG(product.quote_json);
   const [packagingOverride, setPackagingOverride] = useState<string>(storedPackaging != null ? String(storedPackaging) : "");
   const storedBox = productBox(product.quote_json);
+  const customs = productCustoms(product.quote_json);
   const [boxRmb, setBoxRmb] = useState<string>(storedBox?.priceRmb ? String(storedBox.priceRmb) : "");
   const boxEur =
     boxRmb.trim() && Number(boxRmb) > 0 ? boxPriceEur({ priceRmb: Number(boxRmb), weightG: 0 }, fxRmbPerEur) : null;
@@ -277,6 +280,65 @@ export function SourcingWorkForm({
                   step="1"
                   defaultValue={storedBox?.weightG ? String(storedBox.weightG) : ""}
                   hint={t("boxWeightHint")}
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 rounded-md border border-dashed border-[var(--line)] p-3 sm:col-span-2 lg:col-span-3">
+              <p className="text-sm font-semibold">{t("customsTitle")}</p>
+              <p className="text-xs text-[var(--muted)]">
+                {t("customsIntro", { value: ECCANG_DECLARED_VALUE_USD.toFixed(2) })}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Input
+                  name="declared_name_zh"
+                  label={t("declaredNameZh")}
+                  maxLength={255}
+                  defaultValue={customs.declaredNameZh ?? ""}
+                  placeholder="耳朵护理液"
+                />
+                <Input
+                  name="declared_name_en"
+                  label={t("declaredNameEn")}
+                  maxLength={50}
+                  defaultValue={customs.declaredNameEn ?? ""}
+                  placeholder="Ear care drops"
+                  hint={t("declaredNameEnHint")}
+                />
+                <Input
+                  name="hs_code"
+                  label={t("hsCode")}
+                  maxLength={32}
+                  inputMode="numeric"
+                  defaultValue={customs.hsCode ?? ""}
+                  placeholder="330499"
+                />
+                <Input
+                  name="length_cm"
+                  label={t("lengthCm")}
+                  unit="cm"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  defaultValue={customs.lengthCm ?? ""}
+                />
+                <Input
+                  name="width_cm"
+                  label={t("widthCm")}
+                  unit="cm"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  defaultValue={customs.widthCm ?? ""}
+                />
+                <Input
+                  name="height_cm"
+                  label={t("heightCm")}
+                  unit="cm"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  defaultValue={customs.heightCm ?? ""}
+                  hint={t("dimensionsHint")}
                 />
               </div>
             </div>

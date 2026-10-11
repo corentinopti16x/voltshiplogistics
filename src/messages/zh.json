@@ -1024,7 +1024,17 @@
       "parcelPreview": "1 件包裹：{content} g + 包装 {packaging} g = {total} g",
       "packagingOverride": "特殊包装",
       "packagingAuto": "自动",
-      "packagingOverrideHint": "留空 = 按包裹大小自动计算（定价设置）。仅当该产品有特殊包装时填写。"
+      "packagingOverrideHint": "留空 = 按包裹大小自动计算（定价设置）。仅当该产品有特殊包装时填写。",
+      "customsTitle": "报关与仓库（易仓）",
+      "customsIntro": "随产品同步到易仓，并打印在物流面单上。申报价值：所有产品 {value} 美元。",
+      "declaredNameZh": "中文申报名",
+      "declaredNameEn": "英文申报名",
+      "declaredNameEnHint": "最多 50 个字符，用通用名称（不写品牌）",
+      "hsCode": "海关编码",
+      "lengthCm": "包装长",
+      "widthCm": "包装宽",
+      "heightCm": "包装高",
+      "dimensionsHint": "三个尺寸也用于计算物流体积重。"
     },
     "title": "采购待办队列",
     "soon": "按请求时间从早到晚处理。填写报价字段后，向客户发送最终 COGS（商品成本）。",

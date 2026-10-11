@@ -72,6 +72,8 @@ export function withSheetExtras(
     boxWeightG?: number | null;
     /** Packaging fixed for this product (g); null = automatic; undefined = untouched. */
     packagingWeightG?: number | null;
+    /** Customs / warehouse data sent to ECCANG; undefined = untouched. */
+    customs?: ProductCustoms;
   },
   now: Date = new Date(),
 ) {
@@ -88,6 +90,16 @@ export function withSheetExtras(
       ...(input.boxPriceRmb !== undefined ? { box_price_rmb: input.boxPriceRmb } : {}),
       ...(input.boxWeightG !== undefined ? { box_weight_g: input.boxWeightG } : {}),
       ...(input.packagingWeightG !== undefined ? { packaging_weight_g: input.packagingWeightG } : {}),
+      ...(input.customs
+        ? {
+            declared_name_zh: input.customs.declaredNameZh,
+            declared_name_en: input.customs.declaredNameEn,
+            hs_code: input.customs.hsCode,
+            length_cm: input.customs.lengthCm,
+            width_cm: input.customs.widthCm,
+            height_cm: input.customs.heightCm,
+          }
+        : {}),
     } as Record<string, unknown>,
     /** True when a new or edited note must be announced to the client. */
     noteChanged: noteChanged && input.clientNote != null,
@@ -144,4 +156,52 @@ export function parseBoxField(raw: unknown): number | null {
   if (!text) return null;
   const value = Number(text);
   return Number.isFinite(value) && value >= 0 ? value : Number.NaN;
+}
+
+/** Customs / warehouse data of a product (ECCANG product sheet and carrier declarations). */
+export type ProductCustoms = {
+  /** Chinese name: warehouse title in ECCANG and Chinese customs declaration. */
+  declaredNameZh: string | null;
+  /** English customs declaration name (max 50 characters in ECCANG). */
+  declaredNameEn: string | null;
+  hsCode: string | null;
+  /** Packed unit dimensions (cm): ECCANG sheet + volumetric weight of the parcel. */
+  lengthCm: number | null;
+  widthCm: number | null;
+  heightCm: number | null;
+};
+
+function customsText(raw: unknown, max: number) {
+  if (typeof raw !== "string") return null;
+  const value = raw.replace(/\s+/g, " ").trim();
+  return value ? value.slice(0, max) : null;
+}
+
+function customsCm(raw: unknown) {
+  if (raw == null || raw === "") return null;
+  const value = Number(String(raw).replace(",", "."));
+  return Number.isFinite(value) && value > 0 && value <= 300 ? Math.round(value * 10) / 10 : null;
+}
+
+export function productCustoms(quoteJson: QuoteJson): ProductCustoms {
+  return {
+    declaredNameZh: customsText(quoteJson?.declared_name_zh, 255),
+    declaredNameEn: customsText(quoteJson?.declared_name_en, 50),
+    hsCode: customsText(quoteJson?.hs_code, 32)?.replace(/[^0-9.]/g, "") || null,
+    lengthCm: customsCm(quoteJson?.length_cm),
+    widthCm: customsCm(quoteJson?.width_cm),
+    heightCm: customsCm(quoteJson?.height_cm),
+  };
+}
+
+/** Customs fields of the sourcing sheet form. */
+export function parseCustomsForm(get: (key: string) => unknown): ProductCustoms {
+  return productCustoms({
+    declared_name_zh: get("declared_name_zh"),
+    declared_name_en: get("declared_name_en"),
+    hs_code: get("hs_code"),
+    length_cm: get("length_cm"),
+    width_cm: get("width_cm"),
+    height_cm: get("height_cm"),
+  });
 }

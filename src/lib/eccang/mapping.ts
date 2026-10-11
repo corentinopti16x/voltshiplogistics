@@ -68,6 +68,20 @@ export function resolveShippingMethod(
 
 // --- Products ------------------------------------------------------------------------
 
+/** Customs value declared to ECCANG for every product and order line (Voltship rule). */
+export const ECCANG_DECLARED_VALUE_USD = 1.01;
+
+/** order_code / receiving_code of a create* response: top level, or under `data`. */
+export function responseCode(response: unknown, key: string): string | null {
+  const record = response && typeof response === "object" ? (response as Record<string, unknown>) : {};
+  const data = record.data && typeof record.data === "object" ? (record.data as Record<string, unknown>) : {};
+  for (const value of [record[key], data[key]]) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number") return String(value);
+  }
+  return null;
+}
+
 export type EccangProductPayload = {
   product_sku: string;
   reference_no?: string;
@@ -97,26 +111,25 @@ function quoteNumber(product: ProductRow, key: string) {
 }
 
 /**
- * createProduct / modifyProduct params. Weight in KG, dimensions in CM, declared value in USD.
- * Declared names come from quote_json (declared_name_en / declared_name_zh, set by the
- * Airtable mapping when available) and fall back to the title. Dimensions default to a
- * 10×10×5 cm box when unknown — ECCANG requires them and the warehouse re-measures.
+ * createProduct / modifyProduct params. Weight in KG, dimensions in CM, declared value in USD
+ * (1.01 for every product unless the sheet sets declared_value_usd). Declared names come from
+ * the sourcing sheet (declared_name_zh / declared_name_en) and fall back to the title; the
+ * Chinese name is the warehouse title. Dimensions default to a 10×10×5 cm box when unknown —
+ * ECCANG requires them and the warehouse re-measures.
  */
 export function mapProductToEccang(product: ProductRow): EccangProductPayload {
   if (!product.sku?.trim()) throw new Error("Product has no SKU yet.");
   const title = product.title.trim().slice(0, 255);
-  const declaredEn = (quoteString(product, "declared_name_en") ?? title).slice(0, 50);
+  const declaredEnRaw = quoteString(product, "declared_name_en");
+  const declaredEn = (declaredEnRaw ?? title).slice(0, 50);
   const declaredZh = quoteString(product, "declared_name_zh");
   const weightKg = Math.max(0.001, Math.round((product.weight_g ?? 0)) / 1000);
-  const declaredValue =
-    quoteNumber(product, "declared_value_usd") ??
-    (product.client_price != null && Number(product.client_price) > 0
-      ? Math.round(Number(product.client_price) * 100) / 100
-      : 1);
+  const declaredValue = quoteNumber(product, "declared_value_usd") ?? ECCANG_DECLARED_VALUE_USD;
   const payload: EccangProductPayload = {
     product_sku: product.sku.trim(),
     reference_no: product.id,
-    product_title: title,
+    // Warehouse staff read the Chinese name; the English one stays the shop title.
+    product_title: (declaredZh ?? title).slice(0, 255),
     product_title_en: title,
     product_weight: weightKg,
     product_length: quoteNumber(product, "length_cm") ?? 10,
@@ -130,7 +143,7 @@ export function mapProductToEccang(product: ProductRow): EccangProductPayload {
   if (declaredZh) payload.product_declared_name_zh = declaredZh.slice(0, 255);
   const hs = quoteString(product, "hs_code");
   if (hs) payload.hs_code = hs.slice(0, 32);
-  if (product.shipping_channel === "electronics_battery") payload.contain_battery = 1;
+  payload.contain_battery = product.shipping_channel === "electronics_battery" ? 1 : 0;
   return payload;
 }
 
@@ -296,8 +309,8 @@ export function orderLinesForEccang(order: ShopifyOrderForEccang, resolver?: Sku
     const item: EccangOrderItem = { product_sku: sku, quantity: line.quantity };
     const title = (line.title ?? line.name ?? "").trim();
     if (title) item.product_name_en = title.slice(0, 200);
-    const price = Number(line.price);
-    if (Number.isFinite(price) && price > 0) item.product_declared_value = price;
+    // Declared value: the Voltship rule (1.01), never the shop's selling price.
+    item.product_declared_value = ECCANG_DECLARED_VALUE_USD;
     merged.set(sku, item);
   }
   return [...merged.values()];

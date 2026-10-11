@@ -17,6 +17,7 @@ import {
   parseShippingMethodMap,
   resolveShippingMethod,
   type ShopifyOrderForEccang,
+  responseCode,
 } from "./mapping";
 
 const shopifyOrder: ShopifyOrderForEccang = {
@@ -79,7 +80,7 @@ describe("shipping method map", () => {
 describe("order lines", () => {
   it("merges same-SKU lines and skips non-shippable / SKU-less lines", () => {
     expect(orderLinesForEccang(shopifyOrder)).toEqual([
-      { product_sku: "VS-LAMP-01", quantity: 3, product_name_en: "Lampe lune", product_declared_value: 24.95 },
+      { product_sku: "VS-LAMP-01", quantity: 3, product_name_en: "Lampe lune", product_declared_value: 1.01 },
     ]);
     expect(orderLinesWithoutSku(shopifyOrder)).toEqual(["Emballage cadeau"]);
   });
@@ -113,7 +114,7 @@ describe("mapShopifyOrderToEccang", () => {
       order_desc: "Shopify #1042",
       verify: 1,
       items: [
-        { product_sku: "VS-LAMP-01", quantity: 3, product_name_en: "Lampe lune", product_declared_value: 24.95 },
+        { product_sku: "VS-LAMP-01", quantity: 3, product_name_en: "Lampe lune", product_declared_value: 1.01 },
       ],
     });
   });
@@ -261,13 +262,13 @@ describe("product mapping", () => {
     expect(mapProductToEccang(product)).toEqual({
       product_sku: "VS-LAMP-01",
       reference_no: "p1",
-      product_title: "Lampe lune",
+      product_title: "月球灯",
       product_title_en: "Lampe lune",
       product_weight: 0.482,
       product_length: 10,
       product_width: 10,
       product_height: 5,
-      product_declared_value: 8.5,
+      product_declared_value: 1.01,
       product_declared_name: "Lampe lune",
       product_declared_name_zh: "月球灯",
       hs_code: "940520",
@@ -278,6 +279,27 @@ describe("product mapping", () => {
   });
   it("requires a SKU", () => {
     expect(() => mapProductToEccang({ ...product, sku: null })).toThrow(/SKU/);
+  });
+  it("uses the sheet's customs data and flags no battery explicitly", () => {
+    const payload = mapProductToEccang({
+      ...product,
+      shipping_channel: "cosmetics",
+      quote_json: { declared_name_en: "Ear drops", length_cm: 12, width_cm: 4, height_cm: 4, declared_value_usd: 2 },
+    });
+    expect(payload).toMatchObject({
+      product_title: "Lampe lune",
+      product_declared_name: "Ear drops",
+      product_length: 12,
+      product_width: 4,
+      product_height: 4,
+      product_declared_value: 2,
+      contain_battery: 0,
+    });
+  });
+  it("reads create* codes at the top level or under data", () => {
+    expect(responseCode({ ask: "Success", order_code: "OC1" }, "order_code")).toBe("OC1");
+    expect(responseCode({ ask: "Success", data: { order_code: "OC2" } }, "order_code")).toBe("OC2");
+    expect(responseCode({ ask: "Success" }, "order_code")).toBeNull();
   });
   it("detects 'already exists' errors", () => {
     expect(isProductExistsError("E200", "SKU已存在")).toBe(true);
