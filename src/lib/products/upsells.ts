@@ -196,3 +196,8 @@ export function composerItem(
     ...(stock !== undefined ? { stock } : {}),
   };
 }
+
+/** Products this one is an upsell of (its « parents »), most relevant first. */
+export function upsellParentsOf<T extends { id: string; quote_json: Record<string, unknown> | null }>(products: T[], productId: string): T[] {
+  return products.filter((row) => row.id !== productId && parseUpsellIds(row.quote_json).includes(productId));
+}

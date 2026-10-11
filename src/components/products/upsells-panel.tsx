@@ -15,7 +15,10 @@ export async function UpsellsPanel({
   suggestions,
   mainOrders,
   candidates,
+  parents = [],
 }: {
+  /** Products this one is an upsell of. */
+  parents?: ProductRow[];
   product: ProductRow;
   upsells: UpsellProduct[];
   suggestions: UpsellSuggestion[];
@@ -36,6 +39,20 @@ export async function UpsellsPanel({
           <button className="cursor-pointer rounded-md border border-[var(--line)] px-2.5 py-1 text-xs">{t("refresh")}</button>
         </form>
       </div>
+
+      {parents.length > 0 ? (
+        <p className="mt-3 flex flex-wrap items-center gap-1.5 rounded-xl bg-[#e3ecd9] px-3 py-2 text-sm text-[#2f4a1f]">
+          <span className="font-semibold">{t("parents")}</span>
+          {parents.map((parent, index) => (
+            <span key={parent.id}>
+              <Link href={`/sourcer/${parent.id}#upsells`} className="underline">
+                {parent.title}
+              </Link>
+              {index < parents.length - 1 ? "," : ""}
+            </span>
+          ))}
+        </p>
+      ) : null}
 
       {upsells.length === 0 ? (
         <p className="mt-3 text-sm text-[var(--muted)]">{t("none")}</p>

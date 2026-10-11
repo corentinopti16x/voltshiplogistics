@@ -1115,7 +1115,8 @@
       "addManual": "关联",
       "refresh": "按订单重新计算（90 天）",
       "sourceAuto": "自动 · 一起 {orders} 单",
-      "sourceManual": "手动关联"
+      "sourceManual": "手动关联",
+      "parents": "是以下产品的加购："
     }
   },
   "app": {
@@ -1302,7 +1303,9 @@
       "missingRate": "{market} 没有这个重量的运费。",
       "missingGrid": "运费表还没有启用。",
       "empty": "至少选一件才能看到 COGS。",
-      "notReady": "缺少价格、重量或类别：暂时不能计入包裹。"
+      "notReady": "缺少价格、重量或类别：暂时不能计入包裹。",
+      "parentsTitle": "一起销售",
+      "parentsLead": "这个产品作为以下产品的加购销售。完整包裹的 COGS（主产品 + 加购）在它们的产品页“经常一起购买”里。"
     }
   }
 }

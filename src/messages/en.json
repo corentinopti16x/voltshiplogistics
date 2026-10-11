@@ -740,7 +740,9 @@
       "missingRate": "No shipping rate for this weight to {market}.",
       "missingGrid": "The rate grid is not active yet.",
       "empty": "Add at least one unit to see the COGS.",
-      "notReady": "Price, weight or category missing: cannot be priced in the parcel yet."
+      "notReady": "Price, weight or category missing: cannot be priced in the parcel yet.",
+      "parentsTitle": "Sold with",
+      "parentsLead": "This product is sold as an upsell of these products. The full parcel COGS (product + upsells) is on their page, in “Frequently bought together”."
     }
   },
   "economics": {
@@ -2009,7 +2011,8 @@
       "addManual": "Link",
       "refresh": "Recount from orders (90 days)",
       "sourceAuto": "auto · {orders, plural, one {# order} other {# orders}} together",
-      "sourceManual": "linked by hand"
+      "sourceManual": "linked by hand",
+      "parents": "Upsell of:"
     }
   },
   "support": {

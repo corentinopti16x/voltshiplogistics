@@ -6,6 +6,7 @@ import {
   parseAutoUpsells,
   parseUpsellIds,
   upsellPairs,
+  upsellParentsOf,
   withUpsell,
 } from "./upsells";
 
@@ -99,5 +100,17 @@ describe("automatic upsells (bought together)", () => {
     expect(parseUpsellIds(removed)).toEqual(["manual", "case"]);
     // Linking it again by hand lifts the exclusion.
     expect(parseUpsellIds(withUpsell(removed, "pouch", true))).toEqual(["manual", "pouch", "case"]);
+  });
+});
+
+describe("upsellParentsOf", () => {
+  it("finds the products a product is sold with", () => {
+    const products = [
+      { id: "trad", quote_json: { upsell_auto: [{ id: "case", orders: 810 }] } },
+      { id: "kit", quote_json: { upsell_ids: ["case"] } },
+      { id: "other", quote_json: { upsell_auto: [{ id: "case", orders: 3 }], upsell_excluded_ids: ["case"] } },
+      { id: "case", quote_json: null },
+    ];
+    expect(upsellParentsOf(products, "case").map((row) => row.id)).toEqual(["trad", "kit"]);
   });
 });

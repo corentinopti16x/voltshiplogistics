@@ -12,6 +12,7 @@ import {
   parseUpsellIds,
   sameAutoUpsells,
   upsellPairs,
+  upsellParentsOf,
 } from "./upsells";
 import type { OrderLine } from "@/lib/shopify/order-cache";
 
@@ -221,4 +222,9 @@ export function upsellOwners(products: Array<Pick<ProductRow, "id" | "title" | "
     }
   }
   return owners;
+}
+
+/** Products of the same client that this product is an upsell of. */
+export async function loadUpsellParents(product: ProductRow) {
+  return upsellParentsOf(await clientProducts(product.client_id), product.id);
 }

@@ -19,7 +19,7 @@ import { CogsMatrix } from "@/components/client/cogs-matrix";
 import { UpsellsPanel } from "@/components/products/upsells-panel";
 import { UpsellComposer } from "@/components/products/upsell-composer";
 import { clientProducts, loadUpsells, stockBySku, suggestUpsells } from "@/lib/products/upsells-server";
-import { composerItem } from "@/lib/products/upsells";
+import { composerItem, upsellParentsOf } from "@/lib/products/upsells";
 
 export default async function SourcerProductPage({
   params,
@@ -174,6 +174,7 @@ export default async function SourcerProductPage({
           suggestions={suggestions.items}
           mainOrders={suggestions.mainOrders}
           candidates={candidates}
+          parents={upsellParentsOf(candidates, product.id)}
         />
       </div>
       {upsells.length > 0 ? (
