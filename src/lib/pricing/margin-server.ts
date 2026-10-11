@@ -52,6 +52,7 @@ import {
 import { handlingLadderFrom, readPricingSettings, type PricingSettings } from "@/lib/pricing/settings";
 import { CLIENT_PRODUCT_SELECT, serializeClientProduct } from "@/lib/products/visibility";
 import { parcelExtras, productBox } from "@/lib/products/extras";
+import { GRAM_COLUMNS, isMissingGramColumns, parseGramArray } from "@/lib/pricing/gram-columns";
 import type { ProductRow } from "@/lib/products/types";
 import { unpackOrderLines, type OrderShipping } from "@/lib/shopify/order-cache";
 import {
@@ -97,22 +98,30 @@ async function loadInternalRateCells(
     delivery_range: string | null;
     line_name: string | null;
   }> = [];
+  let withGrams = true;
   for (let from = 0; from < 100_000; from += 1000) {
     const { data: page, error } = await admin
       .from("rate_grid_cells")
       .select(
-        "id, grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, carrier_cost_rmb, tax_included, ioss_required",
+        `id, grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, carrier_cost_rmb, tax_included, ioss_required${withGrams ? `, ${GRAM_COLUMNS}` : ""}`,
       )
       .eq("grid_version", gridVersion)
       .in("destination", destinations)
       .in("channel", [...new Set(channels.map((channel) => gridChannel(channel)))])
       .order("id")
       .range(from, from + 999);
+    if (error && withGrams && isMissingGramColumns(error)) {
+      withGrams = false;
+      from -= 1000;
+      continue;
+    }
     if (error) throw error;
-    data.push(...((page ?? []) as typeof data));
+    data.push(...((page ?? []) as unknown as typeof data));
     if (!page || page.length < 1000) break;
   }
   return data.map((cell) => ({
+    gramPrices: parseGramArray(cell.gram_prices),
+    gramCostsRmb: parseGramArray(cell.gram_costs_rmb),
     gridVersion: cell.grid_version,
     carrier: cell.carrier,
     destination: cell.destination,

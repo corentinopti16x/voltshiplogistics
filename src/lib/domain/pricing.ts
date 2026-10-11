@@ -26,7 +26,27 @@ export type RateCell = {
   taxIncluded?: boolean | null;
   /** The line ships under the client's IOSS number (informational, not a cost). */
   iossRequired?: boolean | null;
+  /**
+   * Gram-exact grids: client price and INTERNAL carrier cost for every gram of the bracket
+   * (index 0 = weightMinG). The parcel is then billed at its exact billed weight; without
+   * them the bracket's flat `price` / `carrierCostRmb` apply.
+   */
+  gramPrices?: number[] | null;
+  gramCostsRmb?: number[] | null;
 };
+
+/** The cell priced at an exact billed weight (gram-exact grids), else the cell unchanged. */
+export function cellAtWeight(cell: RateCell, billedG: number): RateCell {
+  const index = Math.round(billedG) - cell.weightMinG;
+  const price = cell.gramPrices?.[index];
+  const cost = cell.gramCostsRmb?.[index];
+  if ((price == null || !Number.isFinite(price)) && (cost == null || !Number.isFinite(cost))) return cell;
+  return {
+    ...cell,
+    price: price != null && Number.isFinite(price) ? price : cell.price,
+    carrierCostRmb: cost != null && Number.isFinite(cost) ? cost : cell.carrierCostRmb,
+  };
+}
 
 /** Product dimensions in cm (quote_json length_cm / width_cm / height_cm). */
 export type ParcelDimensionsCm = { length_cm: number; width_cm: number; height_cm: number };
@@ -315,14 +335,17 @@ function matchingCells(cells: RateCell[], input: CellQuery) {
       destination,
       volumetricDivisors: input.volumetricDivisors,
     });
-  const matches = cells.filter((cell) => {
-    if (cell.destination.trim().toUpperCase() !== destination || cell.channel !== gridChannel(input.channel)) return false;
-    if (input.preferredCarrier && cell.carrier !== input.preferredCarrier) return false;
-    if (input.allowedLines && !input.allowedLines.has(lineKey(cell.carrier, cell.lineName))) return false;
-    if (input.batteryInternal !== true && isInternalBatteryOnlyLine(cell)) return false;
+  const matches: RateCell[] = [];
+  for (const cell of cells) {
+    if (cell.destination.trim().toUpperCase() !== destination || cell.channel !== gridChannel(input.channel)) continue;
+    if (input.preferredCarrier && cell.carrier !== input.preferredCarrier) continue;
+    if (input.allowedLines && !input.allowedLines.has(lineKey(cell.carrier, cell.lineName))) continue;
+    if (input.batteryInternal !== true && isInternalBatteryOnlyLine(cell)) continue;
     const weight = billed(cell.carrier);
-    return weight >= cell.weightMinG && weight <= cell.weightMaxG;
-  });
+    if (weight < cell.weightMinG || weight > cell.weightMaxG) continue;
+    // Priced at the exact billed gram when the grid carries per-gram prices.
+    matches.push(cellAtWeight(cell, weight));
+  }
   return matches.sort(byPriceThenNarrowest);
 }
 

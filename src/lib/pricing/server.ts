@@ -43,6 +43,7 @@ import {
 import { getProductRequest, type ProductRow } from "@/lib/products/types";
 import { handlingLadderFrom, readPricingSettings } from "./settings";
 import { parcelExtras } from "@/lib/products/extras";
+import { GRAM_COLUMNS, isMissingGramColumns, parseGramArray } from "./gram-columns";
 
 export type ClientPricingProfile = {
   commissionPct: number;
@@ -222,24 +223,35 @@ export async function loadRateCellsFor(
     line_name: string | null;
     ioss_required: boolean | null;
     carrier_cost_rmb: number | null;
+    gram_prices?: unknown;
+    gram_costs_rmb?: unknown;
   };
   const data: Row[] = [];
+  let withGrams = true;
   for (let from = 0; from < 100_000; from += 1000) {
     const { data: page, error } = await admin
       .from("rate_grid_cells")
       .select(
-        "id, grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, ioss_required, carrier_cost_rmb",
+        `id, grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, ioss_required, carrier_cost_rmb${withGrams ? `, ${GRAM_COLUMNS}` : ""}`,
       )
       .eq("grid_version", gridVersion)
       .in("destination", destinations)
       .in("channel", [...new Set(channels.map((channel) => gridChannel(channel)))])
       .order("id")
       .range(from, from + 999);
+    if (error && withGrams && isMissingGramColumns(error)) {
+      // Migration 00022 not applied yet: flat bracket prices.
+      withGrams = false;
+      from -= 1000;
+      continue;
+    }
     if (error) throw error;
-    data.push(...((page ?? []) as Row[]));
+    data.push(...((page ?? []) as unknown as Row[]));
     if (!page || page.length < 1000) break;
   }
   return data.map((cell) => ({
+    gramPrices: parseGramArray(cell.gram_prices),
+    gramCostsRmb: parseGramArray(cell.gram_costs_rmb),
     gridVersion: cell.grid_version,
     carrier: cell.carrier,
     destination: cell.destination,

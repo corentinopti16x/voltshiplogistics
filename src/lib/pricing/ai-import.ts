@@ -2,6 +2,7 @@ import { findRateCell, normalizeDestination, type RateCell, type ShippingChannel
 import type { RateGridCsvRow } from "../domain/rate-grid-csv";
 import { DEFAULT_PRICING_SETTINGS, parsePricingSettings, type PricingSettings } from "./settings";
 import { isSpreadsheetFile, spreadsheetToText } from "./spreadsheet-text";
+import { decodeGramCurve, gramCostsForBracket } from "./gram-curve";
 
 /**
  * AI-assisted carrier price list import.
@@ -55,6 +56,11 @@ export type ParsedLine = {
   notes?: string | null;
   /** Minimum billable weight in grams when the carrier states one (USA: 50 g). */
   min_billable_g?: number | null;
+  /**
+   * Gram-by-gram carrier cost from 1 g (lib/pricing/gram-curve encoding) — Voltship matrix.
+   * Lets the grid bill a parcel at its exact gram instead of the bracket's heaviest gram.
+   */
+  gram_curve?: string | null;
   /** Volumetric divisor (e.g. 8000 for Tongyou, 6000 for Huahan). Stored in notes, never applied. */
   volumetric_divisor?: number | null;
   /** 0–1 */
@@ -313,6 +319,7 @@ export function normalizeParsedPriceList(raw: unknown, carrierHint?: string | nu
       min_billable_g: int(l.min_billable_g),
       volumetric_divisor: int(l.volumetric_divisor),
       confidence: confidenceRaw == null ? 0.5 : Math.min(1, Math.max(0, confidenceRaw)),
+      ...(typeof l.gram_curve === "string" && l.gram_curve ? { gram_curve: l.gram_curve } : {}),
     });
   });
 
@@ -403,6 +410,9 @@ export type ProposedCell = RateGridCsvRow & {
   notes: string | null;
   carrierCostRmb: number;
   confidence: number;
+  /** Per gram of the bracket (index 0 = weightMinG); null = flat bracket price. */
+  gramCostsRmb?: number[] | null;
+  gramPrices?: number[] | null;
 };
 
 export type LineOverride = { include?: boolean; tax_included?: boolean };
@@ -477,6 +487,8 @@ export function expandToCells(
   parsed: ParsedPriceList,
   settings: PricingSettings = DEFAULT_PRICING_SETTINGS,
   overrides?: ImportOverrides,
+  /** withGrams: per-gram cost/price arrays on matrix cells (activation only — large). */
+  options: { withGrams?: boolean } = {},
 ): ProposedCell[] {
   const resolved = resolveSettings(settings, overrides);
   const cells: ProposedCell[] = [];
@@ -502,6 +514,7 @@ export function expandToCells(
     };
 
     if (line.pricing.type === "table") {
+      const curve = options.withGrams && line.gram_curve ? decodeGramCurve(line.gram_curve) : null;
       for (const row of line.pricing.rows) {
         cells.push({
           ...base,
@@ -509,6 +522,16 @@ export function expandToCells(
           weightMaxG: row.max_g,
           carrierCostRmb: round4(row.price),
           price: priceFromCarrierCost(row.price, taxIncluded, resolved),
+          // Gram-exact grid (only computed for activation: arrays are large).
+          ...(curve
+            ? (() => {
+                const costs = gramCostsForBracket(curve, row.min_g, row.max_g, row.price).map(round4);
+                return {
+                  gramCostsRmb: costs,
+                  gramPrices: costs.map((cost) => priceFromCarrierCost(cost, taxIncluded, resolved)),
+                };
+              })()
+            : {}),
         });
       }
       return;
@@ -572,6 +595,9 @@ export type GridCellRecord = {
   notes: string | null;
   carrierCostRmb: number | null;
   iossRequired: boolean;
+  /** Per gram of the bracket (index 0 = weightMinG); null = flat bracket price. */
+  gramCostsRmb?: number[] | null;
+  gramPrices?: number[] | null;
 };
 
 export function proposedToRecords(cells: ProposedCell[]): GridCellRecord[] {
@@ -587,6 +613,8 @@ export function proposedToRecords(cells: ProposedCell[]): GridCellRecord[] {
     taxIncluded: cell.taxIncluded,
     notes: cell.notes,
     carrierCostRmb: cell.carrierCostRmb,
+    gramCostsRmb: cell.gramCostsRmb ?? null,
+    gramPrices: cell.gramPrices ?? null,
     iossRequired: cell.iossRequired,
   }));
 }

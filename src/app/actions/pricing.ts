@@ -751,9 +751,19 @@ export async function activateRateImportAction(
   });
   if (gridError) return { ok: false, error: gridError.message };
 
+  // Gram-exact prices (matrix lines): the same cells, with the cost and price of every gram.
+  const withGrams = expandToCells(review.parsed, review.settings, review.overrides, { withGrams: true });
+  const gramsByCell = new Map(
+    withGrams.map((cell) => [`${cell.lineIndex}|${cell.weightMinG}|${cell.weightMaxG}`, cell]),
+  );
+  const importedCells = review.cells.map((cell) => {
+    const grams = gramsByCell.get(`${cell.lineIndex}|${cell.weightMinG}|${cell.weightMaxG}`);
+    return grams ? { ...cell, gramCostsRmb: grams.gramCostsRmb ?? null, gramPrices: grams.gramPrices ?? null } : cell;
+  });
+
   // Carry forward every other carrier of the active grid; replace the imported carrier.
   const activeRecords = await loadGridCellRecords(review.activeGridVersion);
-  const merged = mergeGridCells(activeRecords, proposedToRecords(review.cells), review.carriers);
+  const merged = mergeGridCells(activeRecords, proposedToRecords(importedCells), review.carriers);
   const rows = merged.map((cell) => ({
     grid_version: gridVersion,
     carrier: cell.carrier,
@@ -768,6 +778,9 @@ export async function activateRateImportAction(
     notes: cell.notes,
     carrier_cost_rmb: cell.carrierCostRmb,
     ioss_required: cell.iossRequired,
+    // Gram-exact grid (migration 00022): price and cost for every gram of the bracket.
+    ...(cell.gramPrices?.length ? { gram_prices: cell.gramPrices } : {}),
+    ...(cell.gramCostsRmb?.length ? { gram_costs_rmb: cell.gramCostsRmb } : {}),
   }));
   const importedCount = review.cells.length;
   for (let index = 0; index < rows.length; index += 500) {

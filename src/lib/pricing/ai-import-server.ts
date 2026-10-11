@@ -1,4 +1,5 @@
 import "server-only";
+import { GRAM_COLUMNS, isMissingGramColumns, parseGramArray } from "./gram-columns";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { RateCell, ShippingChannel } from "@/lib/domain/pricing";
@@ -80,22 +81,32 @@ export async function loadGridCellRecords(gridVersion: string | null): Promise<G
     notes: string | null;
     carrier_cost_rmb: number | null;
     ioss_required: boolean | null;
+    gram_prices?: unknown;
+    gram_costs_rmb?: unknown;
   };
   const data: Row[] = [];
+  let withGrams = true;
   for (let from = 0; from < 100_000; from += 1000) {
     const { data: page, error } = await admin
       .from("rate_grid_cells")
       .select(
-        "id, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, tax_included, notes, carrier_cost_rmb, ioss_required",
+        `id, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, tax_included, notes, carrier_cost_rmb, ioss_required${withGrams ? `, ${GRAM_COLUMNS}` : ""}`,
       )
       .eq("grid_version", gridVersion)
       .order("id")
       .range(from, from + 999);
+    if (error && withGrams && isMissingGramColumns(error)) {
+      withGrams = false;
+      from -= 1000;
+      continue;
+    }
     if (error) throw error;
-    data.push(...((page ?? []) as Row[]));
+    data.push(...((page ?? []) as unknown as Row[]));
     if (!page || page.length < 1000) break;
   }
   return data.map((cell) => ({
+    gramPrices: parseGramArray(cell.gram_prices),
+    gramCostsRmb: parseGramArray(cell.gram_costs_rmb),
     carrier: cell.carrier,
     destination: cell.destination,
     channel: cell.channel as ShippingChannel,
