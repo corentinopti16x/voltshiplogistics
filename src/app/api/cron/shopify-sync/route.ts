@@ -3,6 +3,7 @@ import {
   classifyAllProducts,
   syncConnectedShopifyShops,
 } from "@/lib/shopify/sync";
+import { refreshAutoUpsellsForShops } from "@/lib/products/upsells-server";
 
 async function run(request: Request) {
   if (!validCronRequest(request)) {
@@ -15,7 +16,12 @@ async function run(request: Request) {
     const days = Number.isFinite(daysParam) && daysParam > 0 ? Math.min(90, daysParam) : undefined;
     const shops = await syncConnectedShopifyShops({ days });
     const lifecycle = await classifyAllProducts();
-    return Response.json({ ok: true, shops, lifecycle });
+    // Products bought together become upsells of the dearer one (recent orders every 10 min,
+    // full 90-day recount at night).
+    const upsells = await refreshAutoUpsellsForShops({ days: days ?? 90 }).catch((error) => ({
+      error: error instanceof Error ? error.message : "upsells failed",
+    }));
+    return Response.json({ ok: true, shops, lifecycle, upsells });
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Shopify sync failed." },

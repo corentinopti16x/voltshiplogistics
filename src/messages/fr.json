@@ -718,6 +718,28 @@
     "setBadge": "Set de {count} pcs",
     "clientNote": {
       "title": "Note de Voltship"
+    },
+    "composer": {
+      "title": "Souvent achetés ensemble",
+      "lead": "Ce produit et ce que tes clients achètent avec. Choisis les quantités : le COGS du colis est calculé avec un seul transport au poids total (emballage compris) et une seule préparation.",
+      "market": "Marché",
+      "mainBadge": "produit principal",
+      "unitPrice": "{price} / unité",
+      "noPrice": "prix pas encore fixé",
+      "stock": "stock {count}",
+      "quantity": "Quantité",
+      "less": "Retirer une unité",
+      "more": "Ajouter une unité",
+      "products": "Produits ({units, plural, one {# unité} other {# unités}})",
+      "box": "Boîtes (au prix coûtant)",
+      "shipping": "Transport · {line} · {content} g + {packaging} g emballage = {total} g",
+      "handling": "Préparation (picking + emballage + commission)",
+      "total": "COGS du colis",
+      "computing": "Calcul…",
+      "missingProduct": "Un des produits n'a pas encore son prix, son poids ou sa catégorie.",
+      "missingRate": "Aucun tarif transport pour ce poids vers {market}.",
+      "missingGrid": "La grille tarifaire n'est pas encore active.",
+      "empty": "Mets au moins une unité pour voir le COGS."
     }
   },
   "economics": {
@@ -1958,7 +1980,35 @@
       "announced": "prix annoncé",
       "box": "Boîte {price} ¥ · {weight} g",
       "covered": "code postal couvert ({line}) : {value}",
-      "weightWithPackaging": "{weight} g + {packaging} g emb."
+      "weightWithPackaging": "{weight} g + {packaging} g emb.",
+      "dataUpsells": "Avec upsells / upsells",
+      "hasUpsells": "{count, plural, one {# upsell} other {# upsells}}",
+      "upsellOf": "Upsell de {products}",
+      "upsellStock": "stock {count}",
+      "upsellStockUnknown": "stock inconnu",
+      "detectUpsells": "Détecter les upsells (90 j)"
+    },
+    "upsells": {
+      "title": "Upsells",
+      "lead": "Produits achetés avec celui-ci dans une même commande (pochette, protection, cadeau…). Ajoutés automatiquement dès qu'une vente les réunit : le moins cher de la paire devient l'upsell du plus cher. Ils doivent toujours être en stock avec le produit. Le client les voit sur sa fiche (« Souvent achetés ensemble ») et compose son colis. Retirer un upsell l'empêche de revenir.",
+      "none": "Aucun upsell lié pour l'instant.",
+      "noSku": "pas de SKU",
+      "noPrice": "pas de prix",
+      "noWeight": "pas de poids",
+      "stockUnknown": "stock inconnu",
+      "stock": "stock {count}",
+      "remove": "Retirer",
+      "suggestionsTitle": "Autres produits achetés avec celui-ci (30 jours, {orders} commandes)",
+      "noOrders": "Aucune commande Shopify de ce produit sur 30 jours.",
+      "noSuggestion": "Aucun autre produit acheté dans les mêmes commandes.",
+      "together": "{orders} commandes ensemble · {rate} %",
+      "add": "Lier comme upsell",
+      "noProduct": "SKU pas encore créé comme produit",
+      "pick": "Choisir un produit du client…",
+      "addManual": "Lier",
+      "refresh": "Recalculer depuis les commandes (90 j)",
+      "sourceAuto": "auto · {orders, plural, one {# commande} other {# commandes}} ensemble",
+      "sourceManual": "lié à la main"
     }
   },
   "support": {

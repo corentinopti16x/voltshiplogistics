@@ -26,6 +26,9 @@ import { loadShopifyImagesForProducts } from "@/lib/shopify/images";
 import { loadClientRecurrence } from "@/lib/shopify/recurrence";
 import { CogsMatrix } from "@/components/client/cogs-matrix";
 import { CarrierSelector } from "@/components/client/carrier-selector";
+import { UpsellComposer } from "@/components/products/upsell-composer";
+import { loadUpsells } from "@/lib/products/upsells-server";
+import { composerItem } from "@/lib/products/upsells";
 import { matrixViews } from "@/lib/pricing/matrix-view";
 import { clientNote, packPieces } from "@/lib/products/extras";
 import { ProductImageCarousel } from "@/components/client/product-image-carousel";
@@ -63,13 +66,14 @@ export default async function ProductDetailPage({
   if (!product) notFound();
 
   const request = getProductRequest(product);
-  const [matrix, stock, shopifyImages, recurrence, warehouseLive, purchaseOrders] = await Promise.all([
+  const [matrix, stock, shopifyImages, recurrence, warehouseLive, purchaseOrders, upsells] = await Promise.all([
     calculateProductCogsMatrix(product),
     getProductStockSnapshot(product),
     loadShopifyImagesForProducts(ctx.clientId, [product]).catch(() => new Map<string, string[]>()),
     loadClientRecurrence(ctx.clientId, product.sku ? [product.sku] : []).catch(() => null),
     isClientEccangEnabled(ctx.clientId),
     listClientPurchaseOrders(ctx.clientId, { productId: product.id, limit: 5 }).catch(() => []),
+    loadUpsells(product).catch(() => []),
   ]);
   const liveQuote = liveQuoteFromMatrix(matrix);
   const acceptedSnapshot = parseAcceptedQuoteSnapshot(product.accepted_quote_snapshot_json);
@@ -434,6 +438,16 @@ export default async function ProductDetailPage({
             missingReason={matrix.missingReason}
             packPieces={pieces}
           />
+
+          {/* Upsells sold with this product: the client composes a parcel → COGS. */}
+          {upsells.length > 0 ? (
+            <UpsellComposer
+              productId={product.id}
+              main={composerItem(product)}
+              upsells={upsells.map((item) => composerItem(item.product))}
+              markets={matrixMarkets.map((market) => market.destination)}
+            />
+          ) : null}
 
           <EconomicsCalculator
             productId={product.id}

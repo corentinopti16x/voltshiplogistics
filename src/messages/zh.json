@@ -1087,7 +1087,35 @@
       "announced": "已承诺价格",
       "box": "盒子 ¥{price} · {weight} g",
       "covered": "邮编覆盖（{line}）：{value}",
-      "weightWithPackaging": "{weight} g + 包装 {packaging} g"
+      "weightWithPackaging": "{weight} g + 包装 {packaging} g",
+      "dataUpsells": "有加购 / 加购产品",
+      "hasUpsells": "{count} 个加购",
+      "upsellOf": "{products} 的加购",
+      "upsellStock": "库存 {count}",
+      "upsellStockUnknown": "库存未知",
+      "detectUpsells": "识别加购产品（90 天）"
+    },
+    "upsells": {
+      "title": "加购产品（Upsell）",
+      "lead": "和这个产品在同一订单里一起购买的产品（收纳袋、保护套、赠品…）。只要有一单同时包含，就自动添加：两者中较便宜的成为较贵产品的加购。必须和主产品一起保持有库存。客户在产品页（“经常一起购买”）能看到并组合包裹。移除后不会再自动添加。",
+      "none": "还没有关联的加购产品。",
+      "noSku": "无 SKU",
+      "noPrice": "无价格",
+      "noWeight": "无重量",
+      "stockUnknown": "库存未知",
+      "stock": "库存 {count}",
+      "remove": "移除",
+      "suggestionsTitle": "其他一起购买的产品（30 天，{orders} 个订单）",
+      "noOrders": "30 天内没有这个产品的 Shopify 订单。",
+      "noSuggestion": "同一订单里没有其他产品。",
+      "together": "一起 {orders} 单 · {rate}%",
+      "add": "关联为加购",
+      "noProduct": "该 SKU 还没有创建为产品",
+      "pick": "选择该客户的产品…",
+      "addManual": "关联",
+      "refresh": "按订单重新计算（90 天）",
+      "sourceAuto": "自动 · 一起 {orders} 单",
+      "sourceManual": "手动关联"
     }
   },
   "app": {
@@ -1252,6 +1280,28 @@
         "forced": "Voltship 指定",
         "fallback": "所选渠道不可用 → 最便宜"
       }
+    },
+    "composer": {
+      "title": "经常一起购买",
+      "lead": "这个产品和你的顾客一起购买的产品。选择数量：包裹 COGS 按总重量（含包装）计算一次运费和一次操作费。",
+      "market": "市场",
+      "mainBadge": "主产品",
+      "unitPrice": "{price} / 件",
+      "noPrice": "价格未定",
+      "stock": "库存 {count}",
+      "quantity": "数量",
+      "less": "减一件",
+      "more": "加一件",
+      "products": "产品（{units} 件）",
+      "box": "包装盒（成本价）",
+      "shipping": "运费 · {line} · {content} g + {packaging} g 包装 = {total} g",
+      "handling": "操作（拣货 + 包装 + 佣金）",
+      "total": "包裹 COGS",
+      "computing": "计算中…",
+      "missingProduct": "有产品还没有价格、重量或类别。",
+      "missingRate": "{market} 没有这个重量的运费。",
+      "missingGrid": "运费表还没有启用。",
+      "empty": "至少选一件才能看到 COGS。"
     }
   }
 }
