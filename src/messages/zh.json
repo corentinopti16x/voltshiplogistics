@@ -166,7 +166,7 @@
       },
       "lifecycle": {
         "testingMaxAge": "测试期最长天数",
-        "winningOrders": "爆款判定：日均订单数（14 天）",
+        "winningOrders": "爆款判定：14 天内最少销量",
         "decliningDrop": "下滑判定：销量降幅 %",
         "deadAfter": "滞销判定：连续无销售天数",
         "saved": "生命周期规则已保存。",

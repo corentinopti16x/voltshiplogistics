@@ -1692,7 +1692,7 @@
       },
       "lifecycle": {
         "testingMaxAge": "Testing max age (days)",
-        "winningOrders": "Winning orders / day (14 days)",
+        "winningOrders": "Winning: minimum sales over 14 days",
         "decliningDrop": "Declining drop %",
         "deadAfter": "Dead after days without sales",
         "saved": "Lifecycle rules saved.",
