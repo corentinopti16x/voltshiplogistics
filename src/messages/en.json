@@ -718,6 +718,31 @@
     "setBadge": "Set of {count} pcs",
     "clientNote": {
       "title": "Note from Voltship"
+    },
+    "composer": {
+      "title": "Frequently bought together",
+      "lead": "This product and what your customers buy with it. Pick the quantities: the parcel COGS uses one shipment at the total weight (packaging included) and one handling fee.",
+      "market": "Market",
+      "mainBadge": "main product",
+      "unitPrice": "{price} / unit",
+      "noPrice": "price not set yet",
+      "stock": "stock {count}",
+      "quantity": "Quantity",
+      "less": "Remove one unit",
+      "more": "Add one unit",
+      "products": "Products ({units, plural, one {# unit} other {# units}})",
+      "box": "Boxes (at cost)",
+      "shipping": "Shipping · {line} · {content} g + {packaging} g packaging = {total} g",
+      "handling": "Handling (picking + packing + commission)",
+      "total": "Parcel COGS",
+      "computing": "Calculating…",
+      "missingProduct": "One of the products has no price, weight or category yet.",
+      "missingRate": "No shipping rate for this weight to {market}.",
+      "missingGrid": "The rate grid is not active yet.",
+      "empty": "Add at least one unit to see the COGS.",
+      "notReady": "Price, weight or category missing: cannot be priced in the parcel yet.",
+      "parentsTitle": "Sold with",
+      "parentsLead": "This product is sold as an upsell of these products. The full parcel COGS (product + upsells) is on their page, in “Frequently bought together”."
     }
   },
   "economics": {
@@ -1958,7 +1983,36 @@
       "announced": "announced price",
       "box": "Box ¥{price} · {weight} g",
       "covered": "postcode covered ({line}): {value}",
-      "weightWithPackaging": "{weight} g + {packaging} g pack."
+      "weightWithPackaging": "{weight} g + {packaging} g pack.",
+      "dataUpsells": "With upsells / upsells",
+      "hasUpsells": "{count, plural, one {# upsell} other {# upsells}}",
+      "upsellOf": "Upsell of {products}",
+      "upsellStock": "stock {count}",
+      "upsellStockUnknown": "stock unknown",
+      "detectUpsells": "Detect upsells (90 days)"
+    },
+    "upsells": {
+      "title": "Upsells",
+      "lead": "Products bought with this one in the same order (pouch, case, gift…). Added automatically as soon as one sale has both: the cheaper of the pair becomes the upsell of the dearer one. They must always be in stock with the product. The client sees them on the product page (“Frequently bought together”) and builds the parcel. A removed upsell does not come back.",
+      "none": "No upsell linked yet.",
+      "noSku": "no SKU",
+      "noPrice": "no price",
+      "noWeight": "no weight",
+      "stockUnknown": "stock unknown",
+      "stock": "stock {count}",
+      "remove": "Remove",
+      "suggestionsTitle": "Other products bought with this one (30 days, {orders} orders)",
+      "noOrders": "No Shopify order of this product in 30 days.",
+      "noSuggestion": "No other product bought in the same orders.",
+      "together": "{orders} orders together · {rate}%",
+      "add": "Link as upsell",
+      "noProduct": "SKU not created as a product yet",
+      "pick": "Pick a product of the client…",
+      "addManual": "Link",
+      "refresh": "Recount from orders (90 days)",
+      "sourceAuto": "auto · {orders, plural, one {# order} other {# orders}} together",
+      "sourceManual": "linked by hand",
+      "parents": "Upsell of:"
     }
   },
   "support": {

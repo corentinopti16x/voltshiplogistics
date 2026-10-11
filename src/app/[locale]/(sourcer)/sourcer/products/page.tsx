@@ -11,6 +11,9 @@ import { carrierLineLabel } from "@/lib/domain/carrier-rules";
 import { hasInternalBattery } from "@/lib/domain/pricing";
 import { clientNote, packPieces, productBox } from "@/lib/products/extras";
 import { formatAmount } from "@/lib/format";
+import { parseUpsellIds } from "@/lib/products/upsells";
+import { stockBySku, upsellOwners } from "@/lib/products/upsells-server";
+import { refreshUpsellsAction } from "@/app/actions/upsells";
 
 export const dynamic = "force-dynamic";
 
@@ -108,12 +111,28 @@ export default async function CatalogPage({
     (a, b) => a[1].localeCompare(b[1]),
   );
   const q = (filters.q ?? "").trim().toLowerCase();
-  const dataFilter = filters.data === "ready" || filters.data === "missing" ? filters.data : "";
+  const dataFilter =
+    filters.data === "ready" || filters.data === "missing" || filters.data === "upsells" ? filters.data : "";
+  // Upsells: products sold with another one (pouch, case…), to keep in stock with it.
+  const owners = upsellOwners(products);
+  const upsellRows = products.filter((row) => owners.has(row.id));
+  const upsellStock = new Map<string, number | null>();
+  for (const clientId of new Set(upsellRows.map((row) => row.client_id))) {
+    const ofClient = upsellRows.filter((row) => row.client_id === clientId);
+    const stock = await stockBySku(
+      clientId,
+      ofClient.map((row) => row.sku).filter((sku): sku is string => !!sku),
+    ).catch(() => new Map<string, number>());
+    for (const row of ofClient) {
+      upsellStock.set(row.id, row.sku && stock.has(row.sku) ? (stock.get(row.sku) as number) : row.stock_manual ?? null);
+    }
+  }
   const isReady = (row: CatalogRow) => row.client_price != null && row.weight_g != null && !!row.shipping_channel;
   const rows = products.filter((row) => {
     if (filters.client && row.client_id !== filters.client) return false;
     if (dataFilter === "ready" && !isReady(row)) return false;
     if (dataFilter === "missing" && isReady(row)) return false;
+    if (dataFilter === "upsells" && !owners.has(row.id) && parseUpsellIds(row.quote_json).length === 0) return false;
     if (q) {
       const haystack = `${row.title} ${row.sku ?? ""} ${row.clients?.name ?? ""} ${[...(shopsOf.get(row.id) ?? [])].join(" ")}`;
       if (!haystack.toLowerCase().includes(q)) return false;
@@ -176,6 +195,7 @@ export default async function CatalogPage({
           <option value="">{t("dataAll")}</option>
           <option value="ready">{t("dataReady")}</option>
           <option value="missing">{t("dataMissing")}</option>
+          <option value="upsells">{t("dataUpsells")}</option>
         </select>
         <div className="flex gap-2">
           <select
@@ -195,7 +215,13 @@ export default async function CatalogPage({
           </button>
         </div>
       </form>
-      <p className="mt-3 text-xs text-[var(--muted)]">{t("carrierLegend")}</p>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-[var(--muted)]">{t("carrierLegend")}</p>
+        <form action={refreshUpsellsAction}>
+          <input type="hidden" name="client_id" value={filters.client ?? ""} />
+          <button className="cursor-pointer rounded-md border border-[var(--line)] px-2.5 py-1 text-xs">{t("detectUpsells")}</button>
+        </form>
+      </div>
 
       {rows.length === 0 ? (
         <p className="mt-8 rounded-2xl border border-dashed border-[var(--line)] bg-[var(--card)] p-8 text-sm text-[var(--muted)]">
@@ -248,6 +274,34 @@ export default async function CatalogPage({
                         {hasInternalBattery(row.quote_json) ? (
                           <span className="rounded bg-[var(--card-soft)] px-1.5 py-0.5 text-[11px] ring-1 ring-[var(--line)]">
                             {t("battery")}
+                          </span>
+                        ) : null}
+                        {parseUpsellIds(row.quote_json).length > 0 ? (
+                          <Link
+                            href={`/sourcer/${row.id}#upsells`}
+                            className="rounded bg-[#e3ecd9] px-1.5 py-0.5 text-[11px] font-semibold text-[#2f4a1f]"
+                          >
+                            {t("hasUpsells", { count: parseUpsellIds(row.quote_json).length })}
+                          </Link>
+                        ) : null}
+                        {owners.has(row.id) ? (
+                          <span className="rounded bg-[#e3ecd9] px-1.5 py-0.5 text-[11px] text-[#2f4a1f]">
+                            {t("upsellOf", { products: (owners.get(row.id) ?? []).join(", ") })}
+                          </span>
+                        ) : null}
+                        {owners.has(row.id) ? (
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${
+                              upsellStock.get(row.id) == null
+                                ? "bg-[var(--card-soft)] text-[var(--muted)] ring-1 ring-[var(--line)]"
+                                : (upsellStock.get(row.id) as number) > 0
+                                  ? "bg-emerald-100 text-emerald-900"
+                                  : "bg-red-100 text-red-900"
+                            }`}
+                          >
+                            {upsellStock.get(row.id) == null
+                              ? t("upsellStockUnknown")
+                              : t("upsellStock", { count: upsellStock.get(row.id) as number })}
                           </span>
                         ) : null}
                         {clientNote(row.quote_json) ? (

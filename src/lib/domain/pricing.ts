@@ -817,3 +817,111 @@ export function isLimitedCoverageCarrier(carrier: string, autoCarriers: string[]
 export function gridChannel<T extends string | null | undefined>(channel: T): T | "cosmetics" {
   return channel === "liquid_perfume" ? "cosmetics" : channel;
 }
+
+/** Most constraining line first: a parcel ships on the channel of its most sensitive item. */
+const PARCEL_CHANNEL_ORDER: ShippingChannel[] = ["electronics_battery", "sensitive_other", "cosmetics", "magnetic", "standard"];
+
+/** Grid channel of a parcel holding several products (battery > sensitive > cosmetics > magnetic > standard). */
+export function parcelChannel(channels: Array<ShippingChannel | string | null | undefined>): ShippingChannel | null {
+  const present = new Set(channels.map((channel) => gridChannel(channel)).filter(Boolean));
+  return PARCEL_CHANNEL_ORDER.find((channel) => present.has(channel)) ?? null;
+}
+
+/** One product line of a composed parcel (main product + its upsells). */
+export type BundleItem = {
+  productId: string;
+  title: string;
+  quantity: number;
+  /** Client price per unit (€). */
+  clientPrice: number;
+  /** Product weight per unit (g), without packaging. */
+  weightG: number;
+  boxPrice?: number | null;
+  boxWeightG?: number | null;
+};
+
+export type BundleBreakdown = {
+  items: Array<BundleItem & { product: number }>;
+  units: number;
+  /** Products (+ boxes) and packaging; weightG = contentWeightG + packagingWeightG. */
+  contentWeightG: number;
+  packagingWeightG: number;
+  weightG: number;
+  billedWeightG: number;
+  carrier: string;
+  lineName: string | null;
+  deliveryRange: string | null;
+  selectionReason: SelectionReason;
+  product: number;
+  commission: number;
+  box: number;
+  shippingBase: number;
+  shipping: number;
+  handling: number;
+  cogs: number;
+};
+
+/**
+ * COGS of ONE parcel holding several products (the main product and the upsells the client
+ * picks): products + commission, one transport at the total weight (contents + packaging,
+ * gram-exact), boxes at cost, handling once for all the units. Same rules as calculateCogs.
+ */
+export function calculateBundleCogs(
+  input: Omit<PricingInput, "clientPrice" | "weightG" | "quantity" | "boxPrice" | "boxWeightG"> & {
+    items: BundleItem[];
+    /** Smallest packaging for the parcel (a product's own packaging) when no fixed weight is set. */
+    packagingFloorG?: number | null;
+  },
+): BundleBreakdown | null {
+  const items = input.items.filter(
+    (item) => item.quantity > 0 && Number.isInteger(item.quantity) && validNumber(item.clientPrice) && item.weightG > 0,
+  );
+  if (items.length === 0) return null;
+  const units = items.reduce((sum, item) => sum + item.quantity, 0);
+  const contentWeightG = items.reduce(
+    (sum, item) => sum + (item.weightG + Math.max(0, Number(item.boxWeightG) || 0)) * item.quantity,
+    0,
+  );
+  const fixed = input.packagingWeightG;
+  const packagingWeightG =
+    fixed != null && Number.isFinite(Number(fixed))
+      ? Math.max(0, Number(fixed))
+      : Math.max(Math.max(0, Number(input.packagingFloorG) || 0), packagingWeightFor(contentWeightG, input.packagingLadder));
+  const weightG = contentWeightG + packagingWeightG;
+  // Volumetric weight needs every item's dimensions: the actual weight is used for a bundle.
+  const selected = selectRateCell(input.cells, { ...input, weightG, quantity: 1, dimensionsCm: null });
+  if (!selected) return null;
+  const { cell } = selected;
+  const billed = billedWeightG({ actualG: weightG, quantity: 1, carrier: cell.carrier, destination: cell.destination });
+  const lines = items.map((item) => ({ ...item, product: money(item.clientPrice * item.quantity) }));
+  const product = money(lines.reduce((sum, line) => sum + line.product, 0));
+  const box = money(items.reduce((sum, item) => sum + Math.max(0, Number(item.boxPrice) || 0) * item.quantity, 0));
+  const commission = money(product * (Math.max(0, input.commissionPct ?? 0) / 100));
+  const discountRate = Math.min(100, Math.max(0, input.logisticsDiscountPct ?? 0)) / 100;
+  const shippingBase = money(cell.price);
+  const shipping = discountedShipping(shippingBase, discountRate, cell.carrierCostRmb, input.fxRmbPerEur);
+  const handling = handlingForQuantity(
+    input.handlingFee ?? 0,
+    units,
+    input.handlingGrows === false ? FLAT_HANDLING : input.handlingLadder,
+  );
+  return {
+    items: lines,
+    units,
+    contentWeightG,
+    packagingWeightG,
+    weightG,
+    billedWeightG: billed,
+    carrier: cell.carrier,
+    lineName: cell.lineName ?? null,
+    deliveryRange: cell.deliveryRange ?? null,
+    selectionReason: selected.reason,
+    product,
+    commission,
+    box,
+    shippingBase,
+    shipping,
+    handling,
+    cogs: money(product + commission + shipping + handling + box),
+  };
+}

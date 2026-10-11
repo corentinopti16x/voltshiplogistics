@@ -16,6 +16,10 @@ import { parseFinancialProfile } from "@/lib/domain/economics";
 import { packPieces } from "@/lib/products/extras";
 import { CarrierSelector } from "@/components/client/carrier-selector";
 import { CogsMatrix } from "@/components/client/cogs-matrix";
+import { UpsellsPanel } from "@/components/products/upsells-panel";
+import { UpsellComposer } from "@/components/products/upsell-composer";
+import { clientProducts, loadUpsells, stockBySku, suggestUpsells } from "@/lib/products/upsells-server";
+import { composerItem, upsellParentsOf } from "@/lib/products/upsells";
 
 export default async function SourcerProductPage({
   params,
@@ -63,6 +67,14 @@ export default async function SourcerProductPage({
   const matrix = await calculateProductCogsMatrix(product).catch(() => null);
   const views = matrix ? matrixViews(matrix) : null;
   const tCarrier = await getTranslations("sourcer.carrier");
+  // Upsells: linked ones (with stock, to keep them in stock), co-purchase suggestions, all
+  // products of the client for a manual link.
+  const [upsells, suggestions, candidates, mainStock] = await Promise.all([
+    loadUpsells(product).catch(() => []),
+    suggestUpsells(product, 30).catch(() => ({ mainOrders: 0, items: [] })),
+    clientProducts(product.client_id).catch(() => []),
+    product.sku ? stockBySku(product.client_id, [product.sku]).catch(() => new Map<string, number>()) : new Map<string, number>(),
+  ]);
 
   return (
     <SourcerShell role={ctx.role}>
@@ -151,6 +163,28 @@ export default async function SourcerProductPage({
             ratesChanged={false}
             missingReason={matrix.missingReason}
             packPieces={packPieces(product.quote_json)}
+          />
+        </div>
+      ) : null}
+
+      <div className="mt-6">
+        <UpsellsPanel
+          product={product}
+          upsells={upsells}
+          suggestions={suggestions.items}
+          mainOrders={suggestions.mainOrders}
+          candidates={candidates}
+          parents={upsellParentsOf(candidates, product.id)}
+        />
+      </div>
+      {upsells.length > 0 ? (
+        <div className="mt-6">
+          <UpsellComposer
+            productId={product.id}
+            main={composerItem(product, product.sku && mainStock.has(product.sku) ? mainStock.get(product.sku) : product.stock_manual)}
+            upsells={upsells.map((item) => composerItem(item.product, item.stock))}
+            markets={getProductMarkets(product)}
+            showStock
           />
         </div>
       ) : null}

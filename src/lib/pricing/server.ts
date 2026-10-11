@@ -24,7 +24,10 @@ import {
   parseParcelDimensions,
   parcelWeightG,
   autoCarriersFor,
+  calculateBundleCogs,
   gridChannel,
+  parcelChannel,
+  type BundleBreakdown,
   type CarrierLineRef,
   type CogsBreakdown,
   type RateCell,
@@ -441,4 +444,69 @@ export async function calculateLiveProductQuote(
     quantities: [1],
   });
   return liveQuoteFromMatrix(matrix);
+}
+
+export type ComposedCogs = {
+  breakdown: BundleBreakdown | null;
+  missingReason: "product_data" | "grid" | "rate" | null;
+  destination: string;
+};
+
+/**
+ * COGS of one parcel: the main product + the upsells the client picked (quantities), on a
+ * market. Same grid, palier, carrier rules and packaging as the product's own COGS; the line
+ * follows the main product's choice. A battery item moves the parcel to the battery lines.
+ */
+export async function calculateComposedCogs(
+  main: ProductRow,
+  lines: Array<{ product: ProductRow; quantity: number }>,
+  market: string,
+): Promise<ComposedCogs> {
+  const destination = normalizeDestination(market);
+  const picked = lines.filter((line) => line.quantity > 0);
+  const ready = picked.every(
+    (line) => line.product.client_price != null && line.product.weight_g != null && !!line.product.shipping_channel,
+  );
+  if (picked.length === 0 || !ready) return { breakdown: null, missingReason: "product_data", destination };
+  const [activeGridVersion, profile, settings, rules] = await Promise.all([
+    getActiveGridVersion(),
+    getClientPricingProfile(main.client_id),
+    readPricingSettings(createAdminClient()),
+    loadCarrierRules(main.client_id),
+  ]);
+  if (!activeGridVersion) return { breakdown: null, missingReason: "grid", destination };
+  const channel = parcelChannel(picked.map((line) => line.product.shipping_channel)) ?? (main.shipping_channel as ShippingChannel);
+  const cells = await loadRateCellsFor(activeGridVersion, [destination], [channel]);
+  const selection = resolveCarrierSelection(rules, parseCarrierPreferences(main.quote_json), destination);
+  const mainExtras = parcelExtras(main.quote_json, settings);
+  const breakdown = calculateBundleCogs({
+    items: picked.map((line) => {
+      const extras = parcelExtras(line.product.quote_json, settings);
+      return {
+        productId: line.product.id,
+        title: line.product.title,
+        quantity: line.quantity,
+        clientPrice: Number(line.product.client_price),
+        weightG: Number(line.product.weight_g),
+        boxPrice: extras.boxPrice,
+        boxWeightG: extras.boxWeightG,
+      };
+    }),
+    channel,
+    destination,
+    cells,
+    carrierPreference: selection.preference,
+    allowedLines: allowedLinesFromRules(cells, rules),
+    autoCarriers: autoCarriersFor(settings.auto_carriers, destination),
+    batteryInternal: picked.some((line) => hasInternalBattery(line.product.quote_json)),
+    handlingLadder: handlingLadderFrom(settings),
+    fxRmbPerEur: settings.fx_rmb_per_eur,
+    volumetricDivisors: settings.volumetric_divisors,
+    // The product's own packaging is exact for it alone; with upsells it is a minimum.
+    packagingWeightG: picked.every((line) => line.product.id === main.id) ? mainExtras.packagingWeightG : null,
+    packagingFloorG: mainExtras.packagingWeightG,
+    packagingLadder: settings.packaging_ladder,
+    ...profile,
+  });
+  return { breakdown, missingReason: breakdown ? null : "rate", destination };
 }
