@@ -1126,7 +1126,12 @@
           "confirm": "Activer cette grille maintenant ? Tous les devis live l'utiliseront.",
           "done": "Grille {version} activée — {cells} cellules issues de {lines} lignes.",
           "discard": "Abandonner cet import",
-          "discarded": "Import abandonné."
+          "discarded": "Import abandonné.",
+          "scheduleLabel": "Ou créer maintenant et activer le (heure de Chine)",
+          "scheduleButton": "Créer et programmer",
+          "scheduleMissing": "Choisis la date et l’heure d’activation.",
+          "confirmSchedule": "Créer la grille maintenant et l’activer le {at} (heure de Chine) ? La grille actuelle reste en place jusque-là.",
+          "scheduledDone": "Grille {version} créée ({cells} cellules), activation programmée le {at} (heure de Chine)."
         },
         "carriers": "Transporteurs",
         "perCarrier": "Lignes incluses par transporteur :",

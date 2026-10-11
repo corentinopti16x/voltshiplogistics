@@ -1126,7 +1126,12 @@
           "confirm": "Activate this grid now? Every live quote will use it.",
           "done": "Grid {version} activated — {cells} cells from {lines} lines.",
           "discard": "Discard this import",
-          "discarded": "Import discarded."
+          "discarded": "Import discarded.",
+          "scheduleLabel": "Or create now and activate on (China time)",
+          "scheduleButton": "Create and schedule",
+          "scheduleMissing": "Choose the activation date and time.",
+          "confirmSchedule": "Create the grid now and activate it on {at} (China time)? The current grid stays live until then.",
+          "scheduledDone": "Grid {version} created ({cells} cells), activation scheduled on {at} (China time)."
         },
         "carriers": "Carriers",
         "perCarrier": "Lines included per carrier:",

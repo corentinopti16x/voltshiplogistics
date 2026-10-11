@@ -65,13 +65,37 @@ export type RateImportReview = {
 export async function loadGridCellRecords(gridVersion: string | null): Promise<GridCellRecord[]> {
   if (!gridVersion) return [];
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("rate_grid_cells")
-    .select(
-      "carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, tax_included, notes, carrier_cost_rmb, ioss_required",
-    )
-    .eq("grid_version", gridVersion);
-  return (data ?? []).map((cell) => ({
+  // Paged: a grid has thousands of cells and PostgREST returns 1 000 rows per request —
+  // without paging, carriers carried forward by an import would lose cells.
+  type Row = {
+    carrier: string;
+    destination: string;
+    channel: string;
+    weight_min_g: number;
+    weight_max_g: number;
+    price: number;
+    delivery_range: string | null;
+    line_name: string | null;
+    tax_included: boolean | null;
+    notes: string | null;
+    carrier_cost_rmb: number | null;
+    ioss_required: boolean | null;
+  };
+  const data: Row[] = [];
+  for (let from = 0; from < 100_000; from += 1000) {
+    const { data: page, error } = await admin
+      .from("rate_grid_cells")
+      .select(
+        "id, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, tax_included, notes, carrier_cost_rmb, ioss_required",
+      )
+      .eq("grid_version", gridVersion)
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw error;
+    data.push(...((page ?? []) as Row[]));
+    if (!page || page.length < 1000) break;
+  }
+  return data.map((cell) => ({
     carrier: cell.carrier,
     destination: cell.destination,
     channel: cell.channel as ShippingChannel,

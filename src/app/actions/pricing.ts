@@ -699,10 +699,23 @@ export async function reviewRateImportAction(
 /** Step 3: write the versioned grid, activate it, close the import. */
 export async function activateRateImportAction(
   importId: string,
-  options: { gridVersion?: string | null; confirmLowConfidence?: boolean } = {},
+  options: {
+    gridVersion?: string | null;
+    confirmLowConfidence?: boolean;
+    /**
+     * Create the grid now but make it live later ("2026-10-12T09:00", China time), e.g. when
+     * a carrier's new prices start. Without it the grid is activated immediately.
+     */
+    scheduleAt?: string | null;
+  } = {},
 ): Promise<RateImportActionResult> {
   const { ctx, error } = await requireAdmin();
   if (!ctx) return { ok: false, error: error ?? "Admin access required." };
+
+  const scheduleAt = options.scheduleAt ? shanghaiLocalToIso(options.scheduleAt) : null;
+  if (options.scheduleAt && (!scheduleAt || Date.parse(scheduleAt) <= Date.now())) {
+    return { ok: false, error: "The activation time must be a future date." };
+  }
 
   const row = await getRateImport(importId);
   if (!row) return { ok: false, error: "Import not found." };
@@ -767,9 +780,12 @@ export async function activateRateImportAction(
     }
   }
 
-  const { error: metaError } = await admin
-    .from("pricing_meta")
-    .upsert({ key: "active_grid_version", value: gridVersion });
+  // Scheduled: the grid exists now, the engine switches to it at `scheduleAt` (cron confirms).
+  const { error: metaError } = scheduleAt
+    ? await admin
+        .from("pricing_meta")
+        .upsert({ key: SCHEDULED_GRID_KEY, value: serializeGridSchedule({ gridVersion, at: scheduleAt, by: ctx.userId }) })
+    : await admin.from("pricing_meta").upsert({ key: "active_grid_version", value: gridVersion });
   if (metaError) return { ok: false, error: metaError.message };
 
   await admin
@@ -793,10 +809,12 @@ export async function activateRateImportAction(
       lines: review.summary.includedLines,
       settings: review.settings,
       low_confidence_confirmed: review.lowConfidence,
+      scheduled_at: scheduleAt,
     },
   });
-  // Client carrier choices pointing at a line missing from the new grid → tenant notification.
-  await notifyUnavailableCarrierLines(gridVersion);
+  // Client carrier choices pointing at a line missing from the new grid → tenant notification
+  // (for a scheduled grid, the cron does it when the grid goes live).
+  if (!scheduleAt) await notifyUnavailableCarrierLines(gridVersion);
   revalidatePricing();
   revalidatePath("/admin/pricing/update");
   return {

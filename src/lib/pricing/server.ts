@@ -3,6 +3,7 @@ import { resolveClientPricing } from "@/lib/domain/pricing-tiers";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { writeAudit } from "@/lib/auth/audit";
+import { notifyUnavailableCarrierLines } from "./carrier-check-server";
 import {
   SCHEDULED_GRID_KEY,
   effectiveGridVersion,
@@ -152,6 +153,8 @@ export async function applyScheduledGridActivation(now: Date = new Date()) {
     .upsert({ key: "active_grid_version", value: schedule.gridVersion });
   if (error) throw error;
   await admin.from("pricing_meta").delete().eq("key", SCHEDULED_GRID_KEY);
+  // Client carrier choices pointing at a line missing from the new grid → notification.
+  await notifyUnavailableCarrierLines(schedule.gridVersion).catch(() => null);
   if (schedule.by) {
     await writeAudit({
       actorUserId: schedule.by,
