@@ -36,10 +36,17 @@ import {
   type RateImportReview,
 } from "@/lib/pricing/ai-import-server";
 import {
+  SCHEDULED_GRID_KEY,
+  parseGridSchedule,
+  serializeGridSchedule,
+  shanghaiLocalToIso,
+} from "@/lib/pricing/grid-schedule";
+import {
   DEFAULT_PRICING_SETTINGS,
   parsePricingSettings,
   readPricingSettings,
   writePricingSettings,
+  type NumericPricingSetting,
   type PricingSettings,
 } from "@/lib/pricing/settings";
 
@@ -241,6 +248,12 @@ export async function activateRateGridAction(
   });
   if (updateError) return { ok: false, error: updateError.message };
 
+  // Activated by hand: a pending schedule for the same grid has nothing left to do.
+  const { data: scheduled } = await admin.from("pricing_meta").select("value").eq("key", SCHEDULED_GRID_KEY).maybeSingle();
+  if (parseGridSchedule(scheduled?.value ?? null)?.gridVersion === gridVersion) {
+    await admin.from("pricing_meta").delete().eq("key", SCHEDULED_GRID_KEY);
+  }
+
   await writeAudit({
     actorUserId: ctx.userId,
     action: "pricing.grid.activate",
@@ -249,6 +262,42 @@ export async function activateRateGridAction(
   });
   revalidatePricing();
   return { ok: true };
+}
+
+/**
+ * Schedules a grid to go live at a given time (typed in China time, e.g. when a carrier's
+ * new prices start). One schedule at a time: a new one replaces the previous.
+ */
+export async function scheduleGridActivationAction(formData: FormData): Promise<void> {
+  const { ctx } = await requireAdmin();
+  if (!ctx) throw new Error("Admin access required.");
+  const gridVersion = String(formData.get("grid_version") ?? "").trim();
+  const at = shanghaiLocalToIso(String(formData.get("at") ?? ""));
+  if (!gridVersion || !at) throw new Error("Choose a grid and a date.");
+  if (Date.parse(at) <= Date.now()) throw new Error("The activation time must be in the future.");
+  const admin = createAdminClient();
+  const { data: grid } = await admin.from("rate_grids").select("grid_version").eq("grid_version", gridVersion).maybeSingle();
+  if (!grid) throw new Error("Rate grid not found.");
+  const { error } = await admin
+    .from("pricing_meta")
+    .upsert({ key: SCHEDULED_GRID_KEY, value: serializeGridSchedule({ gridVersion, at, by: ctx.userId }) });
+  if (error) throw new Error(error.message);
+  await writeAudit({
+    actorUserId: ctx.userId,
+    action: "pricing.grid.schedule",
+    entity: "pricing_meta",
+    diff: { grid_version: gridVersion, at },
+  });
+  revalidatePricing();
+}
+
+export async function cancelGridScheduleAction(): Promise<void> {
+  const { ctx } = await requireAdmin();
+  if (!ctx) throw new Error("Admin access required.");
+  const admin = createAdminClient();
+  await admin.from("pricing_meta").delete().eq("key", SCHEDULED_GRID_KEY);
+  await writeAudit({ actorUserId: ctx.userId, action: "pricing.grid.schedule_cancel", entity: "pricing_meta" });
+  revalidatePricing();
 }
 
 export async function activateRateGridFormAction(formData: FormData): Promise<void> {
@@ -329,7 +378,7 @@ export async function savePricingSettingsAction(
   // Start from the saved settings: fields that are not in this form (packaging weight,
   // volumetric divisors…) keep their value instead of falling back to the defaults.
   const current = await readPricingSettings(createAdminClient());
-  const field = (key: Exclude<keyof PricingSettings, "volumetric_divisors">) =>
+  const field = (key: NumericPricingSetting) =>
     formData.has(key) ? numberField(formData, key, current[key] ?? DEFAULT_PRICING_SETTINGS[key]) : current[key];
   const settings = parsePricingSettings({
     ...current,
@@ -343,7 +392,6 @@ export async function savePricingSettingsAction(
     handling_step3_eur: field("handling_step3_eur"),
     handling_extra_unit_eur: field("handling_extra_unit_eur"),
     announced_margin_alert_eur: field("announced_margin_alert_eur"),
-    packaging_weight_g: field("packaging_weight_g"),
   });
   const admin = createAdminClient();
   const { error: writeError } = await writePricingSettings(admin, settings);
@@ -362,25 +410,29 @@ export async function savePricingSettingsAction(
 }
 
 /**
- * Packaging weight added to every parcel (Tarification page). Only this key changes; the
- * other pricing settings are kept as saved.
+ * Packaging added to every parcel by the weight of its contents (Tarification page):
+ * rows "up to X g → Y g", the last row without limit. Other settings are kept as saved.
  */
-export async function savePackagingWeightAction(formData: FormData): Promise<void> {
+export async function savePackagingLadderAction(formData: FormData): Promise<void> {
   const { ctx } = await requireAdmin();
   if (!ctx) return;
   const admin = createAdminClient();
   const current = await readPricingSettings(admin);
-  const settings = parsePricingSettings({
-    ...current,
-    packaging_weight_g: numberField(formData, "packaging_weight_g", current.packaging_weight_g),
-  });
+  const steps: Array<{ upToG: number | null; weightG: number }> = [];
+  for (let index = 0; index < 8; index += 1) {
+    const weightRaw = String(formData.get(`weight_${index}`) ?? "").trim();
+    if (!weightRaw) continue;
+    const limitRaw = String(formData.get(`up_to_${index}`) ?? "").trim();
+    steps.push({ upToG: limitRaw ? Number(limitRaw) : null, weightG: Number(weightRaw) });
+  }
+  const settings = parsePricingSettings({ ...current, packaging_ladder: steps });
   const { error } = await writePricingSettings(admin, settings);
   if (error) return;
   await writeAudit({
     actorUserId: ctx.userId,
     action: "pricing.settings.packaging",
     entity: "pricing_meta",
-    diff: { packaging_weight_g: settings.packaging_weight_g },
+    diff: { packaging_ladder: settings.packaging_ladder },
   });
   revalidatePricing();
   revalidatePath("/admin/margin");
@@ -650,10 +702,23 @@ export async function reviewRateImportAction(
 /** Step 3: write the versioned grid, activate it, close the import. */
 export async function activateRateImportAction(
   importId: string,
-  options: { gridVersion?: string | null; confirmLowConfidence?: boolean } = {},
+  options: {
+    gridVersion?: string | null;
+    confirmLowConfidence?: boolean;
+    /**
+     * Create the grid now but make it live later ("2026-10-12T09:00", China time), e.g. when
+     * a carrier's new prices start. Without it the grid is activated immediately.
+     */
+    scheduleAt?: string | null;
+  } = {},
 ): Promise<RateImportActionResult> {
   const { ctx, error } = await requireAdmin();
   if (!ctx) return { ok: false, error: error ?? "Admin access required." };
+
+  const scheduleAt = options.scheduleAt ? shanghaiLocalToIso(options.scheduleAt) : null;
+  if (options.scheduleAt && (!scheduleAt || Date.parse(scheduleAt) <= Date.now())) {
+    return { ok: false, error: "The activation time must be a future date." };
+  }
 
   const row = await getRateImport(importId);
   if (!row) return { ok: false, error: "Import not found." };
@@ -689,9 +754,19 @@ export async function activateRateImportAction(
   });
   if (gridError) return { ok: false, error: gridError.message };
 
+  // Gram-exact prices (matrix lines): the same cells, with the cost and price of every gram.
+  const withGrams = expandToCells(review.parsed, review.settings, review.overrides, { withGrams: true });
+  const gramsByCell = new Map(
+    withGrams.map((cell) => [`${cell.lineIndex}|${cell.weightMinG}|${cell.weightMaxG}`, cell]),
+  );
+  const importedCells = review.cells.map((cell) => {
+    const grams = gramsByCell.get(`${cell.lineIndex}|${cell.weightMinG}|${cell.weightMaxG}`);
+    return grams ? { ...cell, gramCostsRmb: grams.gramCostsRmb ?? null, gramPrices: grams.gramPrices ?? null } : cell;
+  });
+
   // Carry forward every other carrier of the active grid; replace the imported carrier.
   const activeRecords = await loadGridCellRecords(review.activeGridVersion);
-  const merged = mergeGridCells(activeRecords, proposedToRecords(review.cells), review.carriers);
+  const merged = mergeGridCells(activeRecords, proposedToRecords(importedCells), review.carriers);
   const rows = merged.map((cell) => ({
     grid_version: gridVersion,
     carrier: cell.carrier,
@@ -706,6 +781,9 @@ export async function activateRateImportAction(
     notes: cell.notes,
     carrier_cost_rmb: cell.carrierCostRmb,
     ioss_required: cell.iossRequired,
+    // Gram-exact grid (migration 00022): price and cost for every gram of the bracket.
+    ...(cell.gramPrices?.length ? { gram_prices: cell.gramPrices } : {}),
+    ...(cell.gramCostsRmb?.length ? { gram_costs_rmb: cell.gramCostsRmb } : {}),
   }));
   const importedCount = review.cells.length;
   for (let index = 0; index < rows.length; index += 500) {
@@ -718,9 +796,12 @@ export async function activateRateImportAction(
     }
   }
 
-  const { error: metaError } = await admin
-    .from("pricing_meta")
-    .upsert({ key: "active_grid_version", value: gridVersion });
+  // Scheduled: the grid exists now, the engine switches to it at `scheduleAt` (cron confirms).
+  const { error: metaError } = scheduleAt
+    ? await admin
+        .from("pricing_meta")
+        .upsert({ key: SCHEDULED_GRID_KEY, value: serializeGridSchedule({ gridVersion, at: scheduleAt, by: ctx.userId }) })
+    : await admin.from("pricing_meta").upsert({ key: "active_grid_version", value: gridVersion });
   if (metaError) return { ok: false, error: metaError.message };
 
   await admin
@@ -744,10 +825,12 @@ export async function activateRateImportAction(
       lines: review.summary.includedLines,
       settings: review.settings,
       low_confidence_confirmed: review.lowConfidence,
+      scheduled_at: scheduleAt,
     },
   });
-  // Client carrier choices pointing at a line missing from the new grid → tenant notification.
-  await notifyUnavailableCarrierLines(gridVersion);
+  // Client carrier choices pointing at a line missing from the new grid → tenant notification
+  // (for a scheduled grid, the cron does it when the grid goes live).
+  if (!scheduleAt) await notifyUnavailableCarrierLines(gridVersion);
   revalidatePricing();
   revalidatePath("/admin/pricing/update");
   return {

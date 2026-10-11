@@ -48,6 +48,8 @@ export function RateImportReviewPanel({ initial }: { initial: RateImportReview }
   const [notice, setNotice] = useState<string | null>(null);
   const [gridVersion, setGridVersion] = useState("");
   const [confirmLow, setConfirmLow] = useState(false);
+  // Create the grid now, make it live later (China time), e.g. when new carrier prices start.
+  const [scheduleAt, setScheduleAt] = useState("");
   const [pending, startTransition] = useTransition();
   const [activating, startActivation] = useTransition();
   const locked = review.status === "activated" || review.status === "discarded";
@@ -92,13 +94,18 @@ export function RateImportReviewPanel({ initial }: { initial: RateImportReview }
     });
   }
 
-  function activate() {
-    if (!window.confirm(t("step2.activate.confirm"))) return;
+  function activate(scheduled = false) {
+    if (scheduled && !scheduleAt) {
+      setError(t("step2.activate.scheduleMissing"));
+      return;
+    }
+    if (!window.confirm(scheduled ? t("step2.activate.confirmSchedule", { at: scheduleAt.replace("T", " ") }) : t("step2.activate.confirm"))) return;
     setError(null);
     startActivation(async () => {
       const result = await activateRateImportAction(review.importId, {
         gridVersion: gridVersion || null,
         confirmLowConfidence: confirmLow,
+        scheduleAt: scheduled ? scheduleAt : null,
       });
       if (!result.ok) {
         setError(result.error ?? "Error");
@@ -106,11 +113,17 @@ export function RateImportReviewPanel({ initial }: { initial: RateImportReview }
       }
       setReview({ ...review, status: "activated", gridVersion: result.gridVersion ?? null });
       setNotice(
-        t("step2.activate.done", {
-          version: result.gridVersion ?? "",
-          cells: result.counts?.cells ?? 0,
-          lines: result.counts?.lines ?? 0,
-        }),
+        scheduled
+          ? t("step2.activate.scheduledDone", {
+              version: result.gridVersion ?? "",
+              cells: result.counts?.cells ?? 0,
+              at: scheduleAt.replace("T", " "),
+            })
+          : t("step2.activate.done", {
+              version: result.gridVersion ?? "",
+              cells: result.counts?.cells ?? 0,
+              lines: result.counts?.lines ?? 0,
+            }),
       );
     });
   }
@@ -475,11 +488,31 @@ export function RateImportReviewPanel({ initial }: { initial: RateImportReview }
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="gold"
-                  onClick={activate}
+                  onClick={() => activate(false)}
                   disabled={activating || pending || review.cells.length === 0 || (review.lowConfidence && !confirmLow)}
                 >
                   {activating ? t("step2.activate.activating") : t("step2.activate.button")}
                 </Button>
+              </div>
+              <div className="flex flex-wrap items-end gap-2 rounded-md border border-dashed border-[var(--line)] p-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-[var(--muted)]">{t("step2.activate.scheduleLabel")}</span>
+                  <input
+                    type="datetime-local"
+                    value={scheduleAt}
+                    onChange={(event) => setScheduleAt(event.target.value)}
+                    className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
+                  />
+                </label>
+                <Button
+                  variant="secondary"
+                  onClick={() => activate(true)}
+                  disabled={activating || pending || review.cells.length === 0 || (review.lowConfidence && !confirmLow)}
+                >
+                  {t("step2.activate.scheduleButton")}
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
                 <Button variant="ghost" onClick={discard} disabled={activating || pending}>
                   {t("step2.activate.discard")}
                 </Button>

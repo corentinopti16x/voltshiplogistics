@@ -4,6 +4,7 @@ import {
   activeAnnouncedPrices,
   announcedPriceFor,
   applyAnnouncedPrice,
+  autoCarriersFor,
   calculateCogs,
   hasInternalBattery,
   parseParcelDimensions,
@@ -37,11 +38,15 @@ export type CatalogMarketQuote = {
   fallback: boolean;
   /** Total fixed by hand (« prix annoncé ») for 1 unit on this market. */
   announced: boolean;
+  /** Cheaper COGS when the postcode is covered by a limited-coverage line (e.g. Huahan USA). */
+  covered: { cogs: number; line: CarrierLineRef } | null;
 };
 
 export type CatalogQuote = {
   missing: "product_data" | "grid" | null;
   markets: CatalogMarketQuote[];
+  /** Packaging added to 1 unit's parcel (grams), null when not priced. */
+  packagingG?: number | null;
 };
 
 /**
@@ -94,7 +99,8 @@ export async function calculateCatalogQuotes(products: ProductRow[]): Promise<Ma
     const announcedPrices = activeAnnouncedPrices(product.quote_json);
     const markets = (marketsOf.get(product.id) ?? []).map((destination) => {
       const selection = resolveCarrierSelection(clientRules, preferences, destination);
-      const computed = calculateCogs({
+      const autoCarriers = autoCarriersFor(settings.auto_carriers, destination);
+      const input = {
         clientPrice: Number(product.client_price),
         weightG: Number(product.weight_g),
         channel: product.shipping_channel as ShippingChannel,
@@ -108,11 +114,19 @@ export async function calculateCatalogQuotes(products: ProductRow[]): Promise<Ma
         handlingLadder: handlingLadderFrom(settings),
         fxRmbPerEur: settings.fx_rmb_per_eur,
         batteryInternal: hasInternalBattery(product.quote_json),
+        autoCarriers,
         ...parcelExtras(product.quote_json, settings),
         ...profile,
-      });
+      };
+      const computed = calculateCogs(input);
       const announced = announcedPriceFor(announcedPrices, destination, 1);
       const breakdown = computed && announced != null ? applyAnnouncedPrice(computed, announced) : computed;
+      const unrestricted =
+        autoCarriers && !selection.preference && announced == null ? calculateCogs({ ...input, autoCarriers: null }) : null;
+      const covered =
+        unrestricted && (!computed || unrestricted.cogs < computed.cogs)
+          ? { cogs: unrestricted.cogs, line: { carrier: unrestricted.carrier, lineName: unrestricted.lineName } }
+          : null;
       return {
         destination,
         cogs: breakdown?.cogs ?? null,
@@ -121,9 +135,15 @@ export async function calculateCatalogQuotes(products: ProductRow[]): Promise<Ma
         mode: carrierModeOf(selection),
         fallback: breakdown?.selectionReason === "fallback_preferred_unavailable",
         announced: breakdown?.announced === true,
-      } satisfies CatalogMarketQuote;
+        covered,
+        packagingG: computed?.packagingWeightG ?? null,
+      };
     });
-    out.set(product.id, { missing: null, markets });
+    out.set(product.id, {
+      missing: null,
+      markets,
+      packagingG: markets.find((market) => market.packagingG != null)?.packagingG ?? null,
+    });
   }
   return out;
 }

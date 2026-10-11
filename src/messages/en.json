@@ -481,7 +481,8 @@
       },
       "box": "Packaging (box)",
       "boxNote": "product box",
-      "packagingIncluded": "packaging {weight} g included"
+      "packagingIncluded": "packaging {weight} g included",
+      "parcelWeight": "{content} g + packaging {packaging} g = {total} g"
     },
     "stock": {
       "title": "Stock",
@@ -654,7 +655,11 @@
         "forced": "Set by Voltship",
         "fallback": "Chosen line unavailable → cheapest"
       },
-      "carrierNote": "Under each market: the carrier shipping 1 unit. When a heavier parcel switches line, it is shown in the cell."
+      "carrierNote": "Under each market: the carrier shipping 1 unit. When a heavier parcel switches line, it is shown in the cell.",
+      "coveredPrice": "Postcode covered: {value}",
+      "coveredHint": "2nd price: when the postcode is served by {line} (limited zones). Otherwise, the top price.",
+      "parcelWeight": "{content} g + {packaging} g pack.",
+      "parcelWeightOnly": "{weight} g"
     },
     "carousel": {
       "label": "Shopify photos of {title}",
@@ -686,7 +691,8 @@
       "error": "Could not save the line.",
       "note": "The chosen line drives the COGS, the matrix and the warehouse shipment. The accepted quote stays frozen.",
       "readOnly": "Only members of your workspace can change the line.",
-      "staffNote": "Saved on the product: the client page, COGS, margin and ECCANG use this line."
+      "staffNote": "Saved on the product: the client page, COGS, margin and ECCANG use this line.",
+      "limitedCoverage": "limited postcodes"
     },
     "sortLabel": "Sort by",
     "minSalesLabel": "Min. sales (period)",
@@ -1123,7 +1129,12 @@
           "confirm": "Activate this grid now? Every live quote will use it.",
           "done": "Grid {version} activated — {cells} cells from {lines} lines.",
           "discard": "Discard this import",
-          "discarded": "Import discarded."
+          "discarded": "Import discarded.",
+          "scheduleLabel": "Or create now and activate on (China time)",
+          "scheduleButton": "Create and schedule",
+          "scheduleMissing": "Choose the activation date and time.",
+          "confirmSchedule": "Create the grid now and activate it on {at} (China time)? The current grid stays live until then.",
+          "scheduledDone": "Grid {version} created ({cells} cells), activation scheduled on {at} (China time)."
         },
         "carriers": "Carriers",
         "perCarrier": "Lines included per carrier:",
@@ -1582,9 +1593,18 @@
         "delivery": "Delivery"
       },
       "packagingTitle": "Packaging added to every parcel",
-      "packagingLead": "Weight of the bag / carton / label added once per order, for every product. It counts when picking the weight bracket, so in transport, margin and carrier. Set 0 to add nothing.",
+      "packagingLead": "Weight of the bag / carton / label added automatically to every parcel, by the weight of its contents. Product sheets carry the product weight only; the client sees “product + packaging”.",
       "packagingLabel": "Packaging weight per parcel",
-      "packagingSave": "Save"
+      "packagingSave": "Save",
+      "scheduled": "Scheduled activation: {grid} on {at} (China time). Prices switch at that time.",
+      "cancelSchedule": "Cancel schedule",
+      "scheduledBadge": "Scheduled {at}",
+      "schedule": "Schedule",
+      "scheduleAt": "Activation date and time (China time)",
+      "packagingContents": "Contents up to",
+      "packagingNoLimit": "no limit",
+      "packagingWeightUnit": "g of packaging",
+      "packagingLadderHint": "Leave “no limit” empty on the last row. An empty row at the bottom adds a step. A product can have its own packaging on its sourcing sheet."
     },
     "pricingForms": {
       "saved": "Saved.",
@@ -1802,7 +1822,7 @@
       "clientFieldsIntro": "These values appear on the client product page.",
       "clientPrice": "Client product price",
       "clientPriceHint": "Per unit, before the tier commission (added automatically).",
-      "unitWeight": "Unit weight",
+      "unitWeight": "Product weight only",
       "gramsUnit": "g",
       "sku": "SKU (Shopify / ECCANG)",
       "skuHint": "Empty = a Voltship SKU (VS-CLIENT-001) is assigned when the quote is sent. The client puts this SKU on his Shopify product so orders link automatically.",
@@ -1811,7 +1831,7 @@
       "channels": {
         "standard": "Standard",
         "electronics_battery": "Electronics / battery",
-        "cosmetics": "Cosmetics",
+        "cosmetics": "Cosmetics / liquid",
         "liquid_perfume": "Liquid / perfume",
         "magnetic": "Magnetic",
         "sensitive_other": "Sensitive (ingestible)"
@@ -1859,7 +1879,7 @@
       "piecesUnit": "pcs",
       "packPiecesHint": "1 = sold alone. Set 2 if one Shopify unit = 2 pieces to ship (set of 2).",
       "packPiecesSetHint": "Set of {count}: 1 unit sold on Shopify = {count} pieces to pick at the warehouse (ECCANG).",
-      "setWeightHint": "Weight of the whole set ({count} pcs), without packaging or box: they are added automatically.",
+      "setWeightHint": "Weight of the whole set ({count} pcs), without packaging: it is added automatically.",
       "setPriceHint": "Price of the whole set ({count} pcs): what the client pays per unit sold.",
       "setFactoryHint": "Factory price of the whole set ({count} pcs).",
       "perPiece": "That is ¥{value} per piece.",
@@ -1867,13 +1887,17 @@
       "clientNoteBadge": "Visible to the client",
       "clientNotePlaceholder": "E.g. sold as a set of 2, engraving included; factory lead time 7 days…",
       "clientNoteHint": "Shown at the top of the client’s product page with its date. The client gets a notification for each new note. Internal notes (yellow box) stay private.",
-      "weightHint": "Product alone, without packaging: the parcel packaging (Pricing setting) and the box, if any, are added automatically.",
+      "weightHint": "Bare product, no packaging: packaging is added automatically (see below).",
       "boxTitle": "Packaging box (only if the product needs one)",
       "boxIntro": "Leave empty when there is no box. The box is packaging, not a product: it is billed to the client on a “Packaging (box)” line, at cost and without commission, per unit sold. Its weight is added to each unit of the parcel.",
       "boxPrice": "Box price",
       "boxBilled": "Billed €{eur} to the client per unit, no commission (rate {rate}).",
       "boxWeight": "Box weight",
-      "boxWeightHint": "Per unit sold."
+      "boxWeightHint": "Per unit sold.",
+      "parcelPreview": "1-unit parcel: {content} g + packaging {packaging} g = {total} g",
+      "packagingOverride": "Specific packaging",
+      "packagingAuto": "Auto",
+      "packagingOverrideHint": "Empty = automatic by parcel size (Pricing). Fill only if this product has special packaging."
     },
     "announced": {
       "title": "Prices announced to the client",
@@ -1932,7 +1956,9 @@
         "fallback": "choice unavailable → auto"
       },
       "announced": "announced price",
-      "box": "Box ¥{price} · {weight} g"
+      "box": "Box ¥{price} · {weight} g",
+      "covered": "postcode covered ({line}): {value}",
+      "weightWithPackaging": "{weight} g + {packaging} g pack."
     }
   },
   "support": {

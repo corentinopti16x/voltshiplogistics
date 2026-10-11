@@ -274,7 +274,11 @@ export default async function CatalogPage({
                     <td className="tabular px-4 py-3 text-right whitespace-nowrap">
                       {row.client_price != null ? formatAmount(Number(row.client_price), locale) : "—"}
                       <p className="text-xs text-[var(--muted)]">
-                        {row.weight_g != null ? `${row.weight_g} g` : t("noWeight")}
+                        {row.weight_g == null
+                          ? t("noWeight")
+                          : quote?.packagingG
+                            ? t("weightWithPackaging", { weight: row.weight_g, packaging: quote.packagingG })
+                            : `${row.weight_g} g`}
                       </p>
                     </td>
                     <td className="px-4 py-3">
@@ -297,6 +301,14 @@ export default async function CatalogPage({
                                 <span className="text-[11px] text-[var(--muted)]">
                                   {t(`mode.${market.fallback ? "fallback" : market.mode}`)}
                                   {market.announced ? ` · ${t("announced")}` : ""}
+                                </span>
+                              ) : null}
+                              {market.covered ? (
+                                <span className="basis-full pl-9 text-[12px] text-[var(--green-ink)]">
+                                  {t("covered", {
+                                    value: formatAmount(market.covered.cogs, locale),
+                                    line: carrierLineLabel(market.covered.line),
+                                  })}
                                 </span>
                               ) : null}
                             </li>

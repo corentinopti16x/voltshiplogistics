@@ -21,7 +21,10 @@ import {
   FLAT_HANDLING,
   handlingForQuantity,
   findRateCell,
+  autoCarriersFor,
+  gridChannel,
   parcelWeightG as parcelWeightOf,
+  packagingWeightFor,
   activeAnnouncedPrices,
   classifyAnnouncedPrice,
   parseAnnouncedPrices,
@@ -50,6 +53,7 @@ import {
 import { handlingLadderFrom, readPricingSettings, type PricingSettings } from "@/lib/pricing/settings";
 import { CLIENT_PRODUCT_SELECT, serializeClientProduct } from "@/lib/products/visibility";
 import { parcelExtras, productBox } from "@/lib/products/extras";
+import { GRAM_COLUMNS, isMissingGramColumns, parseGramArray } from "@/lib/pricing/gram-columns";
 import type { ProductRow } from "@/lib/products/types";
 import { unpackOrderLines, type OrderShipping } from "@/lib/shopify/order-cache";
 import {
@@ -95,22 +99,30 @@ async function loadInternalRateCells(
     delivery_range: string | null;
     line_name: string | null;
   }> = [];
+  let withGrams = true;
   for (let from = 0; from < 100_000; from += 1000) {
     const { data: page, error } = await admin
       .from("rate_grid_cells")
       .select(
-        "id, grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, carrier_cost_rmb, tax_included, ioss_required",
+        `id, grid_version, carrier, destination, channel, weight_min_g, weight_max_g, price, delivery_range, line_name, carrier_cost_rmb, tax_included, ioss_required${withGrams ? `, ${GRAM_COLUMNS}` : ""}`,
       )
       .eq("grid_version", gridVersion)
       .in("destination", destinations)
-      .in("channel", channels)
+      .in("channel", [...new Set(channels.map((channel) => gridChannel(channel)))])
       .order("id")
       .range(from, from + 999);
+    if (error && withGrams && isMissingGramColumns(error)) {
+      withGrams = false;
+      from -= 1000;
+      continue;
+    }
     if (error) throw error;
-    data.push(...((page ?? []) as typeof data));
+    data.push(...((page ?? []) as unknown as typeof data));
     if (!page || page.length < 1000) break;
   }
   return data.map((cell) => ({
+    gramPrices: parseGramArray(cell.gram_prices),
+    gramCostsRmb: parseGramArray(cell.gram_costs_rmb),
     gridVersion: cell.grid_version,
     carrier: cell.carrier,
     destination: cell.destination,
@@ -189,12 +201,19 @@ type ProductContext = {
  * Line choice of a product on a market — exactly what the client's product page uses:
  * forced line, else the chosen line (`_carrier_pref`), else the cheapest allowed line.
  */
-function carrierChoice(product: ProductRow, destination: string, cells: RateCell[], rules?: CarrierRules) {
+function carrierChoice(
+  product: ProductRow,
+  destination: string,
+  cells: RateCell[],
+  rules: CarrierRules | undefined,
+  settings: PricingSettings,
+) {
   const effective = rules ?? EMPTY_CARRIER_RULES;
   const selection = resolveCarrierSelection(effective, parseCarrierPreferences(product.quote_json), destination);
   return {
     carrierPreference: selection.preference,
     allowedLines: allowedLinesFromRules(cells, effective),
+    autoCarriers: autoCarriersFor(settings.auto_carriers, destination),
   };
 }
 
@@ -206,7 +225,7 @@ function marginForParcel(
   settings: PricingSettings,
 ): VoltshipMargin {
   const { product, profile, cells } = ctx;
-  const choice = carrierChoice(product, destination, cells, ctx.rules);
+  const choice = carrierChoice(product, destination, cells, ctx.rules, settings);
   const ready = product.client_price != null && product.weight_g != null && !!product.shipping_channel;
   const channel = (product.shipping_channel ?? "standard") as ShippingChannel;
   const unitWeightG = product.weight_g ?? 0;
@@ -500,11 +519,14 @@ function marginForOrder(
   const destination = getProductMarkets(lead)[0];
   // Each line: (unit weight + box) × qty; packaging once per parcel.
   const extrasOf = (product: ProductRow) => parcelExtras(product.quote_json, settings);
+  const contentWeightG = priced.reduce(
+    (sum, line) => sum + parcelWeightOf(line.product.weight_g ?? 0, line.quantity, { boxWeightG: extrasOf(line.product).boxWeightG }),
+    0,
+  );
+  // Packaging once per parcel: the lead product's own, else the ladder on the whole contents.
+  const leadPackaging = extrasOf(lead).packagingWeightG;
   const computedWeightG =
-    priced.reduce(
-      (sum, line) => sum + parcelWeightOf(line.product.weight_g ?? 0, line.quantity, { boxWeightG: extrasOf(line.product).boxWeightG }),
-      0,
-    ) + settings.packaging_weight_g;
+    contentWeightG + (leadPackaging ?? packagingWeightFor(contentWeightG, settings.packaging_ladder));
   const parcelWeightG = order.billed_weight_g ?? computedWeightG;
   const units = priced.reduce((sum, line) => sum + line.quantity, 0);
   // Product side: client price × qty per line, commission on the product total. Boxes are
@@ -517,7 +539,7 @@ function marginForOrder(
           channel,
           destination,
           batteryInternal: hasInternalBattery(lead.quote_json),
-          ...carrierChoice(lead, destination, cells, rules),
+          ...carrierChoice(lead, destination, cells, rules, settings),
         }) : null;
   const discount = Math.min(100, Math.max(0, profile.logisticsDiscountPct)) / 100;
   const computedClient = cell

@@ -10,7 +10,7 @@ import {
   type SourcingActionResult,
 } from "@/app/actions/sourcing";
 import { getProductRequest, type ProductRow, type SourcingStatus } from "@/lib/products/types";
-import type { ShippingChannel } from "@/lib/domain/pricing";
+import { gridChannel, parcelParts, type PackagingStep, type ShippingChannel } from "@/lib/domain/pricing";
 import { isShippingChannel, parseProductAttributes, tickedAttributes } from "@/lib/products/attributes";
 import {
   CLIENT_NOTE_MAX,
@@ -19,17 +19,12 @@ import {
   clientNote,
   packPieces,
   productBox,
+  productPackagingG,
 } from "@/lib/products/extras";
 
 const initial: SourcingActionResult = { ok: false };
-const channels: ShippingChannel[] = [
-  "standard",
-  "electronics_battery",
-  "cosmetics",
-  "liquid_perfume",
-  "magnetic",
-  "sensitive_other",
-];
+// No "liquid" choice: the carrier grid has no liquid sheet, liquids go in Cosmétique.
+const channels: ShippingChannel[] = ["standard", "electronics_battery", "cosmetics", "magnetic", "sensitive_other"];
 const statuses: SourcingStatus[] = [
   "brief_received",
   "factories",
@@ -55,9 +50,12 @@ export function SourcingWorkForm({
   product,
   work,
   fxRmbPerEur,
+  packagingLadder,
 }: {
   product: ProductRow;
   work: WorkRow;
+  /** Packaging by parcel contents (Tarification) — shows what is added to the product weight. */
+  packagingLadder: PackagingStep[];
   /** Pricing settings rate (RMB per €), used to show the factory price in €. */
   fxRmbPerEur: number;
 }) {
@@ -74,6 +72,9 @@ export function SourcingWorkForm({
     product.client_price != null ? String(product.client_price) : "",
   );
   const [pieces, setPieces] = useState<string>(String(packPieces(product.quote_json)));
+  const [weight, setWeight] = useState<string>(product.weight_g != null ? String(product.weight_g) : "");
+  const storedPackaging = productPackagingG(product.quote_json);
+  const [packagingOverride, setPackagingOverride] = useState<string>(storedPackaging != null ? String(storedPackaging) : "");
   const storedBox = productBox(product.quote_json);
   const [boxRmb, setBoxRmb] = useState<string>(storedBox?.priceRmb ? String(storedBox.priceRmb) : "");
   const boxEur =
@@ -119,14 +120,43 @@ export function SourcingWorkForm({
               value={clientPrice}
               onChange={(event) => setClientPrice(event.target.value)}
             />
+            <div className="flex flex-col gap-1">
+              <Input
+                name="weight_g"
+                label={t("unitWeight")}
+                unit={t("gramsUnit")}
+                type="number"
+                min="1"
+                value={weight}
+                onChange={(event) => setWeight(event.target.value)}
+                hint={piecesCount > 1 ? t("setWeightHint", { count: piecesCount }) : t("weightHint")}
+              />
+              {(() => {
+                const unit = Number(weight);
+                if (!weight.trim() || !Number.isFinite(unit) || unit <= 0) return null;
+                const parts = parcelParts(unit, 1, {
+                  boxWeightG: storedBox?.weightG ?? 0,
+                  packagingWeightG: packagingOverride.trim() ? Number(packagingOverride) : null,
+                  packagingLadder,
+                });
+                return (
+                  <span className="text-xs font-semibold text-[var(--ink)]">
+                    {t("parcelPreview", { content: parts.contentG, packaging: parts.packagingG, total: parts.totalG })}
+                  </span>
+                );
+              })()}
+            </div>
             <Input
-              name="weight_g"
-              label={t("unitWeight")}
+              name="packaging_weight_g"
+              label={t("packagingOverride")}
               unit={t("gramsUnit")}
               type="number"
-              min="1"
-              defaultValue={product.weight_g ?? ""}
-              hint={piecesCount > 1 ? t("setWeightHint", { count: piecesCount }) : t("weightHint")}
+              min="0"
+              step="1"
+              value={packagingOverride}
+              onChange={(event) => setPackagingOverride(event.target.value)}
+              placeholder={t("packagingAuto")}
+              hint={t("packagingOverrideHint")}
             />
             <Input
               name="pack_pieces"
@@ -151,7 +181,7 @@ export function SourcingWorkForm({
               <span className="text-[var(--muted)]">{t("shippingChannel")}</span>
               <select
                 name="shipping_channel"
-                defaultValue={product.shipping_channel ?? suggested ?? ""}
+                defaultValue={gridChannel(product.shipping_channel ?? suggested ?? "")}
                 className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
               >
                 <option value="">{t("select")}</option>

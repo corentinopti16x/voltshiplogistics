@@ -26,7 +26,27 @@ export type RateCell = {
   taxIncluded?: boolean | null;
   /** The line ships under the client's IOSS number (informational, not a cost). */
   iossRequired?: boolean | null;
+  /**
+   * Gram-exact grids: client price and INTERNAL carrier cost for every gram of the bracket
+   * (index 0 = weightMinG). The parcel is then billed at its exact billed weight; without
+   * them the bracket's flat `price` / `carrierCostRmb` apply.
+   */
+  gramPrices?: number[] | null;
+  gramCostsRmb?: number[] | null;
 };
+
+/** The cell priced at an exact billed weight (gram-exact grids), else the cell unchanged. */
+export function cellAtWeight(cell: RateCell, billedG: number): RateCell {
+  const index = Math.round(billedG) - cell.weightMinG;
+  const price = cell.gramPrices?.[index];
+  const cost = cell.gramCostsRmb?.[index];
+  if ((price == null || !Number.isFinite(price)) && (cost == null || !Number.isFinite(cost))) return cell;
+  return {
+    ...cell,
+    price: price != null && Number.isFinite(price) ? price : cell.price,
+    carrierCostRmb: cost != null && Number.isFinite(cost) ? cost : cell.carrierCostRmb,
+  };
+}
 
 /** Product dimensions in cm (quote_json length_cm / width_cm / height_cm). */
 export type ParcelDimensionsCm = { length_cm: number; width_cm: number; height_cm: number };
@@ -95,21 +115,51 @@ export function billedWeightG(input: BilledWeightInput) {
   return Math.round(billed);
 }
 
-/** Packaging added once per parcel (mailer bag, filler, label) when no setting is given. */
+/** Packaging added once per parcel (mailer bag, filler, label) for a small parcel. */
 export const DEFAULT_PACKAGING_WEIGHT_G = 20;
+
+/** Packaging weight by parcel contents: up to `upToG` grams of contents → `weightG` of packaging. */
+export type PackagingStep = { upToG: number | null; weightG: number };
+
+/** Small parcels 20 g, then bigger mailers / cartons (Tarification → Emballage). */
+export const DEFAULT_PACKAGING_LADDER: PackagingStep[] = [
+  { upToG: 200, weightG: 20 },
+  { upToG: 500, weightG: 25 },
+  { upToG: 1000, weightG: 30 },
+  { upToG: null, weightG: 35 },
+];
+
+/** Packaging weight for a parcel whose contents (products + boxes) weigh `contentG`. */
+export function packagingWeightFor(contentG: number, ladder: PackagingStep[] | null | undefined) {
+  if (!ladder || ladder.length === 0) return 0;
+  const step = ladder.find((entry) => entry.upToG == null || contentG <= entry.upToG) ?? ladder[ladder.length - 1];
+  return Math.max(0, step.weightG);
+}
+
+export type ParcelExtras = {
+  boxWeightG?: number | null;
+  /** Packaging fixed for this product (grams); null/absent = from the ladder. */
+  packagingWeightG?: number | null;
+  packagingLadder?: PackagingStep[] | null;
+};
+
+/** Contents and packaging of a parcel of `quantity` units: n × (unit + box), packaging once. */
+export function parcelParts(unitWeightG: number, quantity: number, extras: ParcelExtras = {}) {
+  const box = Math.max(0, Number(extras.boxWeightG) || 0);
+  const contentG = (unitWeightG + box) * quantity;
+  const fixed = extras.packagingWeightG;
+  const packagingG =
+    fixed != null && Number.isFinite(Number(fixed)) ? Math.max(0, Number(fixed)) : packagingWeightFor(contentG, extras.packagingLadder);
+  return { contentG, packagingG, totalG: contentG + packagingG };
+}
 
 /**
  * Actual parcel weight: n × (unit weight + box weight) + packaging once per parcel.
- * The box (when the product ships in a bought box) is per unit; the packaging is per order.
+ * The box (when the product ships in a bought box) is per unit; the packaging is per order
+ * and grows with the parcel (ladder) unless the product has its own.
  */
-export function parcelWeightG(
-  unitWeightG: number,
-  quantity: number,
-  extras: { boxWeightG?: number | null; packagingWeightG?: number | null } = {},
-) {
-  const box = Math.max(0, Number(extras.boxWeightG) || 0);
-  const packaging = Math.max(0, Number(extras.packagingWeightG) || 0);
-  return (unitWeightG + box) * quantity + packaging;
+export function parcelWeightG(unitWeightG: number, quantity: number, extras: ParcelExtras = {}) {
+  return parcelParts(unitWeightG, quantity, extras).totalG;
 }
 
 /** A carrier service line: carrier + line name (null line for legacy single-line grids). */
@@ -182,8 +232,16 @@ export type PricingInput = {
    * discount never takes the client transport below what the carrier costs Voltship.
    */
   fxRmbPerEur?: number | null;
-  /** Packaging weight added once per parcel (grams). */
+  /** Packaging fixed for this product, once per parcel (grams); null = from `packagingLadder`. */
   packagingWeightG?: number | null;
+  /** Packaging weight by parcel contents (20 g small parcel, more for bigger ones). */
+  packagingLadder?: PackagingStep[] | null;
+  /**
+   * Carriers allowed for the automatic (cheapest) choice on this market; null/empty = all.
+   * A chosen or forced line is not limited by it. When none of them can ship the parcel,
+   * the cheapest of all lines is used.
+   */
+  autoCarriers?: string[] | null;
   /**
    * Box the product ships in (€ per unit sold), when it needs one: billed as packaging,
    * on its own line, without commission. 0/absent = no box.
@@ -216,6 +274,8 @@ export type CogsBreakdown = {
   box?: number;
   /** Packaging weight included in `weightG` (once per parcel). */
   packagingWeightG?: number;
+  /** Products (+ boxes) in the parcel, without packaging: `weightG` = contents + packaging. */
+  contentWeightG?: number;
   shippingBase: number;
   shipping: number;
   handling: number;
@@ -285,6 +345,7 @@ type CellQuery = Pick<
   | "carrierPreference"
   | "allowedLines"
   | "batteryInternal"
+  | "autoCarriers"
 >;
 
 /** quote_json.battery_internal — ticked on the sourcer sheet (« Batterie intégrée »). */
@@ -308,14 +369,17 @@ function matchingCells(cells: RateCell[], input: CellQuery) {
       destination,
       volumetricDivisors: input.volumetricDivisors,
     });
-  const matches = cells.filter((cell) => {
-    if (cell.destination.trim().toUpperCase() !== destination || cell.channel !== input.channel) return false;
-    if (input.preferredCarrier && cell.carrier !== input.preferredCarrier) return false;
-    if (input.allowedLines && !input.allowedLines.has(lineKey(cell.carrier, cell.lineName))) return false;
-    if (input.batteryInternal !== true && isInternalBatteryOnlyLine(cell)) return false;
+  const matches: RateCell[] = [];
+  for (const cell of cells) {
+    if (cell.destination.trim().toUpperCase() !== destination || cell.channel !== gridChannel(input.channel)) continue;
+    if (input.preferredCarrier && cell.carrier !== input.preferredCarrier) continue;
+    if (input.allowedLines && !input.allowedLines.has(lineKey(cell.carrier, cell.lineName))) continue;
+    if (input.batteryInternal !== true && isInternalBatteryOnlyLine(cell)) continue;
     const weight = billed(cell.carrier);
-    return weight >= cell.weightMinG && weight <= cell.weightMaxG;
-  });
+    if (weight < cell.weightMinG || weight > cell.weightMaxG) continue;
+    // Priced at the exact billed gram when the grid carries per-gram prices.
+    matches.push(cellAtWeight(cell, weight));
+  }
   return matches.sort(byPriceThenNarrowest);
 }
 
@@ -337,14 +401,17 @@ export function selectRateCell(
   const matches = matchingCells(cells, input);
   if (matches.length === 0) return null;
   const preference = input.carrierPreference ?? null;
+  // Automatic choice: cheapest among the market's auto carriers when one of them can ship.
+  const auto = new Set((input.autoCarriers ?? []).map((carrier) => carrier.toLowerCase()));
+  const cheapest = (auto.size > 0 ? matches.find((cell) => auto.has(cell.carrier.toLowerCase())) : null) ?? matches[0];
   if (preference) {
     const preferred = matches.find((cell) =>
       sameLine({ carrier: cell.carrier, lineName: cell.lineName ?? null }, preference),
     );
     if (preferred) return { cell: preferred, reason: "preferred" };
-    return { cell: matches[0], reason: "fallback_preferred_unavailable" };
+    return { cell: cheapest, reason: "fallback_preferred_unavailable" };
   }
-  return { cell: matches[0], reason: "cheapest" };
+  return { cell: cheapest, reason: "cheapest" };
 }
 
 export function findRateCell(cells: RateCell[], input: CellQuery) {
@@ -405,11 +472,13 @@ export function calculateCogs(input: PricingInput): CogsBreakdown | null {
   }
 
   // One parcel for the whole order: the rate bracket is picked for n × (unit + box) + packaging.
-  const packagingWeightG = Math.max(0, Number(input.packagingWeightG) || 0);
-  const parcelWeight = parcelWeightG(input.weightG, quantity, {
+  const parts = parcelParts(input.weightG, quantity, {
     boxWeightG: input.boxWeightG,
-    packagingWeightG,
+    packagingWeightG: input.packagingWeightG,
+    packagingLadder: input.packagingLadder,
   });
+  const packagingWeightG = parts.packagingG;
+  const parcelWeight = parts.totalG;
   const selected = selectRateCell(input.cells, { ...input, weightG: parcelWeight, quantity });
   if (!selected) return null;
   const { cell } = selected;
@@ -458,6 +527,7 @@ export function calculateCogs(input: PricingInput): CogsBreakdown | null {
     product,
     box,
     packagingWeightG,
+    contentWeightG: parts.contentG,
     shippingBase,
     shipping,
     handling,
@@ -725,4 +795,25 @@ export function applyAnnouncedPrice(breakdown: CogsBreakdown, price: number): Co
     cogsPerUnit: money(price / breakdown.quantity),
     announced: true,
   };
+}
+
+/** Auto carriers of a market from the `auto_carriers` setting (null = no restriction). */
+export function autoCarriersFor(map: Record<string, string[]> | null | undefined, destination: string) {
+  const list = map?.[normalizeDestination(destination)];
+  return list && list.length > 0 ? list : null;
+}
+
+/** True when the carrier is outside the market's automatic set (limited postcode coverage). */
+export function isLimitedCoverageCarrier(carrier: string, autoCarriers: string[] | null | undefined) {
+  if (!autoCarriers || autoCarriers.length === 0) return false;
+  return !autoCarriers.some((name) => name.toLowerCase() === carrier.toLowerCase());
+}
+
+/**
+ * Grid category used to price a product channel. The carrier grid has no "liquid" sheet:
+ * liquids ship on the cosmetics / sensitive lines (Tongyou 特敏感, Huahan 特惠 PK0573,
+ * YunExpress 化妆品), so `liquid_perfume` is priced as `cosmetics`.
+ */
+export function gridChannel<T extends string | null | undefined>(channel: T): T | "cosmetics" {
+  return channel === "liquid_perfume" ? "cosmetics" : channel;
 }

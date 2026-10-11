@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import type { ShippingChannel } from "../domain/pricing";
 import { defaultWeightBrackets, normalizeCarrier, type ParsedLine, type ParsedPriceList } from "./ai-import";
+import { encodeGramCurve } from "./gram-curve";
 
 /**
  * Deterministic importer for Voltship's own carrier matrix ("China_Carriers_Matrix_Vxx.xlsx").
@@ -220,19 +221,38 @@ export function compressBrackets(points: GramPoint[]): RawBracket[] {
 
 /**
  * Engine brackets (50 g steps to 2 000 g, then 500 g steps) up to the table's max weight,
- * each priced at its MAX gram so a parcel anywhere in the bracket is never under-billed.
+ * each priced at its MAX gram (fallback); the line's `gram_curve` carries the cost of every
+ * gram so a parcel is billed at its exact weight.
  * When the table has no row at that exact gram, the first heavier row is used; brackets
  * whose max is not offered (blank) are dropped.
  */
+/** Matrix points (gram → cost, null = not offered) → compact curve from 1 g. */
+export function gramCurveFromPoints(points: GramPoint[]): string {
+  const maxG = Math.max(0, ...points.map((p) => p.g));
+  const costs: Array<number | null> = Array.from({ length: maxG }, () => null);
+  for (const point of points) {
+    if (point.g >= 1 && point.g <= maxG) costs[point.g - 1] = point.price;
+  }
+  return encodeGramCurve(costs);
+}
+
 export function normalizeToEngineBrackets(points: GramPoint[]): RawBracket[] {
   const offered = points.filter((p): p is { g: number; price: number } => p.price != null);
   if (offered.length === 0) return [];
   const maxG = Math.max(...points.map((p) => p.g));
   const sorted = [...offered].sort((a, b) => a.g - b.g);
+  // Indexed lookups: a matrix has ~5 000 gram rows per column.
+  const byGram = new Map(points.map((p) => [p.g, p.price]));
   const priceAtOrAbove = (g: number) => {
-    const exact = points.find((p) => p.g === g);
-    if (exact) return exact.price;
-    return sorted.find((p) => p.g >= g)?.price ?? null;
+    if (byGram.has(g)) return byGram.get(g) ?? null;
+    let lo = 0;
+    let hi = sorted.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (sorted[mid].g < g) lo = mid + 1;
+      else hi = mid;
+    }
+    return sorted[lo]?.price ?? null;
   };
   const out: RawBracket[] = [];
   for (const bracket of defaultWeightBrackets(maxG)) {
@@ -407,6 +427,8 @@ export function parseVoltshipMatrix(buffer: Buffer | Uint8Array): VoltshipMatrix
         vat_extra: false,
         ioss_required: iossRequired,
         pricing: { type: "table", rows },
+        // Every gram's cost, compact: the parcel is billed at its exact weight.
+        gram_curve: gramCurveFromPoints(points),
         delivery_range: header.delivery ? normalizeDelivery(header.delivery) : null,
         notes,
         min_billable_g: null,
