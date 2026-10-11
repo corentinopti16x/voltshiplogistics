@@ -44,12 +44,13 @@ export function isShippingChannel(value: unknown): value is ShippingChannel {
 
 /**
  * Channel suggested from the client's answers. Priority when several boxes are
- * ticked: electronics_battery > liquid_perfume > sensitive_other > cosmetics >
+ * ticked: electronics_battery > liquid with alcohol (cosmetics) > sensitive_other > cosmetics >
  * magnetic > standard (the most constraining line wins).
  */
 export function deriveSuggestedChannel(attributes: Partial<ProductAttributes>): ShippingChannel {
   if (attributes.electronics) return "electronics_battery";
-  if (attributes.liquid && attributes.alcohol) return "liquid_perfume";
+  // Liquids (perfume included) ship on the cosmetics / sensitive lines: there is no liquid grid.
+  if (attributes.liquid && attributes.alcohol) return "cosmetics";
   if (attributes.ingestible) return "sensitive_other";
   if (attributes.liquid) return "cosmetics";
   if (attributes.magnetic) return "magnetic";

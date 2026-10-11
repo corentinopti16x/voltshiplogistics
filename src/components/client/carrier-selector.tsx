@@ -40,7 +40,8 @@ export function CarrierSelector({
   const priceSuffix = (option: RateOption) =>
     // IOSS is Voltship's own number for every EU parcel: never shown to the client.
     `${formatAmount(option.price, locale)}${option.deliveryRange ? ` · ${option.deliveryRange}` : ""}`;
-  const optionLabel = (option: RateOption) => `${carrierLineLabel(option)} · ${priceSuffix(option)}`;
+  const optionLabel = (option: RateOption, limited = false) =>
+    `${carrierLineLabel(option)} · ${priceSuffix(option)}${limited ? ` · ${t("limitedCoverage")}` : ""}`;
 
   const change = (market: string, value: string) => {
     setError(null);
@@ -66,7 +67,14 @@ export function CarrierSelector({
   return (
     <div className="mt-3 flex flex-col gap-3">
       {markets.map((market) => {
-        const cheapest = market.options[0] ?? null;
+        // The automatic choice may skip lines with limited postcode coverage (Huahan USA).
+        const cheapest =
+          (market.autoLine
+            ? market.options.find((option) => lineKey(option.carrier, option.lineName) === lineKey(market.autoLine!.carrier, market.autoLine!.lineName))
+            : null) ??
+          market.options[0] ??
+          null;
+        const limited = new Set(market.limitedLines);
         const currentKey = market.preference ? lineKey(market.preference.carrier, market.preference.lineName) : AUTO;
         const preferredOption =
           market.preference != null
@@ -104,7 +112,7 @@ export function CarrierSelector({
                 </option>
                 {market.options.map((option) => (
                   <option key={lineKey(option.carrier, option.lineName)} value={lineKey(option.carrier, option.lineName)}>
-                    {optionLabel(option)}
+                    {optionLabel(option, limited.has(lineKey(option.carrier, option.lineName)))}
                   </option>
                 ))}
                 {market.preference && !preferredAvailable ? (

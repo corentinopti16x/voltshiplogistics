@@ -654,7 +654,9 @@
         "forced": "Set by Voltship",
         "fallback": "Chosen line unavailable → cheapest"
       },
-      "carrierNote": "Under each market: the carrier shipping 1 unit. When a heavier parcel switches line, it is shown in the cell."
+      "carrierNote": "Under each market: the carrier shipping 1 unit. When a heavier parcel switches line, it is shown in the cell.",
+      "coveredPrice": "Postcode covered: {value}",
+      "coveredHint": "2nd price: when the postcode is served by {line} (limited zones). Otherwise, the top price."
     },
     "carousel": {
       "label": "Shopify photos of {title}",
@@ -686,7 +688,8 @@
       "error": "Could not save the line.",
       "note": "The chosen line drives the COGS, the matrix and the warehouse shipment. The accepted quote stays frozen.",
       "readOnly": "Only members of your workspace can change the line.",
-      "staffNote": "Saved on the product: the client page, COGS, margin and ECCANG use this line."
+      "staffNote": "Saved on the product: the client page, COGS, margin and ECCANG use this line.",
+      "limitedCoverage": "limited postcodes"
     },
     "sortLabel": "Sort by",
     "minSalesLabel": "Min. sales (period)",
@@ -1584,7 +1587,12 @@
       "packagingTitle": "Packaging added to every parcel",
       "packagingLead": "Weight of the bag / carton / label added once per order, for every product. It counts when picking the weight bracket, so in transport, margin and carrier. Set 0 to add nothing.",
       "packagingLabel": "Packaging weight per parcel",
-      "packagingSave": "Save"
+      "packagingSave": "Save",
+      "scheduled": "Scheduled activation: {grid} on {at} (China time). Prices switch at that time.",
+      "cancelSchedule": "Cancel schedule",
+      "scheduledBadge": "Scheduled {at}",
+      "schedule": "Schedule",
+      "scheduleAt": "Activation date and time (China time)"
     },
     "pricingForms": {
       "saved": "Saved.",
@@ -1811,7 +1819,7 @@
       "channels": {
         "standard": "Standard",
         "electronics_battery": "Electronics / battery",
-        "cosmetics": "Cosmetics",
+        "cosmetics": "Cosmetics / liquid",
         "liquid_perfume": "Liquid / perfume",
         "magnetic": "Magnetic",
         "sensitive_other": "Sensitive (ingestible)"
@@ -1932,7 +1940,8 @@
         "fallback": "choice unavailable → auto"
       },
       "announced": "announced price",
-      "box": "Box ¥{price} · {weight} g"
+      "box": "Box ¥{price} · {weight} g",
+      "covered": "postcode covered ({line}): {value}"
     }
   },
   "support": {

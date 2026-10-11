@@ -654,7 +654,9 @@
         "forced": "Imposé par Voltship",
         "fallback": "Ligne choisie indisponible → la moins chère"
       },
-      "carrierNote": "Sous chaque marché : le transporteur qui expédie 1 unité. Si un colis plus lourd change de ligne, elle est indiquée dans la case."
+      "carrierNote": "Sous chaque marché : le transporteur qui expédie 1 unité. Si un colis plus lourd change de ligne, elle est indiquée dans la case.",
+      "coveredPrice": "Code postal couvert : {value}",
+      "coveredHint": "2e prix : si le code postal est livré par {line} (zones limitées). Sinon, prix du haut."
     },
     "carousel": {
       "label": "Photos Shopify de {title}",
@@ -686,7 +688,8 @@
       "error": "Impossible d'enregistrer la ligne.",
       "note": "La ligne choisie est utilisée pour le COGS, la matrice et l'expédition entrepôt. Le devis accepté reste figé.",
       "readOnly": "Seuls les membres de votre espace peuvent changer la ligne.",
-      "staffNote": "Choix enregistré sur le produit : la fiche client, les COGS, la marge et ECCANG utilisent cette ligne."
+      "staffNote": "Choix enregistré sur le produit : la fiche client, les COGS, la marge et ECCANG utilisent cette ligne.",
+      "limitedCoverage": "codes postaux limités"
     },
     "sortLabel": "Trier par",
     "minSalesLabel": "Ventes min. (période)",
@@ -1584,7 +1587,12 @@
       "packagingTitle": "Emballage ajouté à chaque colis",
       "packagingLead": "Poids du sachet / carton / étiquette ajouté une fois par commande, pour tous les produits. Il compte dans le choix de la tranche de poids, donc dans le transport, la marge et le transporteur. Mettre 0 pour ne rien ajouter.",
       "packagingLabel": "Poids d’emballage par colis",
-      "packagingSave": "Enregistrer"
+      "packagingSave": "Enregistrer",
+      "scheduled": "Activation programmée : {grid} le {at} (heure de Chine). Les prix basculent à cette heure-là.",
+      "cancelSchedule": "Annuler la programmation",
+      "scheduledBadge": "Programmée le {at}",
+      "schedule": "Programmer",
+      "scheduleAt": "Date et heure d’activation (heure de Chine)"
     },
     "pricingForms": {
       "saved": "Enregistré.",
@@ -1811,7 +1819,7 @@
       "channels": {
         "standard": "Standard",
         "electronics_battery": "Électronique / batterie",
-        "cosmetics": "Cosmétique",
+        "cosmetics": "Cosmétique / liquide",
         "liquid_perfume": "Liquide / parfum",
         "magnetic": "Magnétique",
         "sensitive_other": "Sensible (ingérable)"
@@ -1932,7 +1940,8 @@
         "fallback": "choix indisponible → auto"
       },
       "announced": "prix annoncé",
-      "box": "Boîte {price} ¥ · {weight} g"
+      "box": "Boîte {price} ¥ · {weight} g",
+      "covered": "code postal couvert ({line}) : {value}"
     }
   },
   "support": {

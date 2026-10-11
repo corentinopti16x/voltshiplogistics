@@ -21,6 +21,8 @@ import {
   FLAT_HANDLING,
   handlingForQuantity,
   findRateCell,
+  autoCarriersFor,
+  gridChannel,
   parcelWeightG as parcelWeightOf,
   activeAnnouncedPrices,
   classifyAnnouncedPrice,
@@ -103,7 +105,7 @@ async function loadInternalRateCells(
       )
       .eq("grid_version", gridVersion)
       .in("destination", destinations)
-      .in("channel", channels)
+      .in("channel", [...new Set(channels.map((channel) => gridChannel(channel)))])
       .order("id")
       .range(from, from + 999);
     if (error) throw error;
@@ -189,12 +191,19 @@ type ProductContext = {
  * Line choice of a product on a market — exactly what the client's product page uses:
  * forced line, else the chosen line (`_carrier_pref`), else the cheapest allowed line.
  */
-function carrierChoice(product: ProductRow, destination: string, cells: RateCell[], rules?: CarrierRules) {
+function carrierChoice(
+  product: ProductRow,
+  destination: string,
+  cells: RateCell[],
+  rules: CarrierRules | undefined,
+  settings: PricingSettings,
+) {
   const effective = rules ?? EMPTY_CARRIER_RULES;
   const selection = resolveCarrierSelection(effective, parseCarrierPreferences(product.quote_json), destination);
   return {
     carrierPreference: selection.preference,
     allowedLines: allowedLinesFromRules(cells, effective),
+    autoCarriers: autoCarriersFor(settings.auto_carriers, destination),
   };
 }
 
@@ -206,7 +215,7 @@ function marginForParcel(
   settings: PricingSettings,
 ): VoltshipMargin {
   const { product, profile, cells } = ctx;
-  const choice = carrierChoice(product, destination, cells, ctx.rules);
+  const choice = carrierChoice(product, destination, cells, ctx.rules, settings);
   const ready = product.client_price != null && product.weight_g != null && !!product.shipping_channel;
   const channel = (product.shipping_channel ?? "standard") as ShippingChannel;
   const unitWeightG = product.weight_g ?? 0;
@@ -517,7 +526,7 @@ function marginForOrder(
           channel,
           destination,
           batteryInternal: hasInternalBattery(lead.quote_json),
-          ...carrierChoice(lead, destination, cells, rules),
+          ...carrierChoice(lead, destination, cells, rules, settings),
         }) : null;
   const discount = Math.min(100, Math.max(0, profile.logisticsDiscountPct)) / 100;
   const computedClient = cell

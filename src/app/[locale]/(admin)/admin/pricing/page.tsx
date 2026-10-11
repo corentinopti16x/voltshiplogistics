@@ -1,6 +1,13 @@
 import { getTranslations } from "next-intl/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { activateRateGridFormAction, savePackagingWeightAction } from "@/app/actions/pricing";
+import {
+  activateRateGridFormAction,
+  cancelGridScheduleAction,
+  savePackagingWeightAction,
+  scheduleGridActivationAction,
+} from "@/app/actions/pricing";
+import { getGridSchedule } from "@/lib/pricing/server";
+import { isoToShanghaiLocal, tomorrowNineShanghai } from "@/lib/pricing/grid-schedule";
 import { ButtonLink } from "@/components/ui/button";
 import { CreateGridForm, RateCellForm, RateGridCsvForm } from "@/components/admin/pricing-forms";
 import { readPricingSettings } from "@/lib/pricing/settings";
@@ -22,7 +29,7 @@ export default async function AdminPricingPage() {
   const tp = await getTranslations("admin.pricingPage");
   const tf = await getTranslations("admin.pricingForms");
   const admin = createAdminClient();
-  const [{ data: grids }, { data: cells }, { data: active }, settings] = await Promise.all([
+  const [{ data: grids }, { data: cells }, { data: active }, settings, schedule] = await Promise.all([
     admin
       .from("rate_grids")
       .select("grid_version, effective_date, source, created_at")
@@ -41,7 +48,10 @@ export default async function AdminPricingPage() {
       .eq("key", "active_grid_version")
       .maybeSingle(),
     readPricingSettings(admin),
+    getGridSchedule(),
   ]);
+  // Default for the « Programmer » field: tomorrow 09:00, China time.
+  const tomorrow9 = tomorrowNineShanghai(new Date());
   const versions = (grids ?? []).map((grid) => grid.grid_version);
   const hasCarrierCost = (cells ?? []).some((cell) => cell.carrier_cost_rmb != null);
   const eur = (value: number) => `${value.toFixed(2)} €`;
@@ -98,6 +108,18 @@ export default async function AdminPricingPage() {
 
       <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
         <h2 className="text-sm font-semibold">{tp("versions")}</h2>
+        {schedule ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <span>
+              {tp("scheduled", { grid: schedule.gridVersion, at: isoToShanghaiLocal(schedule.at) })}
+            </span>
+            <form action={cancelGridScheduleAction}>
+              <button type="submit" className="cursor-pointer rounded-md border border-amber-400 px-3 py-1 text-xs">
+                {tp("cancelSchedule")}
+              </button>
+            </form>
+          </div>
+        ) : null}
         {versions.length === 0 ? (
           <p className="mt-3 text-sm text-[var(--muted)]">{tp("noVersions")}</p>
         ) : (
@@ -120,15 +142,43 @@ export default async function AdminPricingPage() {
                       {tp("active")}
                     </span>
                   ) : (
-                    <form action={activateRateGridFormAction}>
-                      <input type="hidden" name="grid_version" value={grid.grid_version} />
-                      <button
-                        type="submit"
-                        className="cursor-pointer rounded-md border border-[var(--line)] px-3 py-1.5 hover:bg-white"
-                      >
-                        {tp("activate")}
-                      </button>
-                    </form>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {schedule?.gridVersion === grid.grid_version ? (
+                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs text-amber-900">
+                          {tp("scheduledBadge", { at: isoToShanghaiLocal(schedule?.at ?? "") })}
+                        </span>
+                      ) : null}
+                      <form action={scheduleGridActivationAction} className="flex items-center gap-2">
+                        <input type="hidden" name="grid_version" value={grid.grid_version} />
+                        <input
+                          type="datetime-local"
+                          name="at"
+                          required
+                          defaultValue={
+                            schedule && schedule.gridVersion === grid.grid_version
+                              ? isoToShanghaiLocal(schedule.at).replace(" ", "T")
+                              : tomorrow9
+                          }
+                          aria-label={tp("scheduleAt")}
+                          className="rounded-md border border-[var(--line)] bg-white px-2 py-1 text-xs"
+                        />
+                        <button
+                          type="submit"
+                          className="cursor-pointer rounded-md border border-[var(--line)] px-3 py-1.5 text-xs hover:bg-white"
+                        >
+                          {tp("schedule")}
+                        </button>
+                      </form>
+                      <form action={activateRateGridFormAction}>
+                        <input type="hidden" name="grid_version" value={grid.grid_version} />
+                        <button
+                          type="submit"
+                          className="cursor-pointer rounded-md border border-[var(--line)] px-3 py-1.5 hover:bg-white"
+                        >
+                          {tp("activate")}
+                        </button>
+                      </form>
+                    </div>
                   )}
                 </li>
               );

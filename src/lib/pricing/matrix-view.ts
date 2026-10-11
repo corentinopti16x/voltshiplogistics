@@ -1,14 +1,15 @@
 import type { CogsBreakdown, CarrierLineRef, RateOption, SelectionReason } from "../domain/pricing";
-import { lineKey } from "../domain/pricing";
+import { isLimitedCoverageCarrier, lineKey } from "../domain/pricing";
 
 /** Minimal shape of `ProductCogsMatrix` (lib/pricing/server) needed for the views. */
 type MatrixLike = {
   markets: Array<{
     destination: string;
-    cells: Array<{ quantity: number; breakdown: CogsBreakdown | null }>;
+    cells: Array<{ quantity: number; breakdown: CogsBreakdown | null; covered?: CogsBreakdown | null }>;
     options: RateOption[];
     preference: CarrierLineRef | null;
     forced: boolean;
+    autoCarriers?: string[] | null;
   }>;
 };
 
@@ -31,6 +32,9 @@ export type CogsMatrixCellView = {
   /** Parcel shipping price from the rate cell (after client discount). */
   shipping: number | null;
   deliveryRange: string | null;
+  /** Cheaper COGS when the postcode is covered by a limited-coverage line (Huahan USA…). */
+  coveredCogs: number | null;
+  coveredLine: CarrierLineRef | null;
 };
 
 export type CogsMatrixMarketView = {
@@ -53,6 +57,10 @@ export type CarrierSelectorMarket = {
   forced: boolean;
   /** Reason of the single-unit selection (null when no rate matches). */
   selectionReason: SelectionReason | null;
+  /** Line the automatic choice uses for 1 unit (may differ from the cheapest option). */
+  autoLine: CarrierLineRef | null;
+  /** Option keys (lineKey) with limited postcode coverage, left out of the automatic choice. */
+  limitedLines: string[];
 };
 
 export function carrierModeOf(market: { preference: CarrierLineRef | null; forced: boolean }): CarrierMode {
@@ -92,15 +100,24 @@ export function matrixViews(matrix: MatrixLike) {
         weightMaxG: cell.breakdown?.weightMaxG ?? null,
         shipping: cell.breakdown?.shipping ?? null,
         deliveryRange: cell.breakdown?.deliveryRange ?? null,
+        coveredCogs: cell.covered?.cogs ?? null,
+        coveredLine: cell.covered ? { carrier: cell.covered.carrier, lineName: cell.covered.lineName } : null,
       })),
     };
   });
-  const carrierMarkets: CarrierSelectorMarket[] = matrix.markets.map((market) => ({
-    destination: market.destination,
-    options: market.options,
-    preference: market.preference,
-    forced: market.forced,
-    selectionReason: market.cells.find((cell) => cell.quantity === 1)?.breakdown?.selectionReason ?? null,
-  }));
+  const carrierMarkets: CarrierSelectorMarket[] = matrix.markets.map((market) => {
+    const single = market.cells.find((cell) => cell.quantity === 1)?.breakdown ?? null;
+    return {
+      destination: market.destination,
+      options: market.options,
+      preference: market.preference,
+      forced: market.forced,
+      selectionReason: single?.selectionReason ?? null,
+      autoLine: !market.preference && single ? { carrier: single.carrier, lineName: single.lineName } : null,
+      limitedLines: market.options
+        .filter((option) => isLimitedCoverageCarrier(option.carrier, market.autoCarriers))
+        .map((option) => lineKey(option.carrier, option.lineName)),
+    };
+  });
   return { matrixMarkets, carrierMarkets };
 }

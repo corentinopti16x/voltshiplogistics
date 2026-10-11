@@ -36,10 +36,17 @@ import {
   type RateImportReview,
 } from "@/lib/pricing/ai-import-server";
 import {
+  SCHEDULED_GRID_KEY,
+  parseGridSchedule,
+  serializeGridSchedule,
+  shanghaiLocalToIso,
+} from "@/lib/pricing/grid-schedule";
+import {
   DEFAULT_PRICING_SETTINGS,
   parsePricingSettings,
   readPricingSettings,
   writePricingSettings,
+  type NumericPricingSetting,
   type PricingSettings,
 } from "@/lib/pricing/settings";
 
@@ -241,6 +248,12 @@ export async function activateRateGridAction(
   });
   if (updateError) return { ok: false, error: updateError.message };
 
+  // Activated by hand: a pending schedule for the same grid has nothing left to do.
+  const { data: scheduled } = await admin.from("pricing_meta").select("value").eq("key", SCHEDULED_GRID_KEY).maybeSingle();
+  if (parseGridSchedule(scheduled?.value ?? null)?.gridVersion === gridVersion) {
+    await admin.from("pricing_meta").delete().eq("key", SCHEDULED_GRID_KEY);
+  }
+
   await writeAudit({
     actorUserId: ctx.userId,
     action: "pricing.grid.activate",
@@ -249,6 +262,42 @@ export async function activateRateGridAction(
   });
   revalidatePricing();
   return { ok: true };
+}
+
+/**
+ * Schedules a grid to go live at a given time (typed in China time, e.g. when a carrier's
+ * new prices start). One schedule at a time: a new one replaces the previous.
+ */
+export async function scheduleGridActivationAction(formData: FormData): Promise<void> {
+  const { ctx } = await requireAdmin();
+  if (!ctx) throw new Error("Admin access required.");
+  const gridVersion = String(formData.get("grid_version") ?? "").trim();
+  const at = shanghaiLocalToIso(String(formData.get("at") ?? ""));
+  if (!gridVersion || !at) throw new Error("Choose a grid and a date.");
+  if (Date.parse(at) <= Date.now()) throw new Error("The activation time must be in the future.");
+  const admin = createAdminClient();
+  const { data: grid } = await admin.from("rate_grids").select("grid_version").eq("grid_version", gridVersion).maybeSingle();
+  if (!grid) throw new Error("Rate grid not found.");
+  const { error } = await admin
+    .from("pricing_meta")
+    .upsert({ key: SCHEDULED_GRID_KEY, value: serializeGridSchedule({ gridVersion, at, by: ctx.userId }) });
+  if (error) throw new Error(error.message);
+  await writeAudit({
+    actorUserId: ctx.userId,
+    action: "pricing.grid.schedule",
+    entity: "pricing_meta",
+    diff: { grid_version: gridVersion, at },
+  });
+  revalidatePricing();
+}
+
+export async function cancelGridScheduleAction(): Promise<void> {
+  const { ctx } = await requireAdmin();
+  if (!ctx) throw new Error("Admin access required.");
+  const admin = createAdminClient();
+  await admin.from("pricing_meta").delete().eq("key", SCHEDULED_GRID_KEY);
+  await writeAudit({ actorUserId: ctx.userId, action: "pricing.grid.schedule_cancel", entity: "pricing_meta" });
+  revalidatePricing();
 }
 
 export async function activateRateGridFormAction(formData: FormData): Promise<void> {
@@ -329,7 +378,7 @@ export async function savePricingSettingsAction(
   // Start from the saved settings: fields that are not in this form (packaging weight,
   // volumetric divisors…) keep their value instead of falling back to the defaults.
   const current = await readPricingSettings(createAdminClient());
-  const field = (key: Exclude<keyof PricingSettings, "volumetric_divisors">) =>
+  const field = (key: NumericPricingSetting) =>
     formData.has(key) ? numberField(formData, key, current[key] ?? DEFAULT_PRICING_SETTINGS[key]) : current[key];
   const settings = parsePricingSettings({
     ...current,

@@ -14,7 +14,7 @@ describe("deriveSuggestedChannel", () => {
   it("maps each single answer to its channel", () => {
     expect(deriveSuggestedChannel({ electronics: true })).toBe("electronics_battery");
     expect(deriveSuggestedChannel({ liquid: true })).toBe("cosmetics");
-    expect(deriveSuggestedChannel({ liquid: true, alcohol: true })).toBe("liquid_perfume");
+    expect(deriveSuggestedChannel({ liquid: true, alcohol: true })).toBe("cosmetics");
     expect(deriveSuggestedChannel({ ingestible: true })).toBe("sensitive_other");
     expect(deriveSuggestedChannel({ magnetic: true })).toBe("magnetic");
   });
@@ -28,9 +28,8 @@ describe("deriveSuggestedChannel", () => {
     expect(
       deriveSuggestedChannel({ electronics: true, liquid: true, alcohol: true, ingestible: true, magnetic: true }),
     ).toBe("electronics_battery");
-    expect(deriveSuggestedChannel({ liquid: true, alcohol: true, ingestible: true, magnetic: true })).toBe(
-      "liquid_perfume",
-    );
+    // Liquids with alcohol (perfume) ship on the cosmetics lines: there is no liquid grid.
+    expect(deriveSuggestedChannel({ liquid: true, alcohol: true, ingestible: true, magnetic: true })).toBe("cosmetics");
     expect(deriveSuggestedChannel({ liquid: true, ingestible: true, magnetic: true })).toBe("sensitive_other");
     expect(deriveSuggestedChannel({ liquid: true, magnetic: true })).toBe("cosmetics");
   });

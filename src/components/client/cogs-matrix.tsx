@@ -134,6 +134,14 @@ export function CogsMatrix({
                         {market.deliveryRange ? ` · ${market.deliveryRange}` : ""}
                       </span>
                     ) : null}
+                    {(() => {
+                      const covered = market.cells.find((cell) => cell.coveredLine)?.coveredLine ?? null;
+                      return covered ? (
+                        <span className="mt-1 block max-w-[190px] text-[11px] leading-snug font-medium text-[var(--green-ink)]">
+                          {t("coveredHint", { line: carrierLineLabel(covered) })}
+                        </span>
+                      ) : null;
+                    })()}
                   </th>
                   {market.cells.map((cell, index) => {
                     const last = index === market.cells.length - 1;
@@ -201,6 +209,14 @@ export function CogsMatrix({
                         {cellUsesOtherLine(cell, market.line) ? (
                           <span className="block text-[11px] font-semibold text-[var(--gold-text)]">
                             {carrierLineLabel({ carrier: cell.carrier as string, lineName: cell.lineName })}
+                          </span>
+                        ) : null}
+                        {cell.coveredCogs != null && cell.coveredLine ? (
+                          <span
+                            className="tabular mt-1 block border-t border-dashed border-[var(--line)] pt-1 text-[12px] font-semibold text-[var(--green-ink)]"
+                            title={carrierLineLabel(cell.coveredLine)}
+                          >
+                            {t("coveredPrice", { value: formatAmount(cell.coveredCogs, locale) })}
                           </span>
                         ) : null}
                       </td>

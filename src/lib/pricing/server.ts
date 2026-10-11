@@ -2,6 +2,14 @@ import "server-only";
 import { resolveClientPricing } from "@/lib/domain/pricing-tiers";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { writeAudit } from "@/lib/auth/audit";
+import {
+  SCHEDULED_GRID_KEY,
+  effectiveGridVersion,
+  parseGridSchedule,
+  scheduleIsDue,
+  type GridSchedule,
+} from "./grid-schedule";
 import {
   COGS_MATRIX_QUANTITIES,
   announcedPriceFor,
@@ -14,6 +22,8 @@ import {
   parseDestinationMarkets,
   parseParcelDimensions,
   parcelWeightG,
+  autoCarriersFor,
+  gridChannel,
   type CarrierLineRef,
   type CogsBreakdown,
   type RateCell,
@@ -52,6 +62,11 @@ export type CogsMatrixCell = {
   quantity: number;
   /** Live breakdown for a parcel of `quantity` units, or null when no weight bracket matches. */
   breakdown: CogsBreakdown | null;
+  /**
+   * Cheaper price when the delivery postcode is covered by a line with limited coverage
+   * (e.g. Huahan USA), which the automatic choice leaves out. Null when not cheaper / n.a.
+   */
+  covered?: CogsBreakdown | null;
 };
 
 export type CogsMatrixMarket = {
@@ -63,6 +78,8 @@ export type CogsMatrixMarket = {
   preference: CarrierLineRef | null;
   /** True when Voltship forces the line on this market. */
   forced: boolean;
+  /** Carriers of the automatic choice on this market (null = all carriers). */
+  autoCarriers?: string[] | null;
 };
 
 export type ProductCogsMatrix = {
@@ -90,15 +107,60 @@ function getDestination(product: ProductRow) {
   return "FR";
 }
 
+/**
+ * Grid used for pricing now: `active_grid_version`, or the scheduled grid as soon as its
+ * activation time has passed (the cron then makes it the active one).
+ */
 export async function getActiveGridVersion() {
   const admin = createAdminClient();
   const { data } = await admin
     .from("pricing_meta")
-    .select("value")
-    .eq("key", "active_grid_version")
+    .select("key, value")
+    .in("key", ["active_grid_version", SCHEDULED_GRID_KEY]);
+  const rows = new Map((data ?? []).map((row) => [row.key as string, row.value as unknown]));
+  const active = typeof rows.get("active_grid_version") === "string" ? (rows.get("active_grid_version") as string) : null;
+  return effectiveGridVersion(active, parseGridSchedule(rows.get(SCHEDULED_GRID_KEY)));
+}
+
+/** Scheduled activation, or null. */
+export async function getGridSchedule(): Promise<GridSchedule | null> {
+  const admin = createAdminClient();
+  const { data } = await admin.from("pricing_meta").select("value").eq("key", SCHEDULED_GRID_KEY).maybeSingle();
+  return parseGridSchedule(data?.value ?? null);
+}
+
+/**
+ * Cron: once the scheduled time has passed, the scheduled grid becomes `active_grid_version`
+ * and the schedule is cleared. Returns the activated version, or null when nothing was due.
+ */
+export async function applyScheduledGridActivation(now: Date = new Date()) {
+  const schedule = await getGridSchedule();
+  if (!schedule || !scheduleIsDue(schedule, now)) return null;
+  const admin = createAdminClient();
+  const { data: grid } = await admin
+    .from("rate_grids")
+    .select("grid_version")
+    .eq("grid_version", schedule.gridVersion)
     .maybeSingle();
-  const version = data?.value;
-  return version && version !== "uninitialized" ? version : null;
+  if (!grid) {
+    // The grid was deleted: drop the schedule rather than pricing on a missing grid.
+    await admin.from("pricing_meta").delete().eq("key", SCHEDULED_GRID_KEY);
+    return null;
+  }
+  const { error } = await admin
+    .from("pricing_meta")
+    .upsert({ key: "active_grid_version", value: schedule.gridVersion });
+  if (error) throw error;
+  await admin.from("pricing_meta").delete().eq("key", SCHEDULED_GRID_KEY);
+  if (schedule.by) {
+    await writeAudit({
+      actorUserId: schedule.by,
+      action: "pricing.grid.activate_scheduled",
+      entity: "pricing_meta",
+      diff: { active_grid_version: schedule.gridVersion, at: schedule.at },
+    }).catch(() => null);
+  }
+  return schedule.gridVersion;
 }
 
 /** Admin carrier rules of a client (`clients.carrier_rules_json`); empty rules when unset. */
@@ -167,7 +229,7 @@ export async function loadRateCellsFor(
       )
       .eq("grid_version", gridVersion)
       .in("destination", destinations)
-      .in("channel", channels)
+      .in("channel", [...new Set(channels.map((channel) => gridChannel(channel)))])
       .order("id")
       .range(from, from + 999);
     if (error) throw error;
@@ -245,6 +307,7 @@ export async function calculateProductCogsMatrix(
         options: [] as RateOption[],
         preference: selection.preference,
         forced: selection.forced,
+        autoCarriers: null,
       };
     });
   if (effective.clientPrice == null || effective.weightG == null || !effective.channel) {
@@ -300,7 +363,10 @@ export async function calculateProductCogsMatrix(
     missingReason: null,
     markets: markets.map((destination) => {
       const selection = resolveCarrierSelection(rules, preferences, destination);
+      // Automatic choice limited to the market's full-coverage carriers (US: YunExpress, Tongyou).
+      const autoCarriers = autoCarriersFor(settings.auto_carriers, destination);
       const common = {
+        autoCarriers,
         weightG: unitWeightG,
         channel,
         destination,
@@ -317,13 +383,21 @@ export async function calculateProductCogsMatrix(
         destination,
         preference: selection.preference,
         forced: selection.forced,
+        autoCarriers,
         options: listRateOptions(cells, { ...common, weightG: parcelWeightG(unitWeightG, 1, extras), quantity: 1 }),
         cells: quantities.map((quantity) => {
           const computed = calculateCogs({ ...common, cells, clientPrice, quantity, ...profile });
           const announced = announcedPriceFor(announcedPrices, destination, quantity);
+          // Same parcel with every line allowed: the price when the postcode is covered.
+          const unrestricted =
+            autoCarriers && !selection.preference && announced == null
+              ? calculateCogs({ ...common, autoCarriers: null, cells, clientPrice, quantity, ...profile })
+              : null;
           return {
             quantity,
             breakdown: computed && announced != null ? applyAnnouncedPrice(computed, announced) : computed,
+            covered:
+              unrestricted && (!computed || unrestricted.cogs < computed.cogs) ? unrestricted : null,
           };
         }),
       };

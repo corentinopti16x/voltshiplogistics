@@ -43,7 +43,15 @@ export type PricingSettings = {
   announced_margin_alert_eur: number;
   /** Packaging (bag, filler, label) added to every parcel's weight, in grams. */
   packaging_weight_g: number;
+  /**
+   * Carriers allowed for the AUTOMATIC (cheapest) choice per market, e.g. US → YunExpress and
+   * Tongyou while Huahan only covers part of the US postcodes. Other carriers stay
+   * selectable by hand and are shown as the "postcode covered" price. Empty = all carriers.
+   */
+  auto_carriers: Record<string, string[]>;
 };
+
+export const DEFAULT_AUTO_CARRIERS: Record<string, string[]> = { US: ["YunExpress", "Tongyou"] };
 
 export const PRICING_SETTINGS_KEY = "pricing_settings";
 
@@ -60,9 +68,10 @@ export const DEFAULT_PRICING_SETTINGS: PricingSettings = {
   handling_extra_unit_eur: 0.15,
   announced_margin_alert_eur: 0.5,
   packaging_weight_g: DEFAULT_PACKAGING_WEIGHT_G,
+  auto_carriers: DEFAULT_AUTO_CARRIERS,
 };
 
-export type NumericPricingSetting = Exclude<keyof PricingSettings, "volumetric_divisors">;
+export type NumericPricingSetting = Exclude<keyof PricingSettings, "volumetric_divisors" | "auto_carriers">;
 
 const BOUNDS: Record<NumericPricingSetting, [number, number]> = {
   fx_rmb_per_eur: [0.5, 100],
@@ -94,6 +103,20 @@ export function parsePricingSettings(raw: unknown): PricingSettings {
     out[key] = Math.min(max, Math.max(min, value));
   }
   out.volumetric_divisors = parseVolumetricDivisors(source.volumetric_divisors);
+  out.auto_carriers = parseAutoCarriers(source.auto_carriers);
+  return out;
+}
+
+/** `{ "US": ["YunExpress", "Tongyou"] }`; missing → defaults, `{}` → no restriction anywhere. */
+export function parseAutoCarriers(raw: unknown): Record<string, string[]> {
+  const source = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : typeof raw === "string" ? safeJson(raw) : null;
+  if (!source) return { ...DEFAULT_AUTO_CARRIERS };
+  const out: Record<string, string[]> = {};
+  for (const [market, carriers] of Object.entries(source)) {
+    if (!/^[A-Z]{2}$/i.test(market) || !Array.isArray(carriers)) continue;
+    const list = carriers.filter((c): c is string => typeof c === "string" && /^[\w .-]{1,40}$/.test(c.trim())).map((c) => c.trim());
+    if (list.length > 0) out[market.toUpperCase()] = list;
+  }
   return out;
 }
 

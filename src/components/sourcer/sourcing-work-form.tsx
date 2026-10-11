@@ -10,7 +10,7 @@ import {
   type SourcingActionResult,
 } from "@/app/actions/sourcing";
 import { getProductRequest, type ProductRow, type SourcingStatus } from "@/lib/products/types";
-import type { ShippingChannel } from "@/lib/domain/pricing";
+import { gridChannel, type ShippingChannel } from "@/lib/domain/pricing";
 import { isShippingChannel, parseProductAttributes, tickedAttributes } from "@/lib/products/attributes";
 import {
   CLIENT_NOTE_MAX,
@@ -22,14 +22,8 @@ import {
 } from "@/lib/products/extras";
 
 const initial: SourcingActionResult = { ok: false };
-const channels: ShippingChannel[] = [
-  "standard",
-  "electronics_battery",
-  "cosmetics",
-  "liquid_perfume",
-  "magnetic",
-  "sensitive_other",
-];
+// No "liquid" choice: the carrier grid has no liquid sheet, liquids go in Cosmétique.
+const channels: ShippingChannel[] = ["standard", "electronics_battery", "cosmetics", "magnetic", "sensitive_other"];
 const statuses: SourcingStatus[] = [
   "brief_received",
   "factories",
@@ -151,7 +145,7 @@ export function SourcingWorkForm({
               <span className="text-[var(--muted)]">{t("shippingChannel")}</span>
               <select
                 name="shipping_channel"
-                defaultValue={product.shipping_channel ?? suggested ?? ""}
+                defaultValue={gridChannel(product.shipping_channel ?? suggested ?? "")}
                 className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
               >
                 <option value="">{t("select")}</option>

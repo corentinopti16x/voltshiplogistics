@@ -955,7 +955,7 @@
       "channels": {
         "standard": "普货",
         "electronics_battery": "带电（电子产品 / 电池）",
-        "cosmetics": "化妆品",
+        "cosmetics": "化妆品 / 液体",
         "liquid_perfume": "液体 / 香水",
         "magnetic": "磁性",
         "sensitive_other": "敏感货（可食用）"
@@ -1078,7 +1078,8 @@
         "fallback": "所选不可用 → 自动"
       },
       "announced": "已承诺价格",
-      "box": "盒子 ¥{price} · {weight} g"
+      "box": "盒子 ¥{price} · {weight} g",
+      "covered": "邮编覆盖（{line}）：{value}"
     }
   },
   "app": {
@@ -1233,7 +1234,8 @@
       "flagged": "待澄清"
     },
     "carrier": {
-      "staffNote": "已保存在产品上：客户页面、COGS、利润和 ECCANG 都使用这条渠道。"
+      "staffNote": "已保存在产品上：客户页面、COGS、利润和 ECCANG 都使用这条渠道。",
+      "limitedCoverage": "邮编有限"
     },
     "cogsMatrix": {
       "carrierMode": {

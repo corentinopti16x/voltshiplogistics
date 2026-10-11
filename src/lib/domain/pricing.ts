@@ -185,6 +185,12 @@ export type PricingInput = {
   /** Packaging weight added once per parcel (grams). */
   packagingWeightG?: number | null;
   /**
+   * Carriers allowed for the automatic (cheapest) choice on this market; null/empty = all.
+   * A chosen or forced line is not limited by it. When none of them can ship the parcel,
+   * the cheapest of all lines is used.
+   */
+  autoCarriers?: string[] | null;
+  /**
    * Box the product ships in (€ per unit sold), when it needs one: billed as packaging,
    * on its own line, without commission. 0/absent = no box.
    */
@@ -285,6 +291,7 @@ type CellQuery = Pick<
   | "carrierPreference"
   | "allowedLines"
   | "batteryInternal"
+  | "autoCarriers"
 >;
 
 /** quote_json.battery_internal — ticked on the sourcer sheet (« Batterie intégrée »). */
@@ -309,7 +316,7 @@ function matchingCells(cells: RateCell[], input: CellQuery) {
       volumetricDivisors: input.volumetricDivisors,
     });
   const matches = cells.filter((cell) => {
-    if (cell.destination.trim().toUpperCase() !== destination || cell.channel !== input.channel) return false;
+    if (cell.destination.trim().toUpperCase() !== destination || cell.channel !== gridChannel(input.channel)) return false;
     if (input.preferredCarrier && cell.carrier !== input.preferredCarrier) return false;
     if (input.allowedLines && !input.allowedLines.has(lineKey(cell.carrier, cell.lineName))) return false;
     if (input.batteryInternal !== true && isInternalBatteryOnlyLine(cell)) return false;
@@ -337,14 +344,17 @@ export function selectRateCell(
   const matches = matchingCells(cells, input);
   if (matches.length === 0) return null;
   const preference = input.carrierPreference ?? null;
+  // Automatic choice: cheapest among the market's auto carriers when one of them can ship.
+  const auto = new Set((input.autoCarriers ?? []).map((carrier) => carrier.toLowerCase()));
+  const cheapest = (auto.size > 0 ? matches.find((cell) => auto.has(cell.carrier.toLowerCase())) : null) ?? matches[0];
   if (preference) {
     const preferred = matches.find((cell) =>
       sameLine({ carrier: cell.carrier, lineName: cell.lineName ?? null }, preference),
     );
     if (preferred) return { cell: preferred, reason: "preferred" };
-    return { cell: matches[0], reason: "fallback_preferred_unavailable" };
+    return { cell: cheapest, reason: "fallback_preferred_unavailable" };
   }
-  return { cell: matches[0], reason: "cheapest" };
+  return { cell: cheapest, reason: "cheapest" };
 }
 
 export function findRateCell(cells: RateCell[], input: CellQuery) {
@@ -725,4 +735,25 @@ export function applyAnnouncedPrice(breakdown: CogsBreakdown, price: number): Co
     cogsPerUnit: money(price / breakdown.quantity),
     announced: true,
   };
+}
+
+/** Auto carriers of a market from the `auto_carriers` setting (null = no restriction). */
+export function autoCarriersFor(map: Record<string, string[]> | null | undefined, destination: string) {
+  const list = map?.[normalizeDestination(destination)];
+  return list && list.length > 0 ? list : null;
+}
+
+/** True when the carrier is outside the market's automatic set (limited postcode coverage). */
+export function isLimitedCoverageCarrier(carrier: string, autoCarriers: string[] | null | undefined) {
+  if (!autoCarriers || autoCarriers.length === 0) return false;
+  return !autoCarriers.some((name) => name.toLowerCase() === carrier.toLowerCase());
+}
+
+/**
+ * Grid category used to price a product channel. The carrier grid has no "liquid" sheet:
+ * liquids ship on the cosmetics / sensitive lines (Tongyou 特敏感, Huahan 特惠 PK0573,
+ * YunExpress 化妆品), so `liquid_perfume` is priced as `cosmetics`.
+ */
+export function gridChannel<T extends string | null | undefined>(channel: T): T | "cosmetics" {
+  return channel === "liquid_perfume" ? "cosmetics" : channel;
 }

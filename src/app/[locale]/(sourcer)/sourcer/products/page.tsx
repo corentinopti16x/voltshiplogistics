@@ -299,6 +299,14 @@ export default async function CatalogPage({
                                   {market.announced ? ` · ${t("announced")}` : ""}
                                 </span>
                               ) : null}
+                              {market.covered ? (
+                                <span className="basis-full pl-9 text-[12px] text-[var(--green-ink)]">
+                                  {t("covered", {
+                                    value: formatAmount(market.covered.cogs, locale),
+                                    line: carrierLineLabel(market.covered.line),
+                                  })}
+                                </span>
+                              ) : null}
                             </li>
                           ))}
                         </ul>
