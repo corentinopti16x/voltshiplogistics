@@ -19,6 +19,28 @@ describe("lifecycle classification", () => {
     ).toBe("winning");
   });
 
+  it("counts 5 sales over 14 days as winning", () => {
+    expect(
+      classifyLifecycle({
+        current: "testing",
+        createdDate: "2026-08-01",
+        now,
+        sales: [sale(1, 2), sale(5, 1), sale(10, 2)],
+      }),
+    ).toBe("winning");
+  });
+
+  it("keeps fewer than 5 sales over 14 days in testing", () => {
+    expect(
+      classifyLifecycle({
+        current: "winning",
+        createdDate: "2026-08-01",
+        now,
+        sales: [sale(1, 2), sale(5, 2)],
+      }),
+    ).toBe("testing");
+  });
+
   it("marks a 50 percent drop as declining", () => {
     const sales = [
       ...Array.from({ length: 14 }, (_, day) => sale(day, 2)),

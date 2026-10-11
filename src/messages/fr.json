@@ -1692,7 +1692,7 @@
       },
       "lifecycle": {
         "testingMaxAge": "Durée max. en test (jours)",
-        "winningOrders": "Commandes / jour pour « winning » (14 jours)",
+        "winningOrders": "Ventes min. sur 14 jours pour « winning »",
         "decliningDrop": "Baisse pour « en déclin » (%)",
         "deadAfter": "« Mort » après X jours sans vente",
         "saved": "Règles de cycle de vie enregistrées.",
