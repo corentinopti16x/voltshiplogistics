@@ -167,12 +167,22 @@ export type ComposerItem = {
   /** Client price per unit (€), null when not priced yet. */
   price: number | null;
   weightG: number | null;
+  /** Price, weight and category known: the item can be priced in the parcel. */
+  ready: boolean;
   /** Stock (staff view only). */
   stock?: number | null;
 };
 
 export function composerItem(
-  product: { id: string; title: string; sku: string | null; photo_url: string | null; client_price: number | null; weight_g: number | null },
+  product: {
+    id: string;
+    title: string;
+    sku: string | null;
+    photo_url: string | null;
+    client_price: number | null;
+    weight_g: number | null;
+    shipping_channel: string | null;
+  },
   stock?: number | null,
 ): ComposerItem {
   return {
@@ -182,6 +192,7 @@ export function composerItem(
     photoUrl: product.photo_url,
     price: product.client_price != null ? Number(product.client_price) : null,
     weightG: product.weight_g != null ? Number(product.weight_g) : null,
+    ready: product.client_price != null && product.weight_g != null && !!product.shipping_channel,
     ...(stock !== undefined ? { stock } : {}),
   };
 }

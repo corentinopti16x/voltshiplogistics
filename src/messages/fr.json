@@ -739,7 +739,8 @@
       "missingProduct": "Un des produits n'a pas encore son prix, son poids ou sa catégorie.",
       "missingRate": "Aucun tarif transport pour ce poids vers {market}.",
       "missingGrid": "La grille tarifaire n'est pas encore active.",
-      "empty": "Mets au moins une unité pour voir le COGS."
+      "empty": "Mets au moins une unité pour voir le COGS.",
+      "notReady": "Prix, poids ou catégorie manquant : pas encore comptable dans le colis."
     }
   },
   "economics": {

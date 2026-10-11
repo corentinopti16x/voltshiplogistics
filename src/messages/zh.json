@@ -1301,7 +1301,8 @@
       "missingProduct": "有产品还没有价格、重量或类别。",
       "missingRate": "{market} 没有这个重量的运费。",
       "missingGrid": "运费表还没有启用。",
-      "empty": "至少选一件才能看到 COGS。"
+      "empty": "至少选一件才能看到 COGS。",
+      "notReady": "缺少价格、重量或类别：暂时不能计入包裹。"
     }
   }
 }

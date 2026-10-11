@@ -29,7 +29,8 @@ export function UpsellComposer({
   const locale = useLocale();
   const [market, setMarket] = useState(markets[0] ?? "FR");
   const [quantities, setQuantities] = useState<Record<string, number>>(() =>
-    Object.fromEntries([[main.id, 1], ...upsells.map((item) => [item.id, 1])]),
+    // Upsells start at 1 when they can be priced; the others (data missing) at 0.
+    Object.fromEntries([[main.id, 1], ...upsells.map((item) => [item.id, item.ready ? 1 : 0])]),
   );
   const [result, setResult] = useState<ComposeResult | null>(null);
   const [pending, startTransition] = useTransition();
@@ -89,6 +90,7 @@ export function UpsellComposer({
                 {item.sku ? ` · ${item.sku}` : ""}
                 {showStock && item.stock != null ? ` · ${t("stock", { count: item.stock })}` : ""}
               </p>
+              {!item.ready ? <p className="text-[12px] text-[var(--rust-ink)]">{t("notReady")}</p> : null}
             </div>
             <label className="flex items-center gap-2 text-[13px]">
               <span className="sr-only">{t("quantity")}</span>

@@ -24,9 +24,14 @@ describe("upsell links", () => {
   });
 
   it("maps a product to a composer line", () => {
-    const item = composerItem({ id: "p", title: "Pochette", sku: "PO-1", photo_url: null, client_price: 0.45, weight_g: 18 }, 12);
-    expect(item).toEqual({ id: "p", title: "Pochette", sku: "PO-1", photoUrl: null, price: 0.45, weightG: 18, stock: 12 });
-    expect("stock" in composerItem({ id: "p", title: "x", sku: null, photo_url: null, client_price: null, weight_g: null })).toBe(false);
+    const item = composerItem(
+      { id: "p", title: "Pochette", sku: "PO-1", photo_url: null, client_price: 0.45, weight_g: 18, shipping_channel: "standard" },
+      12,
+    );
+    expect(item).toEqual({ id: "p", title: "Pochette", sku: "PO-1", photoUrl: null, price: 0.45, weightG: 18, ready: true, stock: 12 });
+    const bare = composerItem({ id: "p", title: "x", sku: null, photo_url: null, client_price: null, weight_g: null, shipping_channel: null });
+    expect("stock" in bare).toBe(false);
+    expect(bare.ready).toBe(false);
   });
 });
 

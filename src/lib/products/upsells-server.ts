@@ -114,12 +114,14 @@ async function recentOrderLines(clientId: string, days: number, multiOnly = fals
   return orders;
 }
 
-/** SKU (lower case) → product of the client, variants included. */
+/** SKU (lower case) → products of the client carrying it (variants included; a SKU can sit on duplicates). */
 async function productsBySku(products: ProductRow[]) {
   const skus = await loadProductSkus(products);
-  const bySku = new Map<string, ProductRow>();
+  const bySku = new Map<string, ProductRow[]>();
   for (const row of products) {
-    for (const sku of skus.get(row.id) ?? []) bySku.set(sku.trim().toLowerCase(), row);
+    for (const sku of new Set((skus.get(row.id) ?? []).map((value) => value.trim().toLowerCase()))) {
+      bySku.set(sku, [...(bySku.get(sku) ?? []), row]);
+    }
   }
   return { skus, bySku };
 }
@@ -136,10 +138,9 @@ export async function refreshAutoUpsells(clientId: string, options: { days?: num
   if (products.length < 2) return { updated: 0, orders: 0 };
   const [{ bySku }, orders] = await Promise.all([productsBySku(products), recentOrderLines(clientId, days, true)]);
   const mapped = orders.map((lines) =>
-    lines.flatMap((line) => {
-      const match = bySku.get(line.sku.trim().toLowerCase());
-      return match ? [{ productId: match.id, price: line.price ?? null }] : [];
-    }),
+    lines.flatMap((line) =>
+      (bySku.get(line.sku.trim().toLowerCase()) ?? []).map((match) => ({ productId: match.id, price: line.price ?? null })),
+    ),
   );
   const listPrice = new Map(products.map((row) => [row.id, row.client_price != null ? Number(row.client_price) : null]));
   const pairs = upsellPairs(mapped, (id) => listPrice.get(id) ?? null);
@@ -192,8 +193,9 @@ export async function suggestUpsells(product: ProductRow, days = 90): Promise<{ 
   const result = coPurchases(orders, mainSkus);
   const items: UpsellSuggestion[] = [];
   for (const item of result.items) {
-    const match = productBySku.get(item.sku.trim().toLowerCase()) ?? null;
-    if (match && (match.id === product.id || linked.has(match.id))) continue;
+    const matches = productBySku.get(item.sku.trim().toLowerCase()) ?? [];
+    if (matches.some((row) => row.id === product.id || linked.has(row.id))) continue;
+    const match = matches.find((row) => row.client_price != null) ?? matches[0] ?? null;
     // Several SKUs (variants) of one product: keep its most frequent line only.
     if (match && items.some((existing) => existing.product?.id === match.id)) continue;
     items.push({

@@ -739,7 +739,8 @@
       "missingProduct": "One of the products has no price, weight or category yet.",
       "missingRate": "No shipping rate for this weight to {market}.",
       "missingGrid": "The rate grid is not active yet.",
-      "empty": "Add at least one unit to see the COGS."
+      "empty": "Add at least one unit to see the COGS.",
+      "notReady": "Price, weight or category missing: cannot be priced in the parcel yet."
     }
   },
   "economics": {
