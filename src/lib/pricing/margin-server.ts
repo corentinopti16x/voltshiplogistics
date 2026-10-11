@@ -24,6 +24,7 @@ import {
   autoCarriersFor,
   gridChannel,
   parcelWeightG as parcelWeightOf,
+  packagingWeightFor,
   activeAnnouncedPrices,
   classifyAnnouncedPrice,
   parseAnnouncedPrices,
@@ -518,11 +519,14 @@ function marginForOrder(
   const destination = getProductMarkets(lead)[0];
   // Each line: (unit weight + box) × qty; packaging once per parcel.
   const extrasOf = (product: ProductRow) => parcelExtras(product.quote_json, settings);
+  const contentWeightG = priced.reduce(
+    (sum, line) => sum + parcelWeightOf(line.product.weight_g ?? 0, line.quantity, { boxWeightG: extrasOf(line.product).boxWeightG }),
+    0,
+  );
+  // Packaging once per parcel: the lead product's own, else the ladder on the whole contents.
+  const leadPackaging = extrasOf(lead).packagingWeightG;
   const computedWeightG =
-    priced.reduce(
-      (sum, line) => sum + parcelWeightOf(line.product.weight_g ?? 0, line.quantity, { boxWeightG: extrasOf(line.product).boxWeightG }),
-      0,
-    ) + settings.packaging_weight_g;
+    contentWeightG + (leadPackaging ?? packagingWeightFor(contentWeightG, settings.packaging_ladder));
   const parcelWeightG = order.billed_weight_g ?? computedWeightG;
   const units = priced.reduce((sum, line) => sum + line.quantity, 0);
   // Product side: client price × qty per line, commission on the product total. Boxes are

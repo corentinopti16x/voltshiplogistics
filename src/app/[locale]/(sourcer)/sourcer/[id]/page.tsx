@@ -118,7 +118,12 @@ export default async function SourcerProductPage({
       </section>
 
       <div className="mt-6">
-        <SourcingWorkForm product={product} work={work} fxRmbPerEur={settings.fx_rmb_per_eur} />
+        <SourcingWorkForm
+          product={product}
+          work={work}
+          fxRmbPerEur={settings.fx_rmb_per_eur}
+          packagingLadder={settings.packaging_ladder}
+        />
       </div>
       <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6" id="carrier">
         <h2 className="text-sm font-semibold">{tCarrier("title")}</h2>

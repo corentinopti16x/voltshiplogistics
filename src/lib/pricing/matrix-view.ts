@@ -32,6 +32,9 @@ export type CogsMatrixCellView = {
   /** Parcel shipping price from the rate cell (after client discount). */
   shipping: number | null;
   deliveryRange: string | null;
+  /** Products (+ boxes) in the parcel and the packaging added on top (weightG = both). */
+  contentWeightG: number | null;
+  packagingWeightG: number | null;
   /** Cheaper COGS when the postcode is covered by a limited-coverage line (Huahan USA…). */
   coveredCogs: number | null;
   coveredLine: CarrierLineRef | null;
@@ -100,6 +103,8 @@ export function matrixViews(matrix: MatrixLike) {
         weightMaxG: cell.breakdown?.weightMaxG ?? null,
         shipping: cell.breakdown?.shipping ?? null,
         deliveryRange: cell.breakdown?.deliveryRange ?? null,
+        contentWeightG: cell.breakdown?.contentWeightG ?? null,
+        packagingWeightG: cell.breakdown?.packagingWeightG ?? null,
         coveredCogs: cell.covered?.cogs ?? null,
         coveredLine: cell.covered ? { carrier: cell.covered.carrier, lineName: cell.covered.lineName } : null,
       })),

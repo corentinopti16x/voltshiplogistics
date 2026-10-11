@@ -100,7 +100,10 @@
       "packagingTitle": "每个包裹的包装重量",
       "packagingLead": "每个订单加一次的袋子 / 纸箱 / 面单重量，适用于所有产品。",
       "packagingLabel": "每个包裹的包装重量",
-      "packagingSave": "保存"
+      "packagingSave": "保存",
+      "packagingContents": "内容物不超过",
+      "packagingNoLimit": "无上限",
+      "packagingWeightUnit": "g 包装"
     },
     "pricingForms": {
       "saved": "已保存。",
@@ -946,7 +949,7 @@
       "clientFieldsIntro": "以下数值会显示在客户的产品页面上。",
       "clientPrice": "客户产品单价",
       "clientPriceHint": "按单件计，不含等级佣金（系统自动加收）。",
-      "unitWeight": "单件重量",
+      "unitWeight": "产品净重",
       "gramsUnit": "克",
       "sku": "SKU（Shopify / ECCANG）",
       "skuHint": "留空 = 发送报价时自动分配 Voltship SKU（VS-CLIENT-001）。客户需将此 SKU 填到其 Shopify 产品上，订单即可自动关联。",
@@ -1003,7 +1006,7 @@
       "piecesUnit": "件",
       "packPiecesHint": "1 = 单件销售。如果 Shopify 卖出 1 个 = 需发 2 件（2 件套），填 2。",
       "packPiecesSetHint": "{count} 件套：Shopify 卖出 1 个 = 仓库（ECCANG）需拣 {count} 件。",
-      "setWeightHint": "整套重量（{count} 件），不含包装和盒子：会自动加上。",
+      "setWeightHint": "整套重量（{count} 件），不含包装：包装自动加上。",
       "setPriceHint": "整套价格（{count} 件），即客户每售出一个单位支付的价格。",
       "setFactoryHint": "整套工厂价（{count} 件）。",
       "perPiece": "即每件 ¥{value}。",
@@ -1011,13 +1014,17 @@
       "clientNoteBadge": "客户可见",
       "clientNotePlaceholder": "例如：2 件套销售，含刻字；工厂交期 7 天…",
       "clientNoteHint": "显示在客户产品页顶部（带日期），每条新备注客户都会收到通知。内部备注（黄色框）仅内部可见。",
-      "weightHint": "仅产品重量，不含包装：包裹包装（定价设置）和盒子（如有）会自动加上。",
+      "weightHint": "仅产品本身，不含包装：包装重量自动加上（见下方）。",
       "boxTitle": "包装盒（仅当产品需要时）",
       "boxIntro": "没有盒子请留空。盒子属于包装而不是产品：按成本价、不收佣金，在“包装（盒子）”一行向客户收取，每个售出单位一次。盒子重量加到包裹的每个单位。",
       "boxPrice": "盒子价格",
       "boxBilled": "每单位向客户收取 {eur} €，不收佣金（汇率 {rate}）。",
       "boxWeight": "盒子重量",
-      "boxWeightHint": "每个售出单位。"
+      "boxWeightHint": "每个售出单位。",
+      "parcelPreview": "1 件包裹：{content} g + 包装 {packaging} g = {total} g",
+      "packagingOverride": "特殊包装",
+      "packagingAuto": "自动",
+      "packagingOverrideHint": "留空 = 按包裹大小自动计算（定价设置）。仅当该产品有特殊包装时填写。"
     },
     "title": "采购待办队列",
     "soon": "按请求时间从早到晚处理。填写报价字段后，向客户发送最终 COGS（商品成本）。",
@@ -1079,7 +1086,8 @@
       },
       "announced": "已承诺价格",
       "box": "盒子 ¥{price} · {weight} g",
-      "covered": "邮编覆盖（{line}）：{value}"
+      "covered": "邮编覆盖（{line}）：{value}",
+      "weightWithPackaging": "{weight} g + 包装 {packaging} g"
     }
   },
   "app": {

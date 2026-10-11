@@ -115,21 +115,51 @@ export function billedWeightG(input: BilledWeightInput) {
   return Math.round(billed);
 }
 
-/** Packaging added once per parcel (mailer bag, filler, label) when no setting is given. */
+/** Packaging added once per parcel (mailer bag, filler, label) for a small parcel. */
 export const DEFAULT_PACKAGING_WEIGHT_G = 20;
+
+/** Packaging weight by parcel contents: up to `upToG` grams of contents → `weightG` of packaging. */
+export type PackagingStep = { upToG: number | null; weightG: number };
+
+/** Small parcels 20 g, then bigger mailers / cartons (Tarification → Emballage). */
+export const DEFAULT_PACKAGING_LADDER: PackagingStep[] = [
+  { upToG: 200, weightG: 20 },
+  { upToG: 500, weightG: 25 },
+  { upToG: 1000, weightG: 30 },
+  { upToG: null, weightG: 35 },
+];
+
+/** Packaging weight for a parcel whose contents (products + boxes) weigh `contentG`. */
+export function packagingWeightFor(contentG: number, ladder: PackagingStep[] | null | undefined) {
+  if (!ladder || ladder.length === 0) return 0;
+  const step = ladder.find((entry) => entry.upToG == null || contentG <= entry.upToG) ?? ladder[ladder.length - 1];
+  return Math.max(0, step.weightG);
+}
+
+export type ParcelExtras = {
+  boxWeightG?: number | null;
+  /** Packaging fixed for this product (grams); null/absent = from the ladder. */
+  packagingWeightG?: number | null;
+  packagingLadder?: PackagingStep[] | null;
+};
+
+/** Contents and packaging of a parcel of `quantity` units: n × (unit + box), packaging once. */
+export function parcelParts(unitWeightG: number, quantity: number, extras: ParcelExtras = {}) {
+  const box = Math.max(0, Number(extras.boxWeightG) || 0);
+  const contentG = (unitWeightG + box) * quantity;
+  const fixed = extras.packagingWeightG;
+  const packagingG =
+    fixed != null && Number.isFinite(Number(fixed)) ? Math.max(0, Number(fixed)) : packagingWeightFor(contentG, extras.packagingLadder);
+  return { contentG, packagingG, totalG: contentG + packagingG };
+}
 
 /**
  * Actual parcel weight: n × (unit weight + box weight) + packaging once per parcel.
- * The box (when the product ships in a bought box) is per unit; the packaging is per order.
+ * The box (when the product ships in a bought box) is per unit; the packaging is per order
+ * and grows with the parcel (ladder) unless the product has its own.
  */
-export function parcelWeightG(
-  unitWeightG: number,
-  quantity: number,
-  extras: { boxWeightG?: number | null; packagingWeightG?: number | null } = {},
-) {
-  const box = Math.max(0, Number(extras.boxWeightG) || 0);
-  const packaging = Math.max(0, Number(extras.packagingWeightG) || 0);
-  return (unitWeightG + box) * quantity + packaging;
+export function parcelWeightG(unitWeightG: number, quantity: number, extras: ParcelExtras = {}) {
+  return parcelParts(unitWeightG, quantity, extras).totalG;
 }
 
 /** A carrier service line: carrier + line name (null line for legacy single-line grids). */
@@ -202,8 +232,10 @@ export type PricingInput = {
    * discount never takes the client transport below what the carrier costs Voltship.
    */
   fxRmbPerEur?: number | null;
-  /** Packaging weight added once per parcel (grams). */
+  /** Packaging fixed for this product, once per parcel (grams); null = from `packagingLadder`. */
   packagingWeightG?: number | null;
+  /** Packaging weight by parcel contents (20 g small parcel, more for bigger ones). */
+  packagingLadder?: PackagingStep[] | null;
   /**
    * Carriers allowed for the automatic (cheapest) choice on this market; null/empty = all.
    * A chosen or forced line is not limited by it. When none of them can ship the parcel,
@@ -242,6 +274,8 @@ export type CogsBreakdown = {
   box?: number;
   /** Packaging weight included in `weightG` (once per parcel). */
   packagingWeightG?: number;
+  /** Products (+ boxes) in the parcel, without packaging: `weightG` = contents + packaging. */
+  contentWeightG?: number;
   shippingBase: number;
   shipping: number;
   handling: number;
@@ -438,11 +472,13 @@ export function calculateCogs(input: PricingInput): CogsBreakdown | null {
   }
 
   // One parcel for the whole order: the rate bracket is picked for n × (unit + box) + packaging.
-  const packagingWeightG = Math.max(0, Number(input.packagingWeightG) || 0);
-  const parcelWeight = parcelWeightG(input.weightG, quantity, {
+  const parts = parcelParts(input.weightG, quantity, {
     boxWeightG: input.boxWeightG,
-    packagingWeightG,
+    packagingWeightG: input.packagingWeightG,
+    packagingLadder: input.packagingLadder,
   });
+  const packagingWeightG = parts.packagingG;
+  const parcelWeight = parts.totalG;
   const selected = selectRateCell(input.cells, { ...input, weightG: parcelWeight, quantity });
   if (!selected) return null;
   const { cell } = selected;
@@ -491,6 +527,7 @@ export function calculateCogs(input: PricingInput): CogsBreakdown | null {
     product,
     box,
     packagingWeightG,
+    contentWeightG: parts.contentG,
     shippingBase,
     shipping,
     handling,

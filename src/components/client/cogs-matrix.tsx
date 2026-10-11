@@ -206,6 +206,16 @@ export function CogsMatrix({
                         <span className="tabular block text-[12px] text-[var(--muted)]">
                           {t("perUnit", { value: formatAmount(cell.cogsPerUnit, locale) })}
                         </span>
+                        {cell.weightG != null ? (
+                          <span className="tabular block text-[11px] text-[var(--faint)]">
+                            {cell.packagingWeightG
+                              ? t("parcelWeight", {
+                                  content: cell.contentWeightG ?? cell.weightG - cell.packagingWeightG,
+                                  packaging: cell.packagingWeightG,
+                                })
+                              : t("parcelWeightOnly", { weight: cell.weightG })}
+                          </span>
+                        ) : null}
                         {cellUsesOtherLine(cell, market.line) ? (
                           <span className="block text-[11px] font-semibold text-[var(--gold-text)]">
                             {carrierLineLabel({ carrier: cell.carrier as string, lineName: cell.lineName })}

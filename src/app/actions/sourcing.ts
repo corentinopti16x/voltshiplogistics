@@ -117,6 +117,8 @@ function parseDraft(formData: FormData) {
     /** Box bought for the product: price (¥ per unit) and weight (g per unit); null = no box. */
     boxPriceRmb: parseBoxField(formData.get("box_price_rmb")),
     boxWeightG: parseBoxField(formData.get("box_weight_g")),
+    /** Packaging fixed for this product (g); empty = automatic (Tarification ladder). */
+    packagingWeightG: parseBoxField(formData.get("packaging_weight_g")),
     internal: {
       factory_purchase_price: nullableNumber(formData, "factory_purchase_price"),
       supplier_name: nullableText(formData, "supplier_name"),
@@ -146,7 +148,7 @@ function validateDraft(draft: ReturnType<typeof parseDraft>) {
   }
   if (!statuses.includes(draft.client.sourcing_status)) return "Invalid sourcing status.";
   if (draft.packPieces == null) return "Pieces per set must be a whole number between 1 and 50.";
-  if (Number.isNaN(draft.boxPriceRmb) || Number.isNaN(draft.boxWeightG)) {
+  if (Number.isNaN(draft.boxPriceRmb) || Number.isNaN(draft.boxWeightG) || Number.isNaN(draft.packagingWeightG)) {
     return "Box price and weight must be positive numbers.";
   }
   return null;
@@ -225,6 +227,7 @@ function sheetQuote(product: ProductRow, draft: ReturnType<typeof parseDraft>) {
     clientNote: draft.clientNote,
     boxPriceRmb: draft.boxPriceRmb,
     boxWeightG: draft.boxWeightG,
+    packagingWeightG: draft.packagingWeightG,
   });
 }
 

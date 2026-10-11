@@ -1,8 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  DEFAULT_PACKAGING_WEIGHT_G,
+  DEFAULT_PACKAGING_LADDER,
   DEFAULT_VOLUMETRIC_DIVISORS,
   type HandlingLadder,
+  type PackagingStep,
   type VolumetricDivisors,
 } from "../domain/pricing";
 
@@ -41,8 +42,11 @@ export type PricingSettings = {
   handling_extra_unit_eur: number;
   /** Alert (admin Marge) when a locked « prix annoncé » leaves less margin per parcel than this. */
   announced_margin_alert_eur: number;
-  /** Packaging (bag, filler, label) added to every parcel's weight, in grams. */
-  packaging_weight_g: number;
+  /**
+   * Packaging (bag / carton, filler, label) added to every parcel's weight, by the weight of
+   * its contents: 20 g for a small parcel, more for bigger ones. Last step = no upper limit.
+   */
+  packaging_ladder: PackagingStep[];
   /**
    * Carriers allowed for the AUTOMATIC (cheapest) choice per market, e.g. US → YunExpress and
    * Tongyou while Huahan only covers part of the US postcodes. Other carriers stay
@@ -67,11 +71,14 @@ export const DEFAULT_PRICING_SETTINGS: PricingSettings = {
   handling_step3_eur: 0.3,
   handling_extra_unit_eur: 0.15,
   announced_margin_alert_eur: 0.5,
-  packaging_weight_g: DEFAULT_PACKAGING_WEIGHT_G,
+  packaging_ladder: DEFAULT_PACKAGING_LADDER,
   auto_carriers: DEFAULT_AUTO_CARRIERS,
 };
 
-export type NumericPricingSetting = Exclude<keyof PricingSettings, "volumetric_divisors" | "auto_carriers">;
+export type NumericPricingSetting = Exclude<
+  keyof PricingSettings,
+  "volumetric_divisors" | "auto_carriers" | "packaging_ladder"
+>;
 
 const BOUNDS: Record<NumericPricingSetting, [number, number]> = {
   fx_rmb_per_eur: [0.5, 100],
@@ -84,7 +91,6 @@ const BOUNDS: Record<NumericPricingSetting, [number, number]> = {
   handling_step3_eur: [0, 50],
   handling_extra_unit_eur: [0, 50],
   announced_margin_alert_eur: [0, 50],
-  packaging_weight_g: [0, 2000],
 };
 
 /** Merge a partial / unknown payload over the defaults, clamping to sane bounds. */
@@ -104,7 +110,31 @@ export function parsePricingSettings(raw: unknown): PricingSettings {
   }
   out.volumetric_divisors = parseVolumetricDivisors(source.volumetric_divisors);
   out.auto_carriers = parseAutoCarriers(source.auto_carriers);
+  out.packaging_ladder = parsePackagingLadder(source.packaging_ladder);
   return out;
+}
+
+/**
+ * Packaging steps sorted by limit, last step open-ended; invalid → defaults. Weights 0–2 000 g.
+ */
+export function parsePackagingLadder(raw: unknown): PackagingStep[] {
+  const source = typeof raw === "string" ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : raw;
+  if (!Array.isArray(source)) return DEFAULT_PACKAGING_LADDER.map((step) => ({ ...step }));
+  const steps: PackagingStep[] = [];
+  for (const entry of source) {
+    if (!entry || typeof entry !== "object") continue;
+    const record = entry as Record<string, unknown>;
+    const weight = Number(record.weightG ?? record.weight_g);
+    const limitRaw = record.upToG ?? record.up_to_g;
+    const limit = limitRaw == null || limitRaw === "" ? null : Number(limitRaw);
+    if (!Number.isFinite(weight) || weight < 0 || weight > 2000) continue;
+    if (limit != null && (!Number.isFinite(limit) || limit <= 0)) continue;
+    steps.push({ upToG: limit == null ? null : Math.round(limit), weightG: Math.round(weight) });
+  }
+  if (steps.length === 0) return DEFAULT_PACKAGING_LADDER.map((step) => ({ ...step }));
+  const bounded = steps.filter((step) => step.upToG != null).sort((a, b) => (a.upToG as number) - (b.upToG as number));
+  const open = steps.find((step) => step.upToG == null) ?? { upToG: null, weightG: bounded[bounded.length - 1]?.weightG ?? 0 };
+  return [...bounded, open];
 }
 
 /** `{ "US": ["YunExpress", "Tongyou"] }`; missing → defaults, `{}` → no restriction anywhere. */

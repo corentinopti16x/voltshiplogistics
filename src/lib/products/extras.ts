@@ -10,6 +10,8 @@
  *   weight added to each unit of the parcel.
  */
 
+import type { PackagingStep } from "../domain/pricing";
+
 export const PACK_PIECES_MAX = 50;
 export const CLIENT_NOTE_MAX = 2000;
 
@@ -68,6 +70,8 @@ export function withSheetExtras(
     /** Box bought for the product; undefined = leave the stored box untouched. */
     boxPriceRmb?: number | null;
     boxWeightG?: number | null;
+    /** Packaging fixed for this product (g); null = automatic; undefined = untouched. */
+    packagingWeightG?: number | null;
   },
   now: Date = new Date(),
 ) {
@@ -83,6 +87,7 @@ export function withSheetExtras(
       client_note_at: input.clientNote ? (noteChanged ? now.toISOString() : previous?.at ?? now.toISOString()) : null,
       ...(input.boxPriceRmb !== undefined ? { box_price_rmb: input.boxPriceRmb } : {}),
       ...(input.boxWeightG !== undefined ? { box_weight_g: input.boxWeightG } : {}),
+      ...(input.packagingWeightG !== undefined ? { packaging_weight_g: input.packagingWeightG } : {}),
     } as Record<string, unknown>,
     /** True when a new or edited note must be announced to the client. */
     noteChanged: noteChanged && input.clientNote != null,
@@ -111,16 +116,25 @@ export function boxPriceEur(box: ProductBox | null, fxRmbPerEur: number) {
   return Math.round((box.priceRmb / fxRmbPerEur) * 10_000) / 10_000;
 }
 
+/** Packaging fixed for this product (grams), or null = automatic (Tarification ladder). */
+export function productPackagingG(quoteJson: QuoteJson): number | null {
+  const raw = quoteJson?.packaging_weight_g;
+  if (raw == null || raw === "") return null;
+  const value = Number(raw);
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
 /** Pricing-engine inputs for the box + packaging of a product. */
 export function parcelExtras(
   quoteJson: QuoteJson,
-  settings: { fx_rmb_per_eur: number; packaging_weight_g: number },
+  settings: { fx_rmb_per_eur: number; packaging_ladder: PackagingStep[] },
 ) {
   const box = productBox(quoteJson);
   return {
     boxPrice: boxPriceEur(box, settings.fx_rmb_per_eur),
     boxWeightG: box?.weightG ?? 0,
-    packagingWeightG: settings.packaging_weight_g,
+    packagingWeightG: productPackagingG(quoteJson),
+    packagingLadder: settings.packaging_ladder,
   };
 }
 

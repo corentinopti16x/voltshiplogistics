@@ -392,7 +392,6 @@ export async function savePricingSettingsAction(
     handling_step3_eur: field("handling_step3_eur"),
     handling_extra_unit_eur: field("handling_extra_unit_eur"),
     announced_margin_alert_eur: field("announced_margin_alert_eur"),
-    packaging_weight_g: field("packaging_weight_g"),
   });
   const admin = createAdminClient();
   const { error: writeError } = await writePricingSettings(admin, settings);
@@ -411,25 +410,29 @@ export async function savePricingSettingsAction(
 }
 
 /**
- * Packaging weight added to every parcel (Tarification page). Only this key changes; the
- * other pricing settings are kept as saved.
+ * Packaging added to every parcel by the weight of its contents (Tarification page):
+ * rows "up to X g → Y g", the last row without limit. Other settings are kept as saved.
  */
-export async function savePackagingWeightAction(formData: FormData): Promise<void> {
+export async function savePackagingLadderAction(formData: FormData): Promise<void> {
   const { ctx } = await requireAdmin();
   if (!ctx) return;
   const admin = createAdminClient();
   const current = await readPricingSettings(admin);
-  const settings = parsePricingSettings({
-    ...current,
-    packaging_weight_g: numberField(formData, "packaging_weight_g", current.packaging_weight_g),
-  });
+  const steps: Array<{ upToG: number | null; weightG: number }> = [];
+  for (let index = 0; index < 8; index += 1) {
+    const weightRaw = String(formData.get(`weight_${index}`) ?? "").trim();
+    if (!weightRaw) continue;
+    const limitRaw = String(formData.get(`up_to_${index}`) ?? "").trim();
+    steps.push({ upToG: limitRaw ? Number(limitRaw) : null, weightG: Number(weightRaw) });
+  }
+  const settings = parsePricingSettings({ ...current, packaging_ladder: steps });
   const { error } = await writePricingSettings(admin, settings);
   if (error) return;
   await writeAudit({
     actorUserId: ctx.userId,
     action: "pricing.settings.packaging",
     entity: "pricing_meta",
-    diff: { packaging_weight_g: settings.packaging_weight_g },
+    diff: { packaging_ladder: settings.packaging_ladder },
   });
   revalidatePricing();
   revalidatePath("/admin/margin");

@@ -45,6 +45,8 @@ export type CatalogMarketQuote = {
 export type CatalogQuote = {
   missing: "product_data" | "grid" | null;
   markets: CatalogMarketQuote[];
+  /** Packaging added to 1 unit's parcel (grams), null when not priced. */
+  packagingG?: number | null;
 };
 
 /**
@@ -134,9 +136,14 @@ export async function calculateCatalogQuotes(products: ProductRow[]): Promise<Ma
         fallback: breakdown?.selectionReason === "fallback_preferred_unavailable",
         announced: breakdown?.announced === true,
         covered,
-      } satisfies CatalogMarketQuote;
+        packagingG: computed?.packagingWeightG ?? null,
+      };
     });
-    out.set(product.id, { missing: null, markets });
+    out.set(product.id, {
+      missing: null,
+      markets,
+      packagingG: markets.find((market) => market.packagingG != null)?.packagingG ?? null,
+    });
   }
   return out;
 }

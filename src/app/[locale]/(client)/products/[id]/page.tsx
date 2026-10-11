@@ -132,7 +132,15 @@ export default async function ProductDetailPage({
         {
           key: "shipping",
           label: t("quote.shippingLine"),
-          note: `${liveQuote.destination} · ${breakdown.carrier} · ${breakdown.weightG} g${
+          note: `${liveQuote.destination} · ${breakdown.carrier} · ${
+            breakdown.packagingWeightG
+              ? t("quote.parcelWeight", {
+                  content: breakdown.contentWeightG ?? breakdown.weightG - breakdown.packagingWeightG,
+                  packaging: breakdown.packagingWeightG,
+                  total: breakdown.weightG,
+                })
+              : `${breakdown.weightG} g`
+          }${
             breakdown.billedWeightG !== breakdown.weightG
               ? ` · ${t("quote.billedWeight", { weight: breakdown.billedWeightG })}`
               : ""
@@ -145,10 +153,14 @@ export default async function ProductDetailPage({
             tier: formatWeightTier(breakdown.weightMinG, breakdown.weightMaxG),
             price: formatAmount(breakdown.shippingBase, locale),
             delivery: breakdown.deliveryRange ? ` · ${breakdown.deliveryRange}` : "",
-          })}${
+          })} · ${
             breakdown.packagingWeightG
-              ? ` · ${t("quote.packagingIncluded", { weight: breakdown.packagingWeightG })}`
-              : ""
+              ? t("quote.parcelWeight", {
+                  content: breakdown.contentWeightG ?? breakdown.weightG - breakdown.packagingWeightG,
+                  packaging: breakdown.packagingWeightG,
+                  total: breakdown.weightG,
+                })
+              : `${breakdown.weightG} g`
           }`,
           // IOSS: Voltship's number for every EU parcel — nothing for the client to provide.
           badge: null,
