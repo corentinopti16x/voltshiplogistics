@@ -35,6 +35,7 @@ import {
   type ShopifyOrderForEccang,
 } from "@/lib/eccang/mapping";
 import { calculateProductCogsMatrix } from "@/lib/pricing/server";
+import { packPieces } from "@/lib/products/extras";
 import { createNotification } from "@/lib/notifications/server";
 import { decryptShopifyToken } from "@/lib/shopify/crypto";
 import { createFulfillmentForOrder } from "@/lib/shopify/admin-api";
@@ -212,17 +213,24 @@ async function skuKnown(clientId: string, skus: string[]) {
   const admin = createAdminClient();
   const [{ data: maps }, { data: products }] = await Promise.all([
     admin.from("sku_maps").select("shopify_sku, eccang_sku").eq("client_id", clientId).in("shopify_sku", skus),
-    admin.from("products_cache").select("sku").eq("client_id", clientId).in("sku", skus),
+    admin.from("products_cache").select("sku, quote_json").eq("client_id", clientId).in("sku", skus),
   ]);
   const known = new Set<string>();
   const warehouse = new Map<string, string>();
+  // Products sold as a set: the warehouse picks `pack_pieces` pieces per unit sold.
+  const pieces = new Map<string, number>();
   for (const row of maps ?? []) {
     if (!row.shopify_sku) continue;
     known.add(row.shopify_sku);
     if (row.eccang_sku?.trim()) warehouse.set(row.shopify_sku, row.eccang_sku.trim());
   }
-  for (const row of products ?? []) if (row.sku) known.add(row.sku);
-  return { known, unknown: skus.filter((sku) => !known.has(sku)), warehouse };
+  for (const row of products ?? []) {
+    if (!row.sku) continue;
+    known.add(row.sku);
+    const count = packPieces(row.quote_json as Record<string, unknown> | null);
+    if (count > 1) pieces.set(row.sku, count);
+  }
+  return { known, unknown: skus.filter((sku) => !known.has(sku)), warehouse, pieces };
 }
 
 async function pickShippingMethod(clientId: string, order: ShopifyOrderForEccang, items: ReturnType<typeof orderLinesForEccang>) {
@@ -289,9 +297,9 @@ export async function pushOrder(
   const resolver = await loadVariantSkuResolver(shop.id);
   const items = orderLinesForEccang(order, resolver);
   const missing = orderLinesWithoutSku(order, resolver);
-  const { unknown, warehouse } = items.length
+  const { unknown, warehouse, pieces } = items.length
     ? await skuKnown(clientId, items.map((item) => item.product_sku))
-    : { unknown: [], warehouse: new Map<string, string>() };
+    : { unknown: [], warehouse: new Map<string, string>(), pieces: new Map<string, number>() };
   if (items.length === 0 || unknown.length > 0 || missing.length > 0) {
     const detail = [...unknown, ...missing].join(", ") || "—";
     await notify(clientId, "eccang_order_blocked", {
@@ -331,7 +339,7 @@ export async function pushOrder(
     warehouseCode,
     shippingMethod: method.code,
     shopDomain: shop.domain,
-    items: toWarehouseItems(items, warehouse),
+    items: toWarehouseItems(items, warehouse, pieces),
   });
   const now = new Date().toISOString();
   try {

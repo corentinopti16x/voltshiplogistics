@@ -12,6 +12,14 @@ import {
 import { getProductRequest, type ProductRow, type SourcingStatus } from "@/lib/products/types";
 import type { ShippingChannel } from "@/lib/domain/pricing";
 import { isShippingChannel, parseProductAttributes, tickedAttributes } from "@/lib/products/attributes";
+import {
+  CLIENT_NOTE_MAX,
+  PACK_PIECES_MAX,
+  boxPriceEur,
+  clientNote,
+  packPieces,
+  productBox,
+} from "@/lib/products/extras";
 
 const initial: SourcingActionResult = { ok: false };
 const channels: ShippingChannel[] = [
@@ -65,6 +73,12 @@ export function SourcingWorkForm({
   const [clientPrice, setClientPrice] = useState<string>(
     product.client_price != null ? String(product.client_price) : "",
   );
+  const [pieces, setPieces] = useState<string>(String(packPieces(product.quote_json)));
+  const storedBox = productBox(product.quote_json);
+  const [boxRmb, setBoxRmb] = useState<string>(storedBox?.priceRmb ? String(storedBox.priceRmb) : "");
+  const boxEur =
+    boxRmb.trim() && Number(boxRmb) > 0 ? boxPriceEur({ priceRmb: Number(boxRmb), weightG: 0 }, fxRmbPerEur) : null;
+  const piecesCount = Number.isInteger(Number(pieces)) && Number(pieces) > 1 ? Number(pieces) : 1;
   const factoryEur =
     factoryRmb.trim() && Number.isFinite(Number(factoryRmb)) && fxRmbPerEur > 0
       ? Math.round((Number(factoryRmb) / fxRmbPerEur) * 100) / 100
@@ -98,7 +112,7 @@ export function SourcingWorkForm({
               name="client_price"
               label={t("clientPrice")}
               unit="€ EUR"
-              hint={t("clientPriceHint")}
+              hint={piecesCount > 1 ? t("setPriceHint", { count: piecesCount }) : t("clientPriceHint")}
               type="number"
               min="0"
               step="0.0001"
@@ -112,6 +126,19 @@ export function SourcingWorkForm({
               type="number"
               min="1"
               defaultValue={product.weight_g ?? ""}
+              hint={piecesCount > 1 ? t("setWeightHint", { count: piecesCount }) : t("weightHint")}
+            />
+            <Input
+              name="pack_pieces"
+              label={t("packPieces")}
+              unit={t("piecesUnit")}
+              type="number"
+              min="1"
+              max={String(PACK_PIECES_MAX)}
+              step="1"
+              value={pieces}
+              onChange={(event) => setPieces(event.target.value)}
+              hint={piecesCount > 1 ? t("packPiecesSetHint", { count: piecesCount }) : t("packPiecesHint")}
             />
             <Input
               name="sku"
@@ -190,6 +217,56 @@ export function SourcingWorkForm({
                 ))}
               </select>
             </label>
+            <div className="flex flex-col gap-2 rounded-md border border-dashed border-[var(--line)] p-3 sm:col-span-2 lg:col-span-3">
+              <p className="text-sm font-semibold">{t("boxTitle")}</p>
+              <p className="text-xs text-[var(--muted)]">{t("boxIntro")}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-1">
+                  <Input
+                    name="box_price_rmb"
+                    label={t("boxPrice")}
+                    unit="¥ RMB"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={boxRmb}
+                    onChange={(event) => setBoxRmb(event.target.value)}
+                  />
+                  {boxEur != null ? (
+                    <span className="text-xs text-[var(--muted)]">
+                      {t("boxBilled", { eur: boxEur.toFixed(2), rate: String(fxRmbPerEur) })}
+                    </span>
+                  ) : null}
+                </div>
+                <Input
+                  name="box_weight_g"
+                  label={t("boxWeight")}
+                  unit={t("gramsUnit")}
+                  type="number"
+                  min="0"
+                  step="1"
+                  defaultValue={storedBox?.weightG ? String(storedBox.weightG) : ""}
+                  hint={t("boxWeightHint")}
+                />
+              </div>
+            </div>
+            <label className="flex flex-col gap-1 text-sm sm:col-span-2 lg:col-span-3">
+              <span className="text-[var(--muted)]">
+                {t("clientNote")}{" "}
+                <span className="rounded bg-[var(--blue-soft)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--blue-ink)]">
+                  {t("clientNoteBadge")}
+                </span>
+              </span>
+              <textarea
+                name="client_note"
+                rows={3}
+                maxLength={CLIENT_NOTE_MAX}
+                defaultValue={clientNote(product.quote_json)?.text ?? ""}
+                placeholder={t("clientNotePlaceholder")}
+                className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
+              />
+              <span className="text-xs text-[var(--muted)]">{t("clientNoteHint")}</span>
+            </label>
           </div>
         </section>
 
@@ -210,6 +287,14 @@ export function SourcingWorkForm({
                 value={factoryRmb}
                 onChange={(event) => setFactoryRmb(event.target.value)}
               />
+              {piecesCount > 1 ? (
+                <p className="text-xs text-amber-900">
+                  {t("setFactoryHint", { count: piecesCount })}
+                  {factoryRmb.trim() && Number(factoryRmb) > 0
+                    ? ` ${t("perPiece", { value: (Number(factoryRmb) / piecesCount).toFixed(2) })}`
+                    : ""}
+                </p>
+              ) : null}
               {factoryEur != null ? (
                 <p className="text-xs text-amber-900">
                   {t("fxConversion", { eur: factoryEur.toFixed(2), rate: String(fxRmbPerEur) })}

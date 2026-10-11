@@ -9,7 +9,13 @@ import { ProductPhoto } from "@/components/client/product-photo";
 import { SourcerShell } from "@/components/sourcer/sourcer-shell";
 import { SourcingWorkForm } from "@/components/sourcer/sourcing-work-form";
 import { AnnouncedPricesForm } from "@/components/sourcer/announced-prices-form";
-import { getProductMarkets } from "@/lib/pricing/server";
+import { calculateProductCogsMatrix, getProductMarkets } from "@/lib/pricing/server";
+import { matrixViews } from "@/lib/pricing/matrix-view";
+import { gridVersionDate } from "@/lib/domain/pricing";
+import { parseFinancialProfile } from "@/lib/domain/economics";
+import { packPieces } from "@/lib/products/extras";
+import { CarrierSelector } from "@/components/client/carrier-selector";
+import { CogsMatrix } from "@/components/client/cogs-matrix";
 
 export default async function SourcerProductPage({
   params,
@@ -36,7 +42,7 @@ export default async function SourcerProductPage({
   const [{ data: productData }, { data: work }] = await Promise.all([
     admin
       .from("products_cache")
-      .select("*, clients!inner(name, code)")
+      .select("*, clients!inner(name, code, financial_profile_json)")
       .eq("id", id)
       .maybeSingle(),
     admin
@@ -49,9 +55,14 @@ export default async function SourcerProductPage({
   ]);
   if (!productData) notFound();
   const product = productData as ProductRow & {
-    clients: { name: string; code: string | null };
+    clients: { name: string; code: string | null; financial_profile_json: unknown };
   };
   const request = getProductRequest(product);
+  // Same engine and carrier choice as the client's product page: the line shown per market
+  // is the one priced in the COGS (and the one ECCANG must use).
+  const matrix = await calculateProductCogsMatrix(product).catch(() => null);
+  const views = matrix ? matrixViews(matrix) : null;
+  const tCarrier = await getTranslations("sourcer.carrier");
 
   return (
     <SourcerShell role={ctx.role}>
@@ -109,6 +120,36 @@ export default async function SourcerProductPage({
       <div className="mt-6">
         <SourcingWorkForm product={product} work={work} fxRmbPerEur={settings.fx_rmb_per_eur} />
       </div>
+      <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6" id="carrier">
+        <h2 className="text-sm font-semibold">{tCarrier("title")}</h2>
+        <p className="mt-1 text-xs text-[var(--muted)]">{tCarrier("lead")}</p>
+        {!matrix || !views ? (
+          <p className="mt-3 text-sm text-[var(--muted)]">{tCarrier("error")}</p>
+        ) : matrix.missingReason ? (
+          <p className="mt-3 text-sm text-[var(--muted)]">
+            {matrix.missingReason === "grid" ? tCarrier("missingGrid") : tCarrier("missingProduct")}
+          </p>
+        ) : (
+          <CarrierSelector productId={product.id} markets={views.carrierMarkets} canEdit staff />
+        )}
+      </section>
+
+      {matrix && views ? (
+        <div className="mt-6">
+          <CogsMatrix
+            markets={views.matrixMarkets}
+            quantities={matrix.quantities}
+            sellingPrice={product.selling_price}
+            profile={parseFinancialProfile(product.clients.financial_profile_json)}
+            gridVersion={matrix.activeGridVersion}
+            gridDate={matrix.gridEffectiveDate ?? gridVersionDate(matrix.activeGridVersion)}
+            ratesChanged={false}
+            missingReason={matrix.missingReason}
+            packPieces={packPieces(product.quote_json)}
+          />
+        </div>
+      ) : null}
+
       <div className="mt-6">
         <AnnouncedPricesForm productId={product.id} quoteJson={product.quote_json} markets={getProductMarkets(product)} />
       </div>

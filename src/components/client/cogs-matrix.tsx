@@ -5,29 +5,14 @@ import { useLocale, useTranslations } from "next-intl";
 import { computeEconomics, type FinancialProfile } from "@/lib/domain/economics";
 import { Badge } from "@/components/ui/badge";
 import { formatAmount, formatRatio } from "@/lib/format";
+import { carrierLineLabel } from "@/lib/domain/carrier-rules";
+import {
+  cellUsesOtherLine,
+  type CogsMatrixCellView,
+  type CogsMatrixMarketView,
+} from "@/lib/pricing/matrix-view";
 
-export type CogsMatrixCellView = {
-  quantity: number;
-  /** COGS for the whole order (n units), null when no weight bracket matches. */
-  cogs: number | null;
-  cogsPerUnit: number | null;
-  weightG: number | null;
-  /** Billed weight (volumetric / USA minimum); shown when it differs from weightG. */
-  billedWeightG: number | null;
-  iossRequired: boolean;
-  carrier: string | null;
-  lineName: string | null;
-  weightMinG: number | null;
-  weightMaxG: number | null;
-  /** Parcel shipping price from the rate cell (after client discount). */
-  shipping: number | null;
-  deliveryRange: string | null;
-};
-
-export type CogsMatrixMarketView = {
-  destination: string;
-  cells: CogsMatrixCellView[];
-};
+export type { CogsMatrixCellView, CogsMatrixMarketView };
 
 /**
  * COGS 1–5 × market. Always the live grid (the accepted quote stays the contractual
@@ -43,6 +28,7 @@ export function CogsMatrix({
   gridDate,
   ratesChanged,
   missingReason,
+  packPieces = 1,
 }: {
   markets: CogsMatrixMarketView[];
   quantities: number[];
@@ -52,6 +38,8 @@ export function CogsMatrix({
   gridDate: string | null;
   ratesChanged: boolean;
   missingReason: "product_data" | "grid" | null;
+  /** Pieces per unit sold (set): shown so the client knows a unit = the whole set. */
+  packPieces?: number;
 }) {
   const t = useTranslations("products.cogsMatrix");
   const locale = useLocale();
@@ -75,6 +63,9 @@ export function CogsMatrix({
             {t("title")}
           </h2>
           <p className="mt-0.5 text-[13px] text-[var(--muted)]">{t("lead")}</p>
+          {packPieces > 1 ? (
+            <p className="mt-1 text-[13px] font-semibold text-[var(--ink)]">{t("setNote", { count: packPieces })}</p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {ratesChanged ? <Badge tone="gold">{t("ratesChanged")}</Badge> : null}
@@ -109,7 +100,7 @@ export function CogsMatrix({
         </p>
       ) : (
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[520px] border-separate border-spacing-y-1.5 text-left">
+          <table className="w-full min-w-[640px] border-separate border-spacing-y-1.5 text-left">
             <thead>
               <tr>
                 <th scope="col" className="pb-1 text-[11px] font-semibold text-[var(--muted)]">
@@ -131,9 +122,18 @@ export function CogsMatrix({
                 <tr key={market.destination} className="bg-[var(--card-soft)]">
                   <th
                     scope="row"
-                    className="rounded-l-[12px] px-3 py-2 text-[14px] font-bold text-[var(--ink)]"
+                    className="rounded-l-[12px] px-3 py-2 align-top text-[14px] font-bold text-[var(--ink)]"
                   >
                     {market.destination}
+                    <span className="block max-w-[190px] text-[12px] leading-snug font-semibold text-[var(--blue-ink)]">
+                      {market.line ? carrierLineLabel(market.line) : t("noCarrier")}
+                    </span>
+                    {market.line ? (
+                      <span className="block text-[11px] font-medium text-[var(--muted)]">
+                        {t(`carrierMode.${market.fallback ? "fallback" : market.mode}`)}
+                        {market.deliveryRange ? ` · ${market.deliveryRange}` : ""}
+                      </span>
+                    ) : null}
                   </th>
                   {market.cells.map((cell, index) => {
                     const last = index === market.cells.length - 1;
@@ -198,6 +198,11 @@ export function CogsMatrix({
                         <span className="tabular block text-[12px] text-[var(--muted)]">
                           {t("perUnit", { value: formatAmount(cell.cogsPerUnit, locale) })}
                         </span>
+                        {cellUsesOtherLine(cell, market.line) ? (
+                          <span className="block text-[11px] font-semibold text-[var(--gold-text)]">
+                            {carrierLineLabel({ carrier: cell.carrier as string, lineName: cell.lineName })}
+                          </span>
+                        ) : null}
                       </td>
                     );
                   })}
@@ -208,7 +213,8 @@ export function CogsMatrix({
         </div>
       )}
       <p className="mt-3 text-[12px] text-[var(--muted)]">
-        {mode === "roas" ? t("roasNote", { margin: profile.target_margin_pct }) : t("formulaNote")}
+        {mode === "roas" ? t("roasNote", { margin: profile.target_margin_pct }) : t("formulaNote")}{" "}
+        {mode === "cogs" ? t("carrierNote") : null}
       </p>
     </section>
   );

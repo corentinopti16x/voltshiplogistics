@@ -478,7 +478,10 @@
         "liquid_perfume": "liquide / parfum",
         "magnetic": "magnétique",
         "sensitive_other": "sensible (ingérable)"
-      }
+      },
+      "box": "Emballage (boîte)",
+      "boxNote": "boîte du produit",
+      "packagingIncluded": "emballage {weight} g inclus"
     },
     "stock": {
       "title": "Stock",
@@ -638,11 +641,20 @@
       "ratesChanged": "Tarifs mis à jour depuis ton devis",
       "missingGrid": "La grille tarifaire n'est pas encore active.",
       "missingProduct": "Prix, poids et canal sont renseignés par Voltship — la matrice apparaîtra ensuite.",
-      "formulaNote": "COGS(n) = n × prix produit (+ commission) + transport d'un colis de n × poids unitaire + préparation une fois par commande. Le devis accepté reste la référence contractuelle pour 1 unité.",
+      "formulaNote": "COGS(n) = n × prix produit (+ commission) + boîte d’emballage s’il y en a une + transport d’un colis de n × poids unitaire + emballage + préparation une fois par commande. Le devis accepté reste la référence contractuelle pour 1 unité.",
       "roasNote": "ROAS break-even puis ROAS cible à {margin} % de marge, calculés sur l'AOV (prix de vente × n) et le COGS de la commande.",
       "cellDetail": "{carrier}{line} · {tier} · colis {price}{delivery}",
       "iossRequired": "IOSS requis",
-      "billedWeight": "poids facturé {weight} g"
+      "billedWeight": "poids facturé {weight} g",
+      "setNote": "Vendu en set : 1 unité = le set de {count} pièces (prix et poids du set complet).",
+      "noCarrier": "Aucun transporteur",
+      "carrierMode": {
+        "auto": "Auto · le moins cher",
+        "preferred": "Ligne choisie",
+        "forced": "Imposé par Voltship",
+        "fallback": "Ligne choisie indisponible → la moins chère"
+      },
+      "carrierNote": "Sous chaque marché : le transporteur qui expédie 1 unité. Si un colis plus lourd change de ligne, elle est indiquée dans la case."
     },
     "carousel": {
       "label": "Photos Shopify de {title}",
@@ -673,7 +685,8 @@
       "saved": "Ligne enregistrée — COGS mis à jour.",
       "error": "Impossible d'enregistrer la ligne.",
       "note": "La ligne choisie est utilisée pour le COGS, la matrice et l'expédition entrepôt. Le devis accepté reste figé.",
-      "readOnly": "Seuls les membres de votre espace peuvent changer la ligne."
+      "readOnly": "Seuls les membres de votre espace peuvent changer la ligne.",
+      "staffNote": "Choix enregistré sur le produit : la fiche client, les COGS, la marge et ECCANG utilisent cette ligne."
     },
     "sortLabel": "Trier par",
     "minSalesLabel": "Ventes min. (période)",
@@ -695,7 +708,11 @@
     "liveNote": "Produit déjà en vente sur ta boutique — rien à sourcer, tout est OK.",
     "periodHint": "Ventes, commandes et CA de chaque produit sur la période choisie (glissant).",
     "periodLabel": "Période",
-    "skuNotice": "Ton SKU Voltship : <b>{sku}</b>. Mets-le dans le champ SKU de ton produit sur Shopify (chaque variante) : tes commandes seront reliées automatiquement à cette cotation."
+    "skuNotice": "Ton SKU Voltship : <b>{sku}</b>. Mets-le dans le champ SKU de ton produit sur Shopify (chaque variante) : tes commandes seront reliées automatiquement à cette cotation.",
+    "setBadge": "Set de {count} pcs",
+    "clientNote": {
+      "title": "Note de Voltship"
+    }
   },
   "economics": {
     "title": "Économie unitaire",
@@ -772,7 +789,8 @@
         "ops_request": "Demande à Voltship",
         "carrier_line_unavailable": "Ligne transporteur indisponible",
         "order_alert": "Commande à vérifier",
-        "purchase_order": "Commande fournisseur"
+        "purchase_order": "Commande fournisseur",
+        "product_note": "Note Voltship sur un produit"
       }
     },
     "fields": {
@@ -981,7 +999,8 @@
       "finance": "Finances",
       "alerts": "Alertes",
       "todo": "À compléter",
-      "orders": "Commandes fournisseurs"
+      "orders": "Commandes fournisseurs",
+      "catalog": "Produits"
     },
     "rateImport": {
       "kicker": "Admin Voltship",
@@ -1561,7 +1580,11 @@
         "weight": "Poids",
         "price": "Prix (EUR)",
         "delivery": "Délai"
-      }
+      },
+      "packagingTitle": "Emballage ajouté à chaque colis",
+      "packagingLead": "Poids du sachet / carton / étiquette ajouté une fois par commande, pour tous les produits. Il compte dans le choix de la tranche de poids, donc dans le transport, la marge et le transporteur. Mettre 0 pour ne rien ajouter.",
+      "packagingLabel": "Poids d’emballage par colis",
+      "packagingSave": "Enregistrer"
     },
     "pricingForms": {
       "saved": "Enregistré.",
@@ -1771,7 +1794,8 @@
     },
     "shell": {
       "queueLink": "File de sourcing",
-      "staff": "Équipe"
+      "staff": "Équipe",
+      "catalogLink": "Produits"
     },
     "form": {
       "clientFieldsTitle": "Champs du devis visibles par le client",
@@ -1830,7 +1854,26 @@
       "flagging": "Signalement…",
       "flagProblem": "Signaler le problème",
       "productFlagged": "Produit signalé.",
-      "batteryInternal": "Batterie intégrée à l'appareil (rechargeable). Seuls ces produits peuvent partir en Huahan 内电 vers les US."
+      "batteryInternal": "Batterie intégrée à l'appareil (rechargeable). Seuls ces produits peuvent partir en Huahan 内电 vers les US.",
+      "packPieces": "Vendu en set — pièces par unité vendue",
+      "piecesUnit": "pcs",
+      "packPiecesHint": "1 = vendu à l’unité. Mettre 2 si 1 commande Shopify = 2 pièces à expédier (set de 2).",
+      "packPiecesSetHint": "Set de {count} : 1 unité vendue sur Shopify = {count} pièces à préparer à l’entrepôt (ECCANG).",
+      "setWeightHint": "Poids du set complet ({count} pcs), sans emballage ni boîte : ajoutés automatiquement.",
+      "setPriceHint": "Prix pour le set complet ({count} pcs), c’est ce que le client paie par unité vendue.",
+      "setFactoryHint": "Prix usine du set complet ({count} pcs).",
+      "perPiece": "Soit {value} ¥ par pièce.",
+      "clientNote": "Note au client",
+      "clientNoteBadge": "Visible par le client",
+      "clientNotePlaceholder": "Ex. : vendu par set de 2, gravure incluse ; délai usine 7 jours…",
+      "clientNoteHint": "S’affiche en haut de la fiche produit du client, avec la date. Il reçoit une notification à chaque nouvelle note. Les notes internes (encadré jaune) restent privées.",
+      "weightHint": "Produit seul, sans emballage : l’emballage du colis (réglage Tarification) et la boîte éventuelle sont ajoutés automatiquement.",
+      "boxTitle": "Boîte d’emballage (seulement si le produit en a besoin)",
+      "boxIntro": "Laisser vide si pas de boîte. La boîte est un emballage, pas un produit : elle est facturée au client sur une ligne « Emballage (boîte) », au prix coûtant et sans commission, à chaque unité vendue. Son poids s’ajoute à chaque unité du colis.",
+      "boxPrice": "Prix de la boîte",
+      "boxBilled": "Facturé {eur} € au client par unité, sans commission (taux {rate}).",
+      "boxWeight": "Poids de la boîte",
+      "boxWeightHint": "Par unité vendue."
     },
     "announced": {
       "title": "Prix annoncés au client",
@@ -1839,6 +1882,57 @@
       "otherMarket": "Autre pays",
       "until": "Valable jusqu'au",
       "expired": "Expiré : règle du palier appliquée"
+    },
+    "carrier": {
+      "title": "Transporteur par marché",
+      "lead": "La ligne utilisée pour calculer les COGS de chaque marché, celle que voit le client et celle à envoyer à ECCANG. « Auto » = la moins chère au poids du produit ; choisir une ligne la fixe pour ce produit (le client voit le même choix).",
+      "error": "Impossible de calculer les tarifs pour ce produit.",
+      "missingGrid": "Aucune grille tarifaire active.",
+      "missingProduct": "Renseignez le prix client, le poids et le canal d’expédition pour voir les transporteurs."
+    },
+    "catalog": {
+      "eyebrow": "Catalogue",
+      "title": "Produits",
+      "intro": "Tous les produits de tous les clients et de toutes les boutiques. Pour chaque marché : le COGS d’1 unité et le transporteur qui l’expédie. Cliquez un produit pour le modifier.",
+      "count": "{count} produits · {ready} avec COGS",
+      "searchPlaceholder": "Rechercher un produit, un SKU, un client, une boutique…",
+      "allClients": "Tous les clients",
+      "dataAll": "Tous les produits",
+      "dataReady": "COGS calculés",
+      "dataMissing": "Données manquantes",
+      "sortLabel": "Trier par",
+      "sort": {
+        "sales": "Ventes 90 j",
+        "title": "Nom",
+        "client": "Client",
+        "created": "Plus récents"
+      },
+      "apply": "Filtrer",
+      "carrierLegend": "Transporteur : « auto » = le moins cher au poids du produit, « choisi » = ligne choisie par le client ou l’équipe, « imposé » = règle Voltship du client.",
+      "empty": "Aucun produit ne correspond.",
+      "columns": {
+        "photo": "Photo",
+        "product": "Produit",
+        "client": "Client · boutiques",
+        "price": "Prix produit · poids",
+        "cogs": "COGS ×1 · transporteur par marché",
+        "sales90": "Ventes 90 j"
+      },
+      "set": "Set de {count}",
+      "battery": "Batterie intégrée",
+      "hasNote": "Note client",
+      "noWeight": "poids ?",
+      "missingGrid": "Pas de grille active",
+      "missingData": "Prix, poids ou canal manquant",
+      "noRate": "aucune ligne à ce poids",
+      "mode": {
+        "auto": "auto",
+        "preferred": "choisi",
+        "forced": "imposé",
+        "fallback": "choix indisponible → auto"
+      },
+      "announced": "prix annoncé",
+      "box": "Boîte {price} ¥ · {weight} g"
     }
   },
   "support": {

@@ -478,7 +478,10 @@
         "liquid_perfume": "liquid / perfume",
         "magnetic": "magnetic",
         "sensitive_other": "sensitive (ingestible)"
-      }
+      },
+      "box": "Packaging (box)",
+      "boxNote": "product box",
+      "packagingIncluded": "packaging {weight} g included"
     },
     "stock": {
       "title": "Stock",
@@ -638,11 +641,20 @@
       "ratesChanged": "Rates updated since your quote",
       "missingGrid": "The rate grid is not active yet.",
       "missingProduct": "Price, weight and channel are filled in by Voltship — the matrix shows up after that.",
-      "formulaNote": "COGS(n) = n × product price (+ commission) + shipping for one parcel of n × unit weight + handling once per order. The accepted quote stays the contractual figure for 1 unit.",
+      "formulaNote": "COGS(n) = n × product price (+ commission) + packaging box if any + transport of one parcel of n × unit weight + packaging + handling once per order. The accepted quote stays the contractual reference for 1 unit.",
       "roasNote": "Break-even ROAS, then target ROAS at {margin}% margin, computed on the AOV (selling price × n) and the order COGS.",
       "cellDetail": "{carrier}{line} · {tier} · parcel {price}{delivery}",
       "iossRequired": "IOSS required",
-      "billedWeight": "billed weight {weight} g"
+      "billedWeight": "billed weight {weight} g",
+      "setNote": "Sold as a set: 1 unit = the set of {count} pieces (price and weight of the whole set).",
+      "noCarrier": "No carrier",
+      "carrierMode": {
+        "auto": "Auto · cheapest",
+        "preferred": "Chosen line",
+        "forced": "Set by Voltship",
+        "fallback": "Chosen line unavailable → cheapest"
+      },
+      "carrierNote": "Under each market: the carrier shipping 1 unit. When a heavier parcel switches line, it is shown in the cell."
     },
     "carousel": {
       "label": "Shopify photos of {title}",
@@ -673,7 +685,8 @@
       "saved": "Line saved — COGS updated.",
       "error": "Could not save the line.",
       "note": "The chosen line drives the COGS, the matrix and the warehouse shipment. The accepted quote stays frozen.",
-      "readOnly": "Only members of your workspace can change the line."
+      "readOnly": "Only members of your workspace can change the line.",
+      "staffNote": "Saved on the product: the client page, COGS, margin and ECCANG use this line."
     },
     "sortLabel": "Sort by",
     "minSalesLabel": "Min. sales (period)",
@@ -695,7 +708,11 @@
     "liveNote": "Already selling on your store — nothing to source, all good.",
     "periodHint": "Units, orders and revenue per product over the chosen rolling period.",
     "periodLabel": "Period",
-    "skuNotice": "Your Voltship SKU: <b>{sku}</b>. Put it in the SKU field of your Shopify product (every variant): your orders will link to this quote automatically."
+    "skuNotice": "Your Voltship SKU: <b>{sku}</b>. Put it in the SKU field of your Shopify product (every variant): your orders will link to this quote automatically.",
+    "setBadge": "Set of {count} pcs",
+    "clientNote": {
+      "title": "Note from Voltship"
+    }
   },
   "economics": {
     "title": "Unit economics",
@@ -772,7 +789,8 @@
         "ops_request": "Request to Voltship",
         "carrier_line_unavailable": "Carrier line unavailable",
         "order_alert": "Order to check",
-        "purchase_order": "Supplier order"
+        "purchase_order": "Supplier order",
+        "product_note": "Voltship note on a product"
       }
     },
     "fields": {
@@ -981,7 +999,8 @@
       "finance": "Finances",
       "alerts": "Alerts",
       "todo": "To complete",
-      "orders": "Supplier orders"
+      "orders": "Supplier orders",
+      "catalog": "Products"
     },
     "rateImport": {
       "kicker": "Voltship admin",
@@ -1561,7 +1580,11 @@
         "weight": "Weight",
         "price": "Price (EUR)",
         "delivery": "Delivery"
-      }
+      },
+      "packagingTitle": "Packaging added to every parcel",
+      "packagingLead": "Weight of the bag / carton / label added once per order, for every product. It counts when picking the weight bracket, so in transport, margin and carrier. Set 0 to add nothing.",
+      "packagingLabel": "Packaging weight per parcel",
+      "packagingSave": "Save"
     },
     "pricingForms": {
       "saved": "Saved.",
@@ -1771,7 +1794,8 @@
     },
     "shell": {
       "queueLink": "Sourcing queue",
-      "staff": "Staff"
+      "staff": "Staff",
+      "catalogLink": "Products"
     },
     "form": {
       "clientFieldsTitle": "Client-safe quote fields",
@@ -1830,7 +1854,26 @@
       "flagging": "Flagging…",
       "flagProblem": "Flag problem",
       "productFlagged": "Product flagged.",
-      "batteryInternal": "Battery built into the device (rechargeable). Only these products can ship with Huahan 内电 to the US."
+      "batteryInternal": "Battery built into the device (rechargeable). Only these products can ship with Huahan 内电 to the US.",
+      "packPieces": "Sold as a set — pieces per unit sold",
+      "piecesUnit": "pcs",
+      "packPiecesHint": "1 = sold alone. Set 2 if one Shopify unit = 2 pieces to ship (set of 2).",
+      "packPiecesSetHint": "Set of {count}: 1 unit sold on Shopify = {count} pieces to pick at the warehouse (ECCANG).",
+      "setWeightHint": "Weight of the whole set ({count} pcs), without packaging or box: they are added automatically.",
+      "setPriceHint": "Price of the whole set ({count} pcs): what the client pays per unit sold.",
+      "setFactoryHint": "Factory price of the whole set ({count} pcs).",
+      "perPiece": "That is ¥{value} per piece.",
+      "clientNote": "Note to the client",
+      "clientNoteBadge": "Visible to the client",
+      "clientNotePlaceholder": "E.g. sold as a set of 2, engraving included; factory lead time 7 days…",
+      "clientNoteHint": "Shown at the top of the client’s product page with its date. The client gets a notification for each new note. Internal notes (yellow box) stay private.",
+      "weightHint": "Product alone, without packaging: the parcel packaging (Pricing setting) and the box, if any, are added automatically.",
+      "boxTitle": "Packaging box (only if the product needs one)",
+      "boxIntro": "Leave empty when there is no box. The box is packaging, not a product: it is billed to the client on a “Packaging (box)” line, at cost and without commission, per unit sold. Its weight is added to each unit of the parcel.",
+      "boxPrice": "Box price",
+      "boxBilled": "Billed €{eur} to the client per unit, no commission (rate {rate}).",
+      "boxWeight": "Box weight",
+      "boxWeightHint": "Per unit sold."
     },
     "announced": {
       "title": "Prices announced to the client",
@@ -1839,6 +1882,57 @@
       "otherMarket": "Other market",
       "until": "Valid until",
       "expired": "Expired: palier rule applies"
+    },
+    "carrier": {
+      "title": "Carrier per market",
+      "lead": "The line used for each market’s COGS — the one the client sees and the one to send to ECCANG. “Auto” = cheapest at the product weight; choosing a line fixes it for this product (the client sees the same choice).",
+      "error": "Could not price this product.",
+      "missingGrid": "No active rate grid.",
+      "missingProduct": "Fill in client price, weight and shipping channel to see the carriers."
+    },
+    "catalog": {
+      "eyebrow": "Catalogue",
+      "title": "Products",
+      "intro": "Every product of every client and shop. Per market: COGS for 1 unit and the carrier that ships it. Click a product to edit it.",
+      "count": "{count} products · {ready} with COGS",
+      "searchPlaceholder": "Search a product, SKU, client, shop…",
+      "allClients": "All clients",
+      "dataAll": "All products",
+      "dataReady": "COGS computed",
+      "dataMissing": "Missing data",
+      "sortLabel": "Sort by",
+      "sort": {
+        "sales": "90-day sales",
+        "title": "Name",
+        "client": "Client",
+        "created": "Newest"
+      },
+      "apply": "Filter",
+      "carrierLegend": "Carrier: “auto” = cheapest at the product weight, “chosen” = line chosen by the client or the team, “forced” = the client’s Voltship rule.",
+      "empty": "No product matches.",
+      "columns": {
+        "photo": "Photo",
+        "product": "Product",
+        "client": "Client · shops",
+        "price": "Product price · weight",
+        "cogs": "COGS ×1 · carrier per market",
+        "sales90": "90-day sales"
+      },
+      "set": "Set of {count}",
+      "battery": "Built-in battery",
+      "hasNote": "Client note",
+      "noWeight": "weight?",
+      "missingGrid": "No active grid",
+      "missingData": "Price, weight or channel missing",
+      "noRate": "no line at this weight",
+      "mode": {
+        "auto": "auto",
+        "preferred": "chosen",
+        "forced": "forced",
+        "fallback": "choice unavailable → auto"
+      },
+      "announced": "announced price",
+      "box": "Box ¥{price} · {weight} g"
     }
   },
   "support": {

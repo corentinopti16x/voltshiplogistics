@@ -96,7 +96,11 @@
         "weight": "重量",
         "price": "价格（EUR）",
         "delivery": "时效"
-      }
+      },
+      "packagingTitle": "每个包裹的包装重量",
+      "packagingLead": "每个订单加一次的袋子 / 纸箱 / 面单重量，适用于所有产品。",
+      "packagingLabel": "每个包裹的包装重量",
+      "packagingSave": "保存"
     },
     "pricingForms": {
       "saved": "已保存。",
@@ -347,7 +351,8 @@
       "finance": "财务",
       "alerts": "提醒",
       "todo": "待完善",
-      "orders": "供应商订单"
+      "orders": "供应商订单",
+      "catalog": "产品"
     },
     "rateImport": {
       "kicker": "Voltship 管理后台",
@@ -933,7 +938,8 @@
     },
     "shell": {
       "queueLink": "采购队列",
-      "staff": "员工"
+      "staff": "员工",
+      "catalogLink": "产品"
     },
     "form": {
       "clientFieldsTitle": "客户可见报价字段",
@@ -992,7 +998,26 @@
       "flagging": "提交中…",
       "flagProblem": "标记问题",
       "productFlagged": "产品已标记为有问题。",
-      "batteryInternal": "内置电池（可充电）。只有这类产品可走华翰内电美国线。"
+      "batteryInternal": "内置电池（可充电）。只有这类产品可走华翰内电美国线。",
+      "packPieces": "套装销售 — 每个售出单位的件数",
+      "piecesUnit": "件",
+      "packPiecesHint": "1 = 单件销售。如果 Shopify 卖出 1 个 = 需发 2 件（2 件套），填 2。",
+      "packPiecesSetHint": "{count} 件套：Shopify 卖出 1 个 = 仓库（ECCANG）需拣 {count} 件。",
+      "setWeightHint": "整套重量（{count} 件），不含包装和盒子：会自动加上。",
+      "setPriceHint": "整套价格（{count} 件），即客户每售出一个单位支付的价格。",
+      "setFactoryHint": "整套工厂价（{count} 件）。",
+      "perPiece": "即每件 ¥{value}。",
+      "clientNote": "给客户的备注",
+      "clientNoteBadge": "客户可见",
+      "clientNotePlaceholder": "例如：2 件套销售，含刻字；工厂交期 7 天…",
+      "clientNoteHint": "显示在客户产品页顶部（带日期），每条新备注客户都会收到通知。内部备注（黄色框）仅内部可见。",
+      "weightHint": "仅产品重量，不含包装：包裹包装（定价设置）和盒子（如有）会自动加上。",
+      "boxTitle": "包装盒（仅当产品需要时）",
+      "boxIntro": "没有盒子请留空。盒子属于包装而不是产品：按成本价、不收佣金，在“包装（盒子）”一行向客户收取，每个售出单位一次。盒子重量加到包裹的每个单位。",
+      "boxPrice": "盒子价格",
+      "boxBilled": "每单位向客户收取 {eur} €，不收佣金（汇率 {rate}）。",
+      "boxWeight": "盒子重量",
+      "boxWeightHint": "每个售出单位。"
     },
     "title": "采购待办队列",
     "soon": "按请求时间从早到晚处理。填写报价字段后，向客户发送最终 COGS（商品成本）。",
@@ -1003,6 +1028,57 @@
       "otherMarket": "其他国家",
       "until": "有效期至",
       "expired": "已过期：按等级规则计费"
+    },
+    "carrier": {
+      "title": "各市场物流渠道",
+      "lead": "用于计算各市场 COGS 的渠道，即客户看到的渠道，也是要发给 ECCANG 的渠道。“自动” = 按产品重量最便宜；选择一条渠道即为该产品固定（客户看到相同选择）。",
+      "error": "无法计算该产品的运费。",
+      "missingGrid": "没有启用的运价表。",
+      "missingProduct": "请填写客户价格、重量和物流类别后查看渠道。"
+    },
+    "catalog": {
+      "eyebrow": "产品目录",
+      "title": "产品",
+      "intro": "所有客户、所有店铺的产品。每个市场显示 1 件的 COGS 和发货渠道。点击产品进行修改。",
+      "count": "{count} 个产品 · {ready} 个有 COGS",
+      "searchPlaceholder": "搜索产品、SKU、客户、店铺…",
+      "allClients": "所有客户",
+      "dataAll": "所有产品",
+      "dataReady": "已算 COGS",
+      "dataMissing": "缺少数据",
+      "sortLabel": "排序",
+      "sort": {
+        "sales": "90 天销量",
+        "title": "名称",
+        "client": "客户",
+        "created": "最新"
+      },
+      "apply": "筛选",
+      "carrierLegend": "渠道：“自动” = 按产品重量最便宜，“已选” = 客户或团队选择的渠道，“指定” = 该客户的 Voltship 规则。",
+      "empty": "没有匹配的产品。",
+      "columns": {
+        "photo": "图片",
+        "product": "产品",
+        "client": "客户 · 店铺",
+        "price": "产品价格 · 重量",
+        "cogs": "COGS ×1 · 各市场渠道",
+        "sales90": "90 天销量"
+      },
+      "set": "{count} 件套",
+      "battery": "内置电池",
+      "hasNote": "客户备注",
+      "noWeight": "重量？",
+      "missingGrid": "没有启用的运价表",
+      "missingData": "缺少价格、重量或类别",
+      "noRate": "该重量无渠道",
+      "mode": {
+        "auto": "自动",
+        "preferred": "已选",
+        "forced": "指定",
+        "fallback": "所选不可用 → 自动"
+      },
+      "announced": "已承诺价格",
+      "box": "盒子 ¥{price} · {weight} g"
     }
   },
   "app": {
@@ -1155,6 +1231,17 @@
       "in_production": "生产中",
       "in_stock": "有库存",
       "flagged": "待澄清"
+    },
+    "carrier": {
+      "staffNote": "已保存在产品上：客户页面、COGS、利润和 ECCANG 都使用这条渠道。"
+    },
+    "cogsMatrix": {
+      "carrierMode": {
+        "auto": "自动 · 最便宜",
+        "preferred": "已选渠道",
+        "forced": "Voltship 指定",
+        "fallback": "所选渠道不可用 → 最便宜"
+      }
     }
   }
 }

@@ -308,13 +308,19 @@ export function orderLinesForEccang(order: ShopifyOrderForEccang, resolver?: Sku
  * Shopify SKUs of one item, or a SKU shared by two items split by Voltship). Lines that end
  * up on the same warehouse SKU are merged.
  */
-export function toWarehouseItems(items: EccangOrderItem[], warehouseSku: Map<string, string>) {
+export function toWarehouseItems(
+  items: EccangOrderItem[],
+  warehouseSku: Map<string, string>,
+  /** Pieces per unit sold, by app SKU (product sold as a set): 1 unit of a set of 2 = 2 pieces. */
+  piecesPerUnit?: Map<string, number>,
+) {
   const merged = new Map<string, EccangOrderItem>();
   for (const item of items) {
     const sku = warehouseSku.get(item.product_sku) || item.product_sku;
+    const quantity = item.quantity * Math.max(1, piecesPerUnit?.get(item.product_sku) ?? 1);
     const current = merged.get(sku);
-    if (current) current.quantity += item.quantity;
-    else merged.set(sku, { ...item, product_sku: sku });
+    if (current) current.quantity += quantity;
+    else merged.set(sku, { ...item, product_sku: sku, quantity });
   }
   return [...merged.values()];
 }

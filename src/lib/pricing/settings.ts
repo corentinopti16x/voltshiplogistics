@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { DEFAULT_VOLUMETRIC_DIVISORS, type HandlingLadder, type VolumetricDivisors } from "../domain/pricing";
+import {
+  DEFAULT_PACKAGING_WEIGHT_G,
+  DEFAULT_VOLUMETRIC_DIVISORS,
+  type HandlingLadder,
+  type VolumetricDivisors,
+} from "../domain/pricing";
 
 /**
  * Voltship margin rule used to turn a carrier cost (RMB) into the grid price (EUR).
@@ -36,6 +41,8 @@ export type PricingSettings = {
   handling_extra_unit_eur: number;
   /** Alert (admin Marge) when a locked « prix annoncé » leaves less margin per parcel than this. */
   announced_margin_alert_eur: number;
+  /** Packaging (bag, filler, label) added to every parcel's weight, in grams. */
+  packaging_weight_g: number;
 };
 
 export const PRICING_SETTINGS_KEY = "pricing_settings";
@@ -52,6 +59,7 @@ export const DEFAULT_PRICING_SETTINGS: PricingSettings = {
   handling_step3_eur: 0.3,
   handling_extra_unit_eur: 0.15,
   announced_margin_alert_eur: 0.5,
+  packaging_weight_g: DEFAULT_PACKAGING_WEIGHT_G,
 };
 
 export type NumericPricingSetting = Exclude<keyof PricingSettings, "volumetric_divisors">;
@@ -67,6 +75,7 @@ const BOUNDS: Record<NumericPricingSetting, [number, number]> = {
   handling_step3_eur: [0, 50],
   handling_extra_unit_eur: [0, 50],
   announced_margin_alert_eur: [0, 50],
+  packaging_weight_g: [0, 2000],
 };
 
 /** Merge a partial / unknown payload over the defaults, clamping to sane bounds. */
