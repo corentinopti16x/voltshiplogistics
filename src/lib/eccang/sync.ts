@@ -44,6 +44,16 @@ import type { ProductRow } from "@/lib/products/types";
 
 export const ECCANG_SHIPPING_METHODS_KEY = "eccang_shipping_methods";
 
+/**
+ * ECCANG imports the Shopify orders itself (store bound in the OMS): its own carrier rules,
+ * labels, stock and Shopify fulfillment. The app only READS ECCANG (orders, billed weight,
+ * fees, tracking, stock) for dashboards and invoices. ECCANG_PUSH_ORDERS=1 brings back the
+ * old flow where the app pushes every new Shopify order (never both: duplicates).
+ */
+export function appPushesOrders() {
+  return process.env.ECCANG_PUSH_ORDERS === "1";
+}
+
 /** Order statuses that still need polling (no tracking / not shipped yet). */
 const OPEN_ORDER_STATUSES = ["pending", "C", "W", "H", "N", "P"];
 
@@ -443,13 +453,13 @@ export async function retryBlockedOrders(clientId: string, config?: ClientEccang
   return { pushed, stillBlocked };
 }
 
-/** Hook for the Shopify orders webhook. Never throws. */
+/** Hook for the Shopify orders webhook (off unless ECCANG_PUSH_ORDERS=1). Never throws. */
 export async function pushOrderIfEnabled(
   clientId: string,
   order: ShopifyOrderForEccang & { cancelled_at?: string | null },
   shop: { id: string; domain: string },
 ) {
-  if (order.cancelled_at) return null;
+  if (!appPushesOrders() || order.cancelled_at) return null;
   const { active, config } = await isEccangActive(clientId);
   if (!active || !config) return null;
   try {
@@ -562,7 +572,10 @@ export async function pullPendingOrders(clientId: string, config?: ClientEccangC
   return result;
 }
 
-// --- Orders created by the client himself (his own ECCANG API key) --------------------
+// --- Orders ECCANG created itself (Shopify store bound in the OMS, UI, client API key) ---
+
+/** getOrderList pages of 100 per run (7 days of a ~600 orders/day client fits). */
+const MAX_ORDER_LIST_PAGES = 60;
 
 async function upsertExternalOrders(clientId: string, records: EccangOrderRecord[]) {
   const rows = records
@@ -583,8 +596,8 @@ async function upsertExternalOrders(clientId: string, records: EccangOrderRecord
 /**
  * getOrderList (modified in the last `days`) → every order of this client's ECCANG
  * account. Orders we pushed (VS-…) are refreshed by pullPendingOrders; the others —
- * created by the client through his own API key or the ECCANG UI — are stored with
- * source "external" so Voltship sees and bills them. First run looks back 90 days.
+ * imported by ECCANG from the client's Shopify store, or created in the ECCANG UI / with
+ * the client's API key — are stored with source "external" so Voltship sees and bills them.
  */
 export async function pullAllOrders(clientId: string, config?: ClientEccangConfig, options: { days?: number } = {}) {
   const cfg = config ?? (await getCredentialsForClient(clientId));
@@ -597,11 +610,15 @@ export async function pullAllOrders(clientId: string, config?: ClientEccangConfi
       .select("id", { count: "exact", head: true })
       .eq("client_id", clientId)
       .eq("source", "external");
-    days = count ? 7 : 90;
+    // Every Shopify order now lands here: short window every 15 min, a 7-day catch-up once
+    // a night (01:00-01:14 UTC), 90 days on the very first run.
+    const now = new Date();
+    const nightly = now.getUTCHours() === 1 && now.getUTCMinutes() < 15;
+    days = count ? (nightly ? 7 : 2) : 90;
   }
   const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 19).replace("T", " ");
   const records: EccangOrderRecord[] = [];
-  for (let page = 1; page <= 20; page += 1) {
+  for (let page = 1; page <= MAX_ORDER_LIST_PAGES; page += 1) {
     const response = await callEccang<EccangOrderRecord[]>(credentials, "getOrderList", {
       page,
       pageSize: 100,
@@ -758,7 +775,11 @@ export async function syncClient(clientId: string) {
   try {
     requireEccangClient(cfg);
     const steps: Array<[string, () => Promise<void>]> = [
-      ["blocked orders", async () => void (summary.retried = (await retryBlockedOrders(clientId, cfg)).pushed)],
+      ...(appPushesOrders()
+        ? ([
+            ["blocked orders", async () => void (summary.retried = (await retryBlockedOrders(clientId, cfg)).pushed)],
+          ] as Array<[string, () => Promise<void>]>)
+        : []),
       ["inventory", async () => void (summary.inventory = (await pullInventory(clientId, cfg)).skus)],
       ["orders", async () => void (summary.orders = (await pullPendingOrders(clientId, cfg)).polled)],
       ["external orders", async () => void (summary.externalOrders = (await pullAllOrders(clientId, cfg)).imported)],
