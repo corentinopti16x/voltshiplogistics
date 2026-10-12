@@ -339,6 +339,15 @@
         "title": "最近客户",
         "lead": "最新创建的公司工作区。",
         "empty": "尚未创建任何客户。"
+      },
+      "todoNow": {
+        "title": "待处理",
+        "alerts": "待核实订单",
+        "achats": "采购与发货",
+        "achatsHint": "采购什么、发什么货",
+        "restock": "缺货",
+        "todo": "待完善产品",
+        "system": "技术问题"
       }
     },
     "nav": {
@@ -355,7 +364,15 @@
       "alerts": "提醒",
       "todo": "待完善",
       "orders": "供应商订单",
-      "catalog": "产品"
+      "catalog": "产品",
+      "achats": "采购与发货",
+      "home": "首页",
+      "groups": {
+        "operations": "运营",
+        "products": "产品",
+        "clients": "客户",
+        "money": "财务"
+      }
     },
     "rateImport": {
       "kicker": "Voltship 管理后台",
@@ -838,6 +855,81 @@
         "received": "已入库",
         "cancelled": "已取消"
       }
+    },
+    "achats": {
+      "kicker": "采购",
+      "title": "采购与待发货订单",
+      "lead": "为发出待发订单并在到货后覆盖 {cover} 天销量需要采购的数量，以及各店铺尚未发货的 Shopify 订单。",
+      "export": "导出（Excel）",
+      "filters": {
+        "client": "客户",
+        "allClients": "所有客户",
+        "since": "订单起始日期",
+        "cover": "库存覆盖",
+        "coverDays": "{days} 天",
+        "apply": "应用",
+        "lastDays": "最近 {days} 天"
+      },
+      "stats": {
+        "orders": "待发货订单",
+        "pieces": "待发件数",
+        "skusToBuy": "需采购产品",
+        "urgent": "紧急",
+        "budget": "采购预算",
+        "unpriced": "{count} 个产品没有工厂价"
+      },
+      "buy": {
+        "title": "需采购",
+        "lead": "需求 = 待发订单件数 + 日均销量（最近 {window} 天）×（补货周期 + {cover} 天）。需采购 = 需求 − 库存 − 在途。",
+        "empty": "该期间没有销量或待发订单。",
+        "product": "产品",
+        "client": "客户",
+        "backlog": "待发",
+        "orders": "{count} 个订单",
+        "perDay": "日销量",
+        "stock": "库存",
+        "incoming": "在途",
+        "runway": "库存天数",
+        "toBuy": "需采购",
+        "price": "工厂价 ¥",
+        "total": "合计 ¥",
+        "supplier": "供应商",
+        "days": "{days} 天",
+        "urgent": "紧急",
+        "upsell": "加购品",
+        "noProduct": "无产品资料",
+        "howto": "库存 = 易仓库存（否则为产品资料中的库存）。在途 = 未完成的采购单或易仓中的入库预报。周期 = 产品的生产周期（默认 7 天）。套装按件数计算。紧急 = 库存不够补货周期。",
+        "leadTime": "周期"
+      },
+      "ship": {
+        "title": "各店铺待发货",
+        "lead": "{since} 以来未取消、Shopify 中尚未标记发货的订单。",
+        "empty": "该期间没有待发订单。",
+        "shop": "店铺",
+        "orders": "订单",
+        "units": "件数",
+        "noSku": "{count} 件无 SKU",
+        "age": {
+          "d0_2": "0–2 天",
+          "d3_7": "3–7 天",
+          "d8_30": "8–30 天",
+          "d31": "30 天以上"
+        },
+        "inEccang": "已进易仓",
+        "shipped": "易仓已发",
+        "flagged": "待核实",
+        "howto": "每次同步都会从 Shopify 重新读取状态（每晚完整同步 90 天）。「已进易仓」= 仓库已收到订单但未发出；「易仓已发」= 已发出，单号回传 Shopify。「待核实」= 被标记的订单（0 元、滥用优惠码等）。"
+      },
+      "oldest": {
+        "title": "最久的订单",
+        "lead": "等待时间最长的 40 个订单。",
+        "partial": "部分发货",
+        "flagged": "待核实",
+        "eccang": {
+          "pending": "已进易仓",
+          "shipped": "易仓已发"
+        }
+      }
     }
   },
   "orderAlerts": {
@@ -861,6 +953,10 @@
       "quantity_spike": {
         "title": "数量异常",
         "help": "单笔订单包含 10 件或以上商品。"
+      },
+      "gift_abuse": {
+        "title": "赠品超量",
+        "help": "赠品数量为 2 件或以上，或赠品多于付费商品：请在店铺中把赠品数量限制为 1。我们按活动规定的数量发货。"
       }
     },
     "paid": "实付金额",

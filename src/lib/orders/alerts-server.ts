@@ -59,6 +59,7 @@ export function detectShopifyOrder(order: ShopifyOrder) {
     discounts: order.total_discounts,
     discountCodes: order.discount_codes ?? null,
     units: orderUnits(order),
+    lines: order.line_items,
   });
 }
 

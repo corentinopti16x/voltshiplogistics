@@ -1015,6 +1015,15 @@
         "title": "Recent clients",
         "lead": "Newest company workspaces.",
         "empty": "No clients have been created yet."
+      },
+      "todoNow": {
+        "title": "To handle",
+        "alerts": "Orders to check",
+        "achats": "Purchasing & shipping",
+        "achatsHint": "What to buy, what to ship",
+        "restock": "Stock-outs",
+        "todo": "Product sheets to complete",
+        "system": "Technical issues"
       }
     },
     "nav": {
@@ -1031,7 +1040,15 @@
       "alerts": "Alerts",
       "todo": "To complete",
       "orders": "Supplier orders",
-      "catalog": "Products"
+      "catalog": "Products",
+      "achats": "Purchasing & shipping",
+      "home": "Home",
+      "groups": {
+        "operations": "Operations",
+        "products": "Products",
+        "clients": "Clients",
+        "money": "Money"
+      }
     },
     "rateImport": {
       "kicker": "Voltship admin",
@@ -1766,6 +1783,81 @@
       "weekShort": "W{week}",
       "percent": "{value}%",
       "openEnded": "∞"
+    },
+    "achats": {
+      "kicker": "Purchasing",
+      "title": "Purchasing & orders to ship",
+      "lead": "What to buy to ship the pending orders and cover {cover} days of sales after arrival, then the Shopify orders not shipped yet, shop by shop.",
+      "export": "Export (Excel)",
+      "filters": {
+        "client": "Client",
+        "allClients": "All clients",
+        "since": "Orders since",
+        "cover": "Stock to cover",
+        "coverDays": "{days} days",
+        "apply": "Apply",
+        "lastDays": "Last {days} days"
+      },
+      "stats": {
+        "orders": "Orders to ship",
+        "pieces": "Pending pieces",
+        "skusToBuy": "Products to buy",
+        "urgent": "Urgent",
+        "budget": "Purchase budget",
+        "unpriced": "{count, plural, one {# product without factory price} other {# products without factory price}}"
+      },
+      "buy": {
+        "title": "To buy",
+        "lead": "Need = pieces of pending orders + daily sales (last {window} days) × (restock lead time + {cover} days). To buy = need − stock − what is already on the way.",
+        "empty": "No sales or pending orders over this period.",
+        "product": "Product",
+        "client": "Client",
+        "backlog": "Pending",
+        "orders": "{count, plural, one {# order} other {# orders}}",
+        "perDay": "Sales / day",
+        "stock": "Stock",
+        "incoming": "On the way",
+        "runway": "Days of stock",
+        "toBuy": "To buy",
+        "price": "Factory ¥",
+        "total": "Total ¥",
+        "supplier": "Supplier",
+        "days": "{days} d",
+        "urgent": "Urgent",
+        "upsell": "Upsell",
+        "noProduct": "No product sheet",
+        "howto": "Stock = ECCANG stock (else the stock declared on the product). On the way = open supplier orders or inbounds announced in ECCANG. Lead time = production lead time of the product (7 days by default). Sets count their pieces. Urgent = stock does not cover the restock lead time.",
+        "leadTime": "Lead time"
+      },
+      "ship": {
+        "title": "To ship, by shop",
+        "lead": "Non-cancelled Shopify orders placed since {since}, not marked shipped in Shopify yet.",
+        "empty": "No pending order over this period.",
+        "shop": "Shop",
+        "orders": "Orders",
+        "units": "Units",
+        "noSku": "{count} without SKU",
+        "age": {
+          "d0_2": "0–2 d",
+          "d3_7": "3–7 d",
+          "d8_30": "8–30 d",
+          "d31": "30+ d"
+        },
+        "inEccang": "In ECCANG",
+        "shipped": "Shipped by ECCANG",
+        "flagged": "To check",
+        "howto": "Status re-read from Shopify at each sync (full every night over 90 days). « In ECCANG » = received by the warehouse, not shipped yet; « Shipped by ECCANG » = left, tracking goes back to Shopify. « To check » = flagged order (0 €, promo abuse…)."
+      },
+      "oldest": {
+        "title": "Oldest",
+        "lead": "The 40 orders waiting the longest.",
+        "partial": "Partial",
+        "flagged": "To check",
+        "eccang": {
+          "pending": "In ECCANG",
+          "shipped": "Shipped by ECCANG"
+        }
+      }
     }
   },
   "impersonate": {
@@ -2139,6 +2231,10 @@
       "quantity_spike": {
         "title": "Unusual quantity",
         "help": "10 or more items in a single order."
+      },
+      "gift_abuse": {
+        "title": "Extra free gift",
+        "help": "Free item taken 2 times or more, or more free items than paid products: the gift quantity should be locked to 1 in the shop. We ship what the offer gives."
       }
     },
     "paid": "Paid",
