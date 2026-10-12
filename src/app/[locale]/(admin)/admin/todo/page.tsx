@@ -9,6 +9,7 @@ import {
 import { ProductPhoto } from "@/components/client/product-photo";
 import { Badge } from "@/components/ui";
 import { formatNumber } from "@/lib/format";
+import { SourcingTabs } from "@/components/sourcer/sourcing-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,7 @@ export default async function AdminProductTodoPage({
 
   return (
     <div className="flex flex-col gap-5">
+      <SourcingTabs active="todo" showTodo todoCount={todo.required} />
       <div>
         <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--gold)] uppercase">{t("kicker")}</p>
         <h1 className="font-display mt-2 text-3xl">{t("title")}</h1>
