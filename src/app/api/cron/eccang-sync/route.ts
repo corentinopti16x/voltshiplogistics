@@ -2,7 +2,9 @@ import { validCronRequest } from "@/lib/integrations/webhook-events";
 import { isEccangConfigured } from "@/lib/eccang/client";
 import { syncAllEccangClients } from "@/lib/eccang/sync";
 
-/** Every 15 min: for each eccang_enabled client → inventory + pending orders + ASNs. */
+export const maxDuration = 300;
+
+/** Every 15 min: for each eccang_enabled client → inventory + orders (read from ECCANG) + ASNs. */
 async function run(request: Request) {
   if (!validCronRequest(request)) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });
