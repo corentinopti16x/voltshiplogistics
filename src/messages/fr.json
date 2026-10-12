@@ -1015,6 +1015,15 @@
         "title": "Clients récents",
         "lead": "Les derniers espaces société créés.",
         "empty": "Aucun client n’a encore été créé."
+      },
+      "todoNow": {
+        "title": "À traiter",
+        "alerts": "Commandes à vérifier",
+        "achats": "Achats & expéditions",
+        "achatsHint": "Quoi acheter, quoi expédier",
+        "restock": "Ruptures de stock",
+        "todo": "Fiches à compléter",
+        "system": "Problèmes techniques"
       }
     },
     "nav": {
@@ -1032,7 +1041,14 @@
       "todo": "À compléter",
       "orders": "Commandes fournisseurs",
       "catalog": "Produits",
-      "achats": "Achats"
+      "achats": "Achats & expéditions",
+      "home": "Accueil",
+      "groups": {
+        "operations": "Opérations",
+        "products": "Produits",
+        "clients": "Clients",
+        "money": "Argent"
+      }
     },
     "rateImport": {
       "kicker": "Admin Voltship",

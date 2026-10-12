@@ -1015,6 +1015,15 @@
         "title": "Recent clients",
         "lead": "Newest company workspaces.",
         "empty": "No clients have been created yet."
+      },
+      "todoNow": {
+        "title": "To handle",
+        "alerts": "Orders to check",
+        "achats": "Purchasing & shipping",
+        "achatsHint": "What to buy, what to ship",
+        "restock": "Stock-outs",
+        "todo": "Product sheets to complete",
+        "system": "Technical issues"
       }
     },
     "nav": {
@@ -1032,7 +1041,14 @@
       "todo": "To complete",
       "orders": "Supplier orders",
       "catalog": "Products",
-      "achats": "Purchasing"
+      "achats": "Purchasing & shipping",
+      "home": "Home",
+      "groups": {
+        "operations": "Operations",
+        "products": "Products",
+        "clients": "Clients",
+        "money": "Money"
+      }
     },
     "rateImport": {
       "kicker": "Voltship admin",

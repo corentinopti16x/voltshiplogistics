@@ -339,6 +339,15 @@
         "title": "最近客户",
         "lead": "最新创建的公司工作区。",
         "empty": "尚未创建任何客户。"
+      },
+      "todoNow": {
+        "title": "待处理",
+        "alerts": "待核实订单",
+        "achats": "采购与发货",
+        "achatsHint": "采购什么、发什么货",
+        "restock": "缺货",
+        "todo": "待完善产品",
+        "system": "技术问题"
       }
     },
     "nav": {
@@ -356,7 +365,14 @@
       "todo": "待完善",
       "orders": "供应商订单",
       "catalog": "产品",
-      "achats": "采购"
+      "achats": "采购与发货",
+      "home": "首页",
+      "groups": {
+        "operations": "运营",
+        "products": "产品",
+        "clients": "客户",
+        "money": "财务"
+      }
     },
     "rateImport": {
       "kicker": "Voltship 管理后台",
