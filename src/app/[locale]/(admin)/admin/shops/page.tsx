@@ -10,6 +10,7 @@ import {
   marketLabel,
   parseShopMarkets,
 } from "@/lib/shopify/shop-markets";
+import { ClientsTabs } from "@/components/admin/section-tabs";
 
 export default async function AdminShopsPage({
   searchParams,
@@ -66,6 +67,7 @@ export default async function AdminShopsPage({
 
   return (
     <div>
+      <ClientsTabs active="shops" />
       <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--gold)] uppercase">
         {t("kicker")}
       </p>

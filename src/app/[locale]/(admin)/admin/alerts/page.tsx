@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { listOrderAlerts } from "@/lib/orders/alerts-queries";
 import { OrderAlertCard } from "@/components/orders/order-alert-card";
+import { OperationsTabs } from "@/components/admin/section-tabs";
 
 export default async function AdminOrderAlertsPage({
   searchParams,
@@ -18,6 +19,7 @@ export default async function AdminOrderAlertsPage({
 
   return (
     <div className="flex max-w-[900px] flex-col gap-5">
+      <OperationsTabs active="alerts" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--gold)] uppercase">

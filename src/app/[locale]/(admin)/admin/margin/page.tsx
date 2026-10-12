@@ -11,6 +11,7 @@ import {
 import { formatAmount } from "@/lib/format";
 import { ConfidentialTag, KpiTile, Pct, SignedAmount, SourceLabel } from "@/components/admin/margin-ui";
 import { AnnouncedAlertsSection } from "@/components/admin/announced-alerts";
+import { ResultsTabs } from "@/components/admin/section-tabs";
 
 // Confidential: voltship_admin only (the admin layout redirects everyone else; the
 // loader throws for any other role as a second line of defence).
@@ -69,6 +70,7 @@ export default async function AdminMarginPage() {
 
   return (
     <div>
+      <ResultsTabs active="order" />
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--gold)] uppercase">{t("kicker")}</p>
         <ConfidentialTag />

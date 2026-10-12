@@ -3,6 +3,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { SignOutButton } from "@/app/[locale]/(client)/dashboard/sign-out-button";
 import { AdminNavLinks } from "@/components/admin/admin-nav-links";
 import { countRequiredTodo } from "@/lib/products/todo";
+import { countOpenOrderAlerts } from "@/lib/orders/alerts-queries";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
 export async function AdminShell({
@@ -12,7 +13,11 @@ export async function AdminShell({
   email: string;
   children: React.ReactNode;
 }) {
-  const [t, todoCount] = await Promise.all([getTranslations("admin"), countRequiredTodo()]);
+  const [t, todoCount, alertCount] = await Promise.all([
+    getTranslations("admin"),
+    countRequiredTodo(),
+    countOpenOrderAlerts().catch(() => 0),
+  ]);
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
@@ -20,7 +25,7 @@ export async function AdminShell({
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-6">
             <BrandMark href="/admin" />
-            <AdminNavLinks todoCount={todoCount} />
+            <AdminNavLinks todoCount={todoCount} alertCount={alertCount} />
           </div>
           <div className="flex items-center gap-3">
             <LanguageSwitcher withChinese />
