@@ -1873,6 +1873,32 @@
         "clients": "Clients",
         "shops": "Boutiques Shopify"
       }
+    },
+    "skuFix": {
+      "kicker": "Sourcing",
+      "title": "SKU à corriger",
+      "lead": "Variantes Shopify sans SKU, ou avec le SKU d'un autre produit (pages dupliquées). ECCANG reconnaît les produits uniquement par le SKU : ces commandes ne trouveraient pas leur produit, ou le mauvais. Coche, vérifie le SKU proposé, et l'app l'écrit dans la boutique du client. Les commandes déjà passées gardent l'ancien SKU.",
+      "countSold": "{count} vendues ces 90 jours",
+      "countTotal": "{count} au total",
+      "showAll": "Afficher aussi les non vendues",
+      "onlySold": "Seulement les vendues",
+      "allClients": "Tous les clients",
+      "liveError": "Lecture Shopify impossible pour :",
+      "empty": "Aucune variante à corriger.",
+      "cols": {
+        "pick": "Écrire",
+        "product": "Produit",
+        "sales": "Ventes 90 j",
+        "current": "SKU dans Shopify",
+        "newSku": "Nouveau SKU"
+      },
+      "missing": "Aucun SKU",
+      "shared": "SKU d'un autre produit",
+      "sharedWith": "Aussi sur : {titles}",
+      "alreadyFixed": "Déjà corrigé ({sku})",
+      "write": "Écrire dans Shopify",
+      "writeHint": "Seules les lignes cochées sont écrites. Les lignes « SKU d'un autre produit » ne sont pas cochées par défaut : si c'est le même produit (même appareil sur une autre page), laisse-les.",
+      "result": "{done} SKU écrits dans Shopify, {failed} en échec."
     }
   },
   "impersonate": {
@@ -2133,7 +2159,8 @@
     },
     "tabs": {
       "queue": "Demandes clients",
-      "todo": "À compléter"
+      "todo": "À compléter",
+      "skus": "SKU à corriger"
     }
   },
   "support": {

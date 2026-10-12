@@ -945,6 +945,32 @@
         "clients": "客户",
         "shops": "Shopify 店铺"
       }
+    },
+    "skuFix": {
+      "kicker": "采购寻源",
+      "title": "待修正SKU",
+      "lead": "没有SKU，或者用了别的产品SKU的Shopify变体（客户复制页面造成）。易仓只按SKU识别产品：这些订单会找不到产品或匹配错产品。勾选并检查建议的SKU，系统会写入客户店铺。已下的订单保留旧SKU。",
+      "countSold": "近90天有销量 {count} 个",
+      "countTotal": "共 {count} 个",
+      "showAll": "也显示无销量的",
+      "onlySold": "只看有销量的",
+      "allClients": "全部客户",
+      "liveError": "无法读取Shopify：",
+      "empty": "没有需要修正的变体。",
+      "cols": {
+        "pick": "写入",
+        "product": "产品",
+        "sales": "90天销量",
+        "current": "Shopify里的SKU",
+        "newSku": "新SKU"
+      },
+      "missing": "没有SKU",
+      "shared": "别的产品的SKU",
+      "sharedWith": "也用于：{titles}",
+      "alreadyFixed": "已修正（{sku}）",
+      "write": "写入Shopify",
+      "writeHint": "只写入勾选的行。「别的产品的SKU」默认不勾选：如果是同一个产品（另一个页面的同款），保持不变。",
+      "result": "已写入 {done} 个SKU，失败 {failed} 个。"
     }
   },
   "orderAlerts": {
@@ -1241,7 +1267,8 @@
     },
     "tabs": {
       "queue": "客户需求",
-      "todo": "待完善"
+      "todo": "待完善",
+      "skus": "待修正SKU"
     }
   },
   "app": {
