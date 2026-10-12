@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Client } from "@/lib/auth/types";
 import { loadPricingTiers } from "@/lib/clients/pricing-tier";
 import { pricingTierLabel } from "@/lib/domain/pricing-tiers";
+import { ClientsTabs } from "@/components/admin/section-tabs";
 
 export default async function AdminClientsPage() {
   const [t, tForms] = await Promise.all([getTranslations("admin"), getTranslations("admin.clientForms")]);
@@ -29,6 +30,7 @@ export default async function AdminClientsPage() {
 
   return (
     <div>
+      <ClientsTabs active="clients" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--gold)] uppercase">
