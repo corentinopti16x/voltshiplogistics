@@ -10,6 +10,7 @@ import { ProductPhoto } from "@/components/client/product-photo";
 import { Badge } from "@/components/ui";
 import { formatNumber } from "@/lib/format";
 import { SourcingTabs } from "@/components/sourcer/sourcing-tabs";
+import { countSkuFixes } from "@/lib/shopify/sku-fix";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,10 @@ export default async function AdminProductTodoPage({
 }) {
   const [query, locale, t] = await Promise.all([searchParams, getLocale(), getTranslations("admin.todo")]);
   const showOptional = query.all === "1";
-  const todo = await loadProductTodo({ clientId: query.client || undefined });
+  const [todo, skuCount] = await Promise.all([
+    loadProductTodo({ clientId: query.client || undefined }),
+    countSkuFixes().catch(() => 0),
+  ]);
   const clients = [...new Map(todo.items.map((item) => [item.clientId, item.clientName])).entries()].sort((a, b) =>
     a[1].localeCompare(b[1]),
   );
@@ -42,7 +46,7 @@ export default async function AdminProductTodoPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <SourcingTabs active="todo" showTodo todoCount={todo.required} />
+      <SourcingTabs active="todo" showTodo todoCount={todo.required} skuCount={skuCount} />
       <div>
         <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--gold)] uppercase">{t("kicker")}</p>
         <h1 className="font-display mt-2 text-3xl">{t("title")}</h1>
