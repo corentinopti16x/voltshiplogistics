@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Link } from "@/i18n/routing";
 import { ProductPhoto } from "@/components/client/product-photo";
 import { SourcerShell } from "@/components/sourcer/sourcer-shell";
+import { SourcingTabs } from "@/components/sourcer/sourcing-tabs";
+import { countRequiredTodo } from "@/lib/products/todo";
 import type { ProductRow } from "@/lib/products/types";
 import {
   isShopifyImport,
@@ -171,8 +173,10 @@ export default async function SourcerPage({
       </th>
     );
   };
+  const todoCount = isAdmin ? await countRequiredTodo().catch(() => 0) : 0;
   return (
     <SourcerShell role={ctx.role}>
+      <SourcingTabs active="queue" showTodo={isAdmin} todoCount={todoCount} />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--gold)] uppercase">
