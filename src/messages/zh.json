@@ -372,7 +372,8 @@
         "products": "产品",
         "clients": "客户",
         "money": "财务"
-      }
+      },
+      "results": "经营结果"
     },
     "rateImport": {
       "kicker": "Voltship 管理后台",
@@ -929,6 +930,20 @@
           "pending": "已进易仓",
           "shipped": "易仓已发"
         }
+      }
+    },
+    "tabs": {
+      "operations": {
+        "achats": "采购与发货",
+        "alerts": "待核查"
+      },
+      "results": {
+        "week": "按周",
+        "order": "按订单（30天）"
+      },
+      "clients": {
+        "clients": "客户",
+        "shops": "Shopify 店铺"
       }
     }
   },

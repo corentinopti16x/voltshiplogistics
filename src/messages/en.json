@@ -1048,7 +1048,8 @@
         "products": "Products",
         "clients": "Clients",
         "money": "Money"
-      }
+      },
+      "results": "Results"
     },
     "rateImport": {
       "kicker": "Voltship admin",
@@ -1857,6 +1858,20 @@
           "pending": "In ECCANG",
           "shipped": "Shipped by ECCANG"
         }
+      }
+    },
+    "tabs": {
+      "operations": {
+        "achats": "Purchasing & shipping",
+        "alerts": "To review"
+      },
+      "results": {
+        "week": "By week",
+        "order": "By order (30 d)"
+      },
+      "clients": {
+        "clients": "Clients",
+        "shops": "Shopify stores"
       }
     }
   },
