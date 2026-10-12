@@ -2205,6 +2205,10 @@
       "quantity_spike": {
         "title": "Quantité inhabituelle",
         "help": "10 articles ou plus dans une seule commande."
+      },
+      "gift_abuse": {
+        "title": "Cadeau en trop",
+        "help": "Article offert en quantité 2 ou plus, ou plus d'articles offerts que de produits payés : la quantité du cadeau est à bloquer à 1 dans la boutique. On expédie la quantité prévue par l'offre."
       }
     },
     "paid": "Payé",

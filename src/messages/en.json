@@ -2205,6 +2205,10 @@
       "quantity_spike": {
         "title": "Unusual quantity",
         "help": "10 or more items in a single order."
+      },
+      "gift_abuse": {
+        "title": "Extra free gift",
+        "help": "Free item taken 2 times or more, or more free items than paid products: the gift quantity should be locked to 1 in the shop. We ship what the offer gives."
       }
     },
     "paid": "Paid",
