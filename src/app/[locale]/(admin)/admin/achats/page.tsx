@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui";
 import { formatDate, formatNumber } from "@/lib/format";
 import { loadAchats } from "@/lib/orders/to-ship-server";
 import { AGE_BUCKETS, summarizeShops } from "@/lib/orders/to-ship";
+import { OperationsTabs } from "@/components/admin/section-tabs";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -46,6 +47,7 @@ export default async function AdminAchatsPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <OperationsTabs active="achats" />
       <div>
         <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--gold)] uppercase">{t("kicker")}</p>
         <h1 className="font-display mt-2 text-3xl">{t("title")}</h1>
