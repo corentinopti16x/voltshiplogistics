@@ -1031,7 +1031,8 @@
       "alerts": "Alertes",
       "todo": "À compléter",
       "orders": "Commandes fournisseurs",
-      "catalog": "Produits"
+      "catalog": "Produits",
+      "achats": "Achats"
     },
     "rateImport": {
       "kicker": "Admin Voltship",
@@ -1766,6 +1767,81 @@
       "weekShort": "S{week}",
       "percent": "{value} %",
       "openEnded": "∞"
+    },
+    "achats": {
+      "kicker": "Achats",
+      "title": "Achats & commandes à expédier",
+      "lead": "Ce qu'il faut acheter pour expédier les commandes en attente et tenir {cover} jours de ventes après réception, puis les commandes Shopify pas encore expédiées, boutique par boutique.",
+      "export": "Exporter (Excel)",
+      "filters": {
+        "client": "Client",
+        "allClients": "Tous les clients",
+        "since": "Commandes depuis le",
+        "cover": "Stock à couvrir",
+        "coverDays": "{days} jours",
+        "apply": "Appliquer",
+        "lastDays": "{days} derniers jours"
+      },
+      "stats": {
+        "orders": "Commandes à expédier",
+        "pieces": "Pièces en attente",
+        "skusToBuy": "Produits à acheter",
+        "urgent": "Urgents",
+        "budget": "Budget achat",
+        "unpriced": "{count, plural, one {# produit sans prix usine} other {# produits sans prix usine}}"
+      },
+      "buy": {
+        "title": "À acheter",
+        "lead": "Besoin = pièces des commandes en attente + ventes par jour ({window} derniers jours) × (délai de réassort + {cover} jours). À acheter = besoin − stock − ce qui est déjà en route.",
+        "empty": "Aucune vente ni commande en attente sur cette période.",
+        "product": "Produit",
+        "client": "Client",
+        "backlog": "En attente",
+        "orders": "{count, plural, one {# commande} other {# commandes}}",
+        "perDay": "Ventes / jour",
+        "stock": "Stock",
+        "incoming": "En route",
+        "runway": "Jours de stock",
+        "toBuy": "À acheter",
+        "price": "Prix usine ¥",
+        "total": "Total ¥",
+        "supplier": "Fournisseur",
+        "days": "{days} j",
+        "urgent": "Urgent",
+        "upsell": "Upsell",
+        "noProduct": "Pas de fiche",
+        "howto": "Stock = stock ECCANG (sinon stock déclaré sur la fiche). En route = commandes fournisseurs ouvertes ou réceptions annoncées dans ECCANG. Délai = délai de production de la fiche (7 jours par défaut). Les sets comptent leurs pièces. Urgent = le stock ne couvre pas le délai de réassort.",
+        "leadTime": "Délai"
+      },
+      "ship": {
+        "title": "À expédier par boutique",
+        "lead": "Commandes Shopify non annulées passées depuis le {since}, pas encore marquées expédiées dans Shopify.",
+        "empty": "Aucune commande en attente sur cette période.",
+        "shop": "Boutique",
+        "orders": "Commandes",
+        "units": "Unités",
+        "noSku": "{count} sans SKU",
+        "age": {
+          "d0_2": "0–2 j",
+          "d3_7": "3–7 j",
+          "d8_30": "8–30 j",
+          "d31": "+30 j"
+        },
+        "inEccang": "Dans ECCANG",
+        "shipped": "Expédiées ECCANG",
+        "flagged": "À vérifier",
+        "howto": "Statut relu chez Shopify à chaque synchro (complète chaque nuit sur 90 jours). « Dans ECCANG » = commande reçue par l'entrepôt, pas encore partie ; « Expédiées ECCANG » = partie, le suivi remonte dans Shopify. « À vérifier » = commande signalée (0 €, code promo abusif…)."
+      },
+      "oldest": {
+        "title": "Les plus anciennes",
+        "lead": "Les 40 commandes en attente depuis le plus longtemps.",
+        "partial": "Partielle",
+        "flagged": "À vérifier",
+        "eccang": {
+          "pending": "Dans ECCANG",
+          "shipped": "Expédiée ECCANG"
+        }
+      }
     }
   },
   "impersonate": {
