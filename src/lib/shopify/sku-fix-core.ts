@@ -4,6 +4,10 @@
  * order line to a warehouse product by its SKU only: such lines would not match, or would
  * match the wrong product. These helpers propose a clean SKU per variant; the admin checks
  * them and the app writes them into Shopify.
+ *
+ * The SKU can be printed on carrier labels and packing slips, so it stays neutral: destination
+ * country + an opaque code + the option in the store's language ("US-P3X8D", "FR-H4N6T-OR").
+ * Never the client's name, and never what the product is (customs).
  */
 
 import { FALLBACK_SKU_PREFIX } from "./sku";
@@ -12,10 +16,10 @@ export type SkuFixKind = "missing" | "shared";
 
 export type SkuFixInput = {
   key: string;
-  clientCode: string;
+  /** Main delivery country of the store (ISO-2, "US"), or "" when unknown. */
+  country: string;
   /** Same Voltship product (or same Shopify product when not linked): same item. */
   groupKey: string;
-  productTitle: string;
   /** Shopify option title ("Gold / 3", "Default Title"), when known. */
   variantTitle: string | null;
 };
@@ -57,14 +61,6 @@ export function isDefaultVariantTitle(title: string | null | undefined) {
   return !text || text === "default title" || text === "default";
 }
 
-/** Short uppercase code of a client, used as SKU prefix ("Maxime" → "MAX"). */
-export function clientSkuCode(code: string | null | undefined, name: string) {
-  const own = plainUpper(code ?? "").replace(/[^A-Z0-9]/g, "");
-  if (own) return own.slice(0, 6);
-  const fromName = plainUpper(name).replace(/[^A-Z0-9]/g, "");
-  return (fromName || "CLI").slice(0, 3);
-}
-
 const SKU_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._\-/+]{0,63}$/;
 
 /** Error message key when the SKU cannot be written, else null. */
@@ -80,27 +76,64 @@ function normVariant(title: string | null) {
   return isDefaultVariantTitle(title) ? "" : plainUpper(title ?? "").replace(/[^A-Z0-9]+/g, " ").trim();
 }
 
+/** Order lines that are not goods (shipping insurance, free shipping…): not ticked by default. */
+export function isServiceLine(title: string) {
+  return /\b(assurance|insurance|livraison|shipping|delivery|frais de port|pourboire|garantie|warranty|(package|order|parcel) protection)\b/i.test(
+    plainUpper(title).toLowerCase(),
+  );
+}
+
+// No 0/O, 1/I/L: the code is read by people in the warehouse.
+const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const CODE_LENGTH = 5;
+
+/** Stable opaque code of an item (same group → same code), e.g. "K7M2Q". */
+export function neutralCode(groupKey: string, salt = 0) {
+  let hash = 0x811c9dc5;
+  for (const char of `${groupKey}#${salt}`) hash = Math.imul(hash ^ char.codePointAt(0)!, 0x01000193) >>> 0;
+  let out = "";
+  for (let i = 0; i < CODE_LENGTH; i += 1) {
+    hash = Math.imul(hash ^ (i + 0x9e37), 0x01000193) >>> 0;
+    out += CODE_ALPHABET[hash % CODE_ALPHABET.length];
+  }
+  return out;
+}
+
 /**
  * One proposal per variant. Variants of the same item (same group, same option) get the
- * same SKU — duplicated pages then share it, which is what ECCANG needs. Proposals never
- * reuse a SKU already used in the client's catalogue (`taken`, uppercase) by another item.
+ * same SKU — duplicated pages then share it, which is what ECCANG needs. Each item gets its
+ * own code, and proposals never reuse a SKU already used anywhere (`taken`).
  */
 export function proposeSkus(inputs: SkuFixInput[], taken: Iterable<string>) {
   const used = new Set([...taken].map((sku) => sku.trim().toUpperCase()));
-  const byGroup = new Map<string, string>();
+  const usedCodes = new Set<string>();
+  for (const sku of used) {
+    const match = /^(?:[A-Z]{2}-)?([A-Z0-9]{5})(?:-|$)/.exec(sku);
+    if (match) usedCodes.add(match[1]);
+  }
+  const codeOfGroup = new Map<string, string>();
+  const skuOfVariant = new Map<string, string>();
   const result = new Map<string, string>();
   const ordered = [...inputs].sort((a, b) => a.groupKey.localeCompare(b.groupKey) || a.key.localeCompare(b.key));
   for (const input of ordered) {
-    const groupId = `${input.groupKey}|${normVariant(input.variantTitle)}`;
-    let sku = byGroup.get(groupId);
+    let code = codeOfGroup.get(input.groupKey);
+    if (!code) {
+      let salt = 0;
+      code = neutralCode(input.groupKey, salt);
+      while (usedCodes.has(code)) code = neutralCode(input.groupKey, (salt += 1));
+      usedCodes.add(code);
+      codeOfGroup.set(input.groupKey, code);
+    }
+    const variantId = `${input.groupKey}|${normVariant(input.variantTitle)}`;
+    let sku = skuOfVariant.get(variantId);
     if (!sku) {
-      const product = slugWords(input.productTitle, 3, 20) || "ITEM";
-      const variant = isDefaultVariantTitle(input.variantTitle) ? "" : slugWords(input.variantTitle ?? "", 3, 14);
-      const base = [input.clientCode, product, variant].filter(Boolean).join("-");
+      const country = /^[A-Z]{2}$/i.test(input.country) ? input.country.toUpperCase() : "";
+      const option = isDefaultVariantTitle(input.variantTitle) ? "" : slugWords(input.variantTitle ?? "", 3, 14);
+      const base = [country, code, option].filter(Boolean).join("-");
       sku = base;
       for (let n = 2; used.has(sku.toUpperCase()); n += 1) sku = `${base}-${n}`;
       used.add(sku.toUpperCase());
-      byGroup.set(groupId, sku);
+      skuOfVariant.set(variantId, sku);
     }
     result.set(input.key, sku);
   }
