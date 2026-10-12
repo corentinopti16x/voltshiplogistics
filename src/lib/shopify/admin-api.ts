@@ -240,6 +240,87 @@ async function shopifyGraphql<T>(
   return payload.data;
 }
 
+export type ShopifyVariantDetail = {
+  variantId: string;
+  productId: string;
+  productTitle: string;
+  variantTitle: string;
+  sku: string | null;
+};
+
+/** Live title + SKU of variants (read_products), by numeric variant id; unknown ids are skipped. */
+export async function fetchVariantDetails(shop: string, accessToken: string, variantIds: string[]) {
+  const result = new Map<string, ShopifyVariantDetail>();
+  const ids = [...new Set(variantIds.filter((id) => /^\d+$/.test(id)))];
+  for (let i = 0; i < ids.length; i += 100) {
+    const data = await shopifyGraphql<{
+      nodes: Array<{
+        legacyResourceId?: string;
+        title?: string;
+        sku?: string | null;
+        product?: { legacyResourceId: string; title: string };
+      } | null>;
+    }>(
+      shop,
+      accessToken,
+      `query VariantDetails($ids: [ID!]!) {
+        nodes(ids: $ids) {
+          ... on ProductVariant { legacyResourceId title sku product { legacyResourceId title } }
+        }
+      }`,
+      { ids: ids.slice(i, i + 100).map((id) => `gid://shopify/ProductVariant/${id}`) },
+    );
+    for (const node of data.nodes) {
+      if (!node?.legacyResourceId || !node.product) continue;
+      result.set(node.legacyResourceId, {
+        variantId: node.legacyResourceId,
+        productId: node.product.legacyResourceId,
+        productTitle: node.product.title,
+        variantTitle: node.title ?? "",
+        sku: node.sku?.trim() || null,
+      });
+    }
+  }
+  return result;
+}
+
+/**
+ * Writes the SKU of variants of ONE Shopify product (write_products). Returns the SKU Shopify
+ * kept per variant id, or throws with Shopify's first user error.
+ */
+export async function updateVariantSkus(
+  shop: string,
+  accessToken: string,
+  productId: string,
+  variants: Array<{ variantId: string; sku: string }>,
+) {
+  const data = await shopifyGraphql<{
+    productVariantsBulkUpdate: {
+      productVariants: Array<{ legacyResourceId: string; sku: string | null }> | null;
+      userErrors: Array<{ field?: string[] | null; message: string }>;
+    };
+  }>(
+    shop,
+    accessToken,
+    `mutation SetVariantSkus($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+        productVariants { legacyResourceId sku }
+        userErrors { field message }
+      }
+    }`,
+    {
+      productId: `gid://shopify/Product/${productId}`,
+      variants: variants.map((variant) => ({
+        id: `gid://shopify/ProductVariant/${variant.variantId}`,
+        inventoryItem: { sku: variant.sku },
+      })),
+    },
+  );
+  const payload = data.productVariantsBulkUpdate;
+  if (payload.userErrors.length) throw new Error(payload.userErrors[0].message);
+  return new Map((payload.productVariants ?? []).map((variant) => [variant.legacyResourceId, variant.sku ?? ""]));
+}
+
 export type ShopifyTrackingInfo = { number: string; company?: string | null; url?: string | null };
 
 /**

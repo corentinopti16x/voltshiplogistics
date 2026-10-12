@@ -1873,6 +1873,32 @@
         "clients": "Clients",
         "shops": "Shopify stores"
       }
+    },
+    "skuFix": {
+      "kicker": "Sourcing",
+      "title": "SKUs to fix",
+      "lead": "Shopify variants with no SKU, or with another item's SKU (duplicated pages). ECCANG recognises products by SKU only: these orders would not find their product, or the wrong one. Tick, check the proposed SKU, and the app writes it into the client's store. Orders already placed keep their old SKU.",
+      "countSold": "{count} sold in the last 90 days",
+      "countTotal": "{count} in total",
+      "showAll": "Also show unsold",
+      "onlySold": "Sold only",
+      "allClients": "All clients",
+      "liveError": "Could not read Shopify for:",
+      "empty": "Nothing to fix.",
+      "cols": {
+        "pick": "Write",
+        "product": "Product",
+        "sales": "Sales 90 d",
+        "current": "SKU on Shopify",
+        "newSku": "New SKU"
+      },
+      "missing": "No SKU",
+      "shared": "Another item's SKU",
+      "sharedWith": "Also on: {titles}",
+      "alreadyFixed": "Already fixed ({sku})",
+      "write": "Write to Shopify",
+      "writeHint": "Only ticked rows are written. « Another item's SKU » rows are not ticked by default: if it is the same item (same device on another page), leave them.",
+      "result": "{done} SKUs written to Shopify, {failed} failed."
     }
   },
   "impersonate": {
@@ -2133,7 +2159,8 @@
     },
     "tabs": {
       "queue": "Client requests",
-      "todo": "To complete"
+      "todo": "To complete",
+      "skus": "SKUs to fix"
     }
   },
   "support": {
