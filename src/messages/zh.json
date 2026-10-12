@@ -1223,6 +1223,10 @@
       "sourceAuto": "自动 · 一起 {orders} 单",
       "sourceManual": "手动关联",
       "parents": "是以下产品的加购："
+    },
+    "tabs": {
+      "queue": "客户需求",
+      "todo": "待完善"
     }
   },
   "app": {

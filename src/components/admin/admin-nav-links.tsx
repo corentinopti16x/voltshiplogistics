@@ -8,6 +8,7 @@ type NavItem = { href: string; key: string };
 type NavGroup = { key: string; href?: string; items?: NavItem[] };
 
 /** Admin menu in 5 sections: home, then 4 dropdowns (operations, products, clients, money). */
+// « À compléter » is the second tab of « Sourcing » (SourcingTabs), not a menu entry.
 const groups: NavGroup[] = [
   { key: "dashboard", href: "/admin" },
   {
@@ -23,7 +24,6 @@ const groups: NavGroup[] = [
     items: [
       { href: "/sourcer/products", key: "catalog" },
       { href: "/sourcer", key: "sourcing" },
-      { href: "/admin/todo", key: "todo" },
     ],
   },
   {
@@ -45,6 +45,8 @@ const groups: NavGroup[] = [
 
 function isActive(href: string, pathname: string) {
   if (href === "/admin") return pathname === href;
+  // « Sourcing » also covers « À compléter » (same rubrique, second tab).
+  if (href === "/sourcer" && (pathname === "/admin/todo" || pathname.startsWith("/admin/todo/"))) return true;
   if (href === "/sourcer" && pathname.startsWith("/sourcer/products")) return false;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -55,7 +57,7 @@ export function AdminNavLinks({ todoCount = 0 }: { todoCount?: number }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
-  const countOf = (key: string) => (key === "todo" ? todoCount : 0);
+  const countOf = (key: string) => (key === "sourcing" ? todoCount : 0);
   const groupCount = (group: NavGroup) => (group.items ?? []).reduce((sum, item) => sum + countOf(item.key), 0);
   const label = (key: string) => (key === "dashboard" ? t("home") : t(key));
 

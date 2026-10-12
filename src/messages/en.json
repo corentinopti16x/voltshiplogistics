@@ -2115,6 +2115,10 @@
       "sourceAuto": "auto · {orders, plural, one {# order} other {# orders}} together",
       "sourceManual": "linked by hand",
       "parents": "Upsell of:"
+    },
+    "tabs": {
+      "queue": "Client requests",
+      "todo": "To complete"
     }
   },
   "support": {
