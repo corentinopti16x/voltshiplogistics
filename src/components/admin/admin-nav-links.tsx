@@ -41,7 +41,7 @@ const groups: NavGroup[] = [
 /** Other pages shown as a tab of a menu entry. */
 const TAB_OF: Record<string, string[]> = {
   "/admin/achats": ["/admin/alerts"],
-  "/sourcer": ["/admin/todo"],
+  "/sourcer": ["/admin/todo", "/admin/skus"],
   "/admin/clients": ["/admin/shops"],
   "/admin/finance": ["/admin/margin"],
 };
