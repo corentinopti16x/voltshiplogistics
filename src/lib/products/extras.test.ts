@@ -5,8 +5,7 @@ import {
   parseClientNote,
   parsePackPieces,
   piecesToShip,
-  withSheetExtras,
-} from "./extras";
+  withSheetExtras, parseCustomsForm, productCustoms } from "./extras";
 
 describe("packPieces", () => {
   it("defaults to 1 and reads valid sets", () => {
@@ -64,5 +63,36 @@ describe("client note", () => {
     expect(cleared.noteChanged).toBe(false);
     expect(cleared.quote.client_note).toBeNull();
     expect(cleared.quote.client_note_at).toBeNull();
+  });
+});
+
+describe("customs data (ECCANG)", () => {
+  it("reads and cleans the sheet fields", () => {
+    const customs = parseCustomsForm((key) =>
+      ({
+        declared_name_zh: " 耳朵护理液 ",
+        declared_name_en: "Ear care drops for blocked and muffled ears, glass bottle 30 ml",
+        hs_code: "3304.99 ",
+        length_cm: "12,5",
+        width_cm: "4",
+        height_cm: "",
+      })[key],
+    );
+    expect(customs).toEqual({
+      declaredNameZh: "耳朵护理液",
+      declaredNameEn: "Ear care drops for blocked and muffled ears, glass",
+      hsCode: "3304.99",
+      lengthCm: 12.5,
+      widthCm: 4,
+      heightCm: null,
+    });
+  });
+
+  it("writes the fields on quote_json and leaves them untouched when absent", () => {
+    const customs = productCustoms({ declared_name_en: "Shaver", length_cm: 10, width_cm: 5, height_cm: 3 });
+    const written = withSheetExtras({ keep: 1 }, { batteryInternal: false, packPieces: 1, clientNote: null, customs }).quote;
+    expect(written).toMatchObject({ keep: 1, declared_name_en: "Shaver", length_cm: 10, width_cm: 5, height_cm: 3, hs_code: null });
+    const untouched = withSheetExtras({ hs_code: "8510" }, { batteryInternal: false, packPieces: 1, clientNote: null }).quote;
+    expect(untouched.hs_code).toBe("8510");
   });
 });

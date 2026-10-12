@@ -327,9 +327,9 @@
     },
     "warehouse": {
       "title": "Warehouse orders",
-      "lead": "Latest ECCANG warehouse orders (pushed from Shopify or created with your API key): status, carrier, tracking and billed weight.",
+      "lead": "Latest ECCANG warehouse orders (imported from your Shopify store by the warehouse): status, carrier, tracking and billed weight.",
       "live": "Live · ECCANG",
-      "empty": "No order pushed to the warehouse yet.",
+      "empty": "No warehouse order yet.",
       "noTracking": "Awaiting tracking",
       "billedWeight": "billed weight {grams} g",
       "status": {
@@ -1708,7 +1708,7 @@
       "lifecycleTitle": "Winning / Declining rules",
       "lifecycleLead": "Thresholds used to classify this client’s products on every Shopify sync.",
       "carriersTitle": "Shipping lines",
-      "carriersLead": "Lines this client may use per product and per market (unchecked = hidden and never used), with a forced line per market if needed. Applied to every COGS and to orders sent to ECCANG; accepted quotes stay frozen."
+      "carriersLead": "Lines this client may use per product and per market (unchecked = hidden and never used), with a forced line per market if needed. Applied to every COGS; the ECCANG shipping rules must use the same line. Accepted quotes stay frozen."
     },
     "clientForms": {
       "tier": "Tier",
@@ -1745,7 +1745,7 @@
       "inbound": "Inbound receipts (ASN)",
       "syncError": "Sync error: {error}",
       "mapTitle": "Carrier → ECCANG method mapping",
-      "mapHelp": "Key = <code>Carrier</code> or <code>Carrier|Line</code> as written in the rate grid (e.g. <code>YunExpress|CHC</code>), or <code>default</code> / <code>default:FR</code>. Value = code returned by getShippingMethod. Global table (all clients). An order without a mapping is not pushed and triggers a notification.",
+      "mapHelp": "Key = <code>Carrier</code> or <code>Carrier|Line</code> as written in the rate grid (e.g. <code>YunExpress|CHC</code>), or <code>default</code> / <code>default:FR</code>. Value = code returned by getShippingMethod. Global table (all clients). Only used when the app pushes the orders itself (ECCANG_PUSH_ORDERS=1): by default ECCANG imports the Shopify orders and applies its own shipping rules.",
       "codePlaceholder": "ECCANG code",
       "removeRow": "Remove row",
       "addRow": "+ Row",
@@ -1922,7 +1922,17 @@
       "parcelPreview": "1-unit parcel: {content} g + packaging {packaging} g = {total} g",
       "packagingOverride": "Specific packaging",
       "packagingAuto": "Auto",
-      "packagingOverrideHint": "Empty = automatic by parcel size (Pricing). Fill only if this product has special packaging."
+      "packagingOverrideHint": "Empty = automatic by parcel size (Pricing). Fill only if this product has special packaging.",
+      "customsTitle": "Customs & warehouse (ECCANG)",
+      "customsIntro": "Sent to ECCANG with the product and printed on carrier labels. Declared value: {value} USD for every product.",
+      "declaredNameZh": "Declared name (Chinese)",
+      "declaredNameEn": "Declared name (English)",
+      "declaredNameEnHint": "50 characters max, generic name (not the brand)",
+      "hsCode": "HS code",
+      "lengthCm": "Packed length",
+      "widthCm": "Packed width",
+      "heightCm": "Packed height",
+      "dimensionsHint": "The 3 dimensions also count for the shipping volumetric weight."
     },
     "announced": {
       "title": "Prices announced to the client",

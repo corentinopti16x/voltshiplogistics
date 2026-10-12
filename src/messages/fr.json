@@ -327,9 +327,9 @@
     },
     "warehouse": {
       "title": "Commandes entrepôt",
-      "lead": "Dernières commandes de l'entrepôt ECCANG (poussées depuis Shopify ou créées via ta clé API) : statut, transporteur, suivi et poids facturé.",
+      "lead": "Dernières commandes de l'entrepôt ECCANG (importées de ta boutique Shopify par l'entrepôt) : statut, transporteur, suivi et poids facturé.",
       "live": "Temps réel · ECCANG",
-      "empty": "Aucune commande poussée à l'entrepôt pour l'instant.",
+      "empty": "Aucune commande à l'entrepôt pour l'instant.",
       "noTracking": "En attente de suivi",
       "billedWeight": "poids facturé {grams} g",
       "status": {
@@ -1708,7 +1708,7 @@
       "lifecycleTitle": "Règles Winning / Declining",
       "lifecycleLead": "Seuils utilisés pour classer les produits de ce client à chaque synchro Shopify.",
       "carriersTitle": "Lignes transport",
-      "carriersLead": "Lignes que ce client peut utiliser par produit et par marché (décochée = masquée et jamais utilisée), avec une ligne imposée par marché si besoin. Appliqué à chaque COGS et aux commandes envoyées à ECCANG ; les devis acceptés restent figés."
+      "carriersLead": "Lignes que ce client peut utiliser par produit et par marché (décochée = masquée et jamais utilisée), avec une ligne imposée par marché si besoin. Appliqué à chaque COGS ; les règles de transport ECCANG doivent utiliser la même ligne. Les devis acceptés restent figés."
     },
     "clientForms": {
       "tier": "Palier",
@@ -1745,7 +1745,7 @@
       "inbound": "Réceptions (ASN)",
       "syncError": "Erreur de synchro : {error}",
       "mapTitle": "Correspondance transporteur → méthode ECCANG",
-      "mapHelp": "Clé = <code>Transporteur</code> ou <code>Transporteur|Ligne</code> tel qu’écrit dans la grille tarifaire (ex. <code>YunExpress|CHC</code>), ou <code>default</code> / <code>default:FR</code>. Valeur = code renvoyé par getShippingMethod. Table globale (tous clients). Une commande sans correspondance n’est pas poussée et génère une notification.",
+      "mapHelp": "Clé = <code>Transporteur</code> ou <code>Transporteur|Ligne</code> tel qu’écrit dans la grille tarifaire (ex. <code>YunExpress|CHC</code>), ou <code>default</code> / <code>default:FR</code>. Valeur = code renvoyé par getShippingMethod. Table globale (tous clients). Utilisée seulement si l’app envoie elle-même les commandes (ECCANG_PUSH_ORDERS=1) : par défaut, ECCANG importe les commandes Shopify et applique ses propres règles de transport.",
       "codePlaceholder": "Code ECCANG",
       "removeRow": "Supprimer la ligne",
       "addRow": "+ Ligne",
@@ -1922,7 +1922,17 @@
       "parcelPreview": "Colis 1 unité : {content} g + emballage {packaging} g = {total} g",
       "packagingOverride": "Emballage spécifique",
       "packagingAuto": "Auto",
-      "packagingOverrideHint": "Vide = automatique selon la taille du colis (Tarification). À remplir seulement si ce produit a un emballage particulier."
+      "packagingOverrideHint": "Vide = automatique selon la taille du colis (Tarification). À remplir seulement si ce produit a un emballage particulier.",
+      "customsTitle": "Douane & entrepôt (ECCANG)",
+      "customsIntro": "Envoyé à ECCANG avec le produit et repris sur les étiquettes transporteur. Valeur déclarée : {value} USD pour tous les produits.",
+      "declaredNameZh": "Nom déclaré (chinois)",
+      "declaredNameEn": "Nom déclaré (anglais)",
+      "declaredNameEnHint": "50 caractères max., nom générique (pas la marque)",
+      "hsCode": "Code HS",
+      "lengthCm": "Longueur emballée",
+      "widthCm": "Largeur emballée",
+      "heightCm": "Hauteur emballée",
+      "dimensionsHint": "Les 3 dimensions comptent aussi pour le poids volumétrique du transport."
     },
     "announced": {
       "title": "Prix annoncés au client",

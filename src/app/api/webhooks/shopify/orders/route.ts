@@ -164,8 +164,8 @@ export async function POST(request: Request) {
       ]);
     }
 
-    // ECCANG: push new orders to the warehouse when the client is enabled (no-op otherwise).
-    // Flag-gated and never throws — the cache above is the source of truth for sales.
+    // ECCANG imports the Shopify orders itself: no-op unless ECCANG_PUSH_ORDERS=1 (old flow,
+    // app pushes each new order). Never throws — the cache above is the source of truth for sales.
     if (!previous) {
       await pushOrderIfEnabled(shop.client_id, order, { id: shop.id, domain: shop.shopify_domain });
     }

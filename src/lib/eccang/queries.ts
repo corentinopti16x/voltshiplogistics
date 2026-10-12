@@ -86,7 +86,10 @@ export async function listRecentEccangOrders(clientId: string, limit = 8): Promi
   return data ?? [];
 }
 
-/** Orders pushed more than `hours` ago that still have no tracking (admin attention). */
+/**
+ * Warehouse orders older than `hours` that still have no tracking (admin attention):
+ * pushed by the app (pushed_at) or imported by ECCANG from Shopify (first seen = created_at).
+ */
 export async function listStuckEccangOrders(hours = 48, limit = 10) {
   const admin = createAdminClient();
   const cutoff = new Date(Date.now() - hours * 3600000).toISOString();
@@ -96,8 +99,8 @@ export async function listStuckEccangOrders(hours = 48, limit = 10) {
     .is("tracking_no", null)
     .not("eccang_order_code", "is", null)
     .not("status", "in", "(D,X)")
-    .lt("pushed_at", cutoff)
-    .order("pushed_at", { ascending: true })
+    .or(`pushed_at.lt."${cutoff}",and(pushed_at.is.null,created_at.lt."${cutoff}")`)
+    .order("created_at", { ascending: true })
     .limit(limit)
     .returns<
       Array<{
@@ -105,7 +108,7 @@ export async function listStuckEccangOrders(hours = 48, limit = 10) {
         client_id: string;
         reference_no: string;
         status: string;
-        pushed_at: string;
+        pushed_at: string | null;
         clients: { name: string } | { name: string }[] | null;
       }>
     >();

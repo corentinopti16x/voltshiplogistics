@@ -28,6 +28,7 @@ import {
   orderReferenceNo,
   parseShippingMethodMap,
   resolveShippingMethod,
+  responseCode,
   type EccangAsnRecord,
   type EccangInventoryRow,
   type EccangOrderRecord,
@@ -42,6 +43,16 @@ import { createFulfillmentForOrder } from "@/lib/shopify/admin-api";
 import type { ProductRow } from "@/lib/products/types";
 
 export const ECCANG_SHIPPING_METHODS_KEY = "eccang_shipping_methods";
+
+/**
+ * ECCANG imports the Shopify orders itself (store bound in the OMS): its own carrier rules,
+ * labels, stock and Shopify fulfillment. The app only READS ECCANG (orders, billed weight,
+ * fees, tracking, stock) for dashboards and invoices. ECCANG_PUSH_ORDERS=1 brings back the
+ * old flow where the app pushes every new Shopify order (never both: duplicates).
+ */
+export function appPushesOrders() {
+  return process.env.ECCANG_PUSH_ORDERS === "1";
+}
 
 /** Order statuses that still need polling (no tracking / not shipped yet). */
 const OPEN_ORDER_STATUSES = ["pending", "C", "W", "H", "N", "P"];
@@ -277,7 +288,10 @@ export async function pushOrder(
   order: ShopifyOrderForEccang,
   shop: { id: string; domain: string },
   config?: ClientEccangConfig,
+  /** notify=false: automatic retry of a blocked order (the client was already told once). */
+  options: { notify?: boolean } = {},
 ) {
+  const shouldNotify = options.notify !== false;
   const cfg = config ?? (await getCredentialsForClient(clientId));
   const { credentials, warehouseCode } = requireEccangClient(cfg);
   const admin = createAdminClient();
@@ -300,37 +314,48 @@ export async function pushOrder(
   const { unknown, warehouse, pieces } = items.length
     ? await skuKnown(clientId, items.map((item) => item.product_sku))
     : { unknown: [], warehouse: new Map<string, string>(), pieces: new Map<string, number>() };
-  if (items.length === 0 || unknown.length > 0 || missing.length > 0) {
-    const detail = [...unknown, ...missing].join(", ") || "—";
-    await notify(clientId, "eccang_order_blocked", {
-      message: `Commande ${order.name ?? orderNumber} non poussée à l'entrepôt : SKU inconnu (${detail}).`,
-      referenceNo,
-      shopifyOrderId: String(order.id),
-      unknownSkus: [...unknown, ...missing],
-    });
-    return { referenceNo, skipped: "unknown_sku" as const, unknown: [...unknown, ...missing] };
-  }
-
-  const method = await pickShippingMethod(clientId, order, items);
-  if (!method.code) {
-    const label = method.carrier ? `${method.carrier}${method.lineName ? ` · ${method.lineName}` : ""}` : "aucun transporteur";
-    await admin.from("eccang_orders").upsert(
+  // A blocked order keeps the Shopify order (address + lines) so it can be pushed again once
+  // the SKU / shipping method is fixed (cron + « Synchroniser maintenant »).
+  const blocked = (error: string, extra: Record<string, unknown> = {}) =>
+    admin.from("eccang_orders").upsert(
       {
         client_id: clientId,
         shop_id: shop.id,
         shopify_order_id: String(order.id),
         reference_no: referenceNo,
         status: "pending",
-        error: `Aucune méthode d'expédition ECCANG pour ${label}.`,
+        error,
+        last_payload: { shopify_order: order, ...extra },
         updated_at: new Date().toISOString(),
       },
       { onConflict: "reference_no" },
     );
-    await notify(clientId, "eccang_order_blocked", {
-      message: `Commande ${order.name ?? orderNumber} non poussée : méthode d'expédition ECCANG non mappée (${label}).`,
-      referenceNo,
-      shopifyOrderId: String(order.id),
-    });
+
+  if (items.length === 0 || unknown.length > 0 || missing.length > 0) {
+    const detail = [...unknown, ...missing].join(", ") || "—";
+    await blocked(`SKU inconnu : ${detail}.`);
+    if (shouldNotify) {
+      await notify(clientId, "eccang_order_blocked", {
+        message: `Commande ${order.name ?? orderNumber} non poussée à l'entrepôt : SKU inconnu (${detail}).`,
+        referenceNo,
+        shopifyOrderId: String(order.id),
+        unknownSkus: [...unknown, ...missing],
+      });
+    }
+    return { referenceNo, skipped: "unknown_sku" as const, unknown: [...unknown, ...missing] };
+  }
+
+  const method = await pickShippingMethod(clientId, order, items);
+  if (!method.code) {
+    const label = method.carrier ? `${method.carrier}${method.lineName ? ` · ${method.lineName}` : ""}` : "aucun transporteur";
+    await blocked(`Aucune méthode d'expédition ECCANG pour ${label}.`);
+    if (shouldNotify) {
+      await notify(clientId, "eccang_order_blocked", {
+        message: `Commande ${order.name ?? orderNumber} non poussée : méthode d'expédition ECCANG non mappée (${label}).`,
+        referenceNo,
+        shopifyOrderId: String(order.id),
+      });
+    }
     return { referenceNo, skipped: "no_shipping_method" as const };
   }
 
@@ -344,8 +369,8 @@ export async function pushOrder(
   const now = new Date().toISOString();
   try {
     const response = await callEccang<unknown>(credentials, "createOrder", payload);
-    const orderCode = typeof response.order_code === "string" ? response.order_code : null;
-    const tracking = typeof response.tracking_no === "string" && response.tracking_no.trim() ? response.tracking_no.trim() : null;
+    const orderCode = responseCode(response, "order_code");
+    const tracking = responseCode(response, "tracking_no");
     const { error } = await admin.from("eccang_orders").upsert(
       {
         client_id: clientId,
@@ -376,6 +401,7 @@ export async function pushOrder(
         status: "pending",
         shipping_method: method.code,
         error: message,
+        last_payload: { shopify_order: order },
         updated_at: now,
       },
       { onConflict: "reference_no" },
@@ -384,13 +410,56 @@ export async function pushOrder(
   }
 }
 
-/** Hook for the Shopify orders webhook. Never throws. */
+/** Blocked orders older than this are left alone (handled by hand). */
+const RETRY_WINDOW_DAYS = 14;
+
+/**
+ * Orders that were never accepted by ECCANG (unknown SKU, unmapped shipping method, API
+ * error) are pushed again with the Shopify order kept on the row. No new notification.
+ */
+export async function retryBlockedOrders(clientId: string, config?: ClientEccangConfig) {
+  const cfg = config ?? (await getCredentialsForClient(clientId));
+  const admin = createAdminClient();
+  const since = new Date(Date.now() - RETRY_WINDOW_DAYS * 86_400_000).toISOString();
+  const { data: rows } = await admin
+    .from("eccang_orders")
+    .select("reference_no, shop_id, last_payload")
+    .eq("client_id", clientId)
+    .eq("status", "pending")
+    .is("eccang_order_code", null)
+    .gte("created_at", since)
+    .order("created_at")
+    .limit(100);
+  const shopIds = [...new Set((rows ?? []).map((row) => row.shop_id).filter((id): id is string => !!id))];
+  const { data: shops } = shopIds.length
+    ? await admin.from("shops").select("id, shopify_domain").in("id", shopIds)
+    : { data: [] as Array<{ id: string; shopify_domain: string }> };
+  const domainOf = new Map((shops ?? []).map((shop) => [shop.id, shop.shopify_domain]));
+  let pushed = 0;
+  let stillBlocked = 0;
+  for (const row of rows ?? []) {
+    const payload = row.last_payload as { shopify_order?: ShopifyOrderForEccang } | null;
+    const order = payload?.shopify_order;
+    const domain = row.shop_id ? domainOf.get(row.shop_id) : undefined;
+    if (!order || !row.shop_id || !domain) continue;
+    try {
+      const result = await pushOrder(clientId, order, { id: row.shop_id, domain }, cfg, { notify: false });
+      if (result.skipped) stillBlocked += 1;
+      else pushed += 1;
+    } catch {
+      stillBlocked += 1;
+    }
+  }
+  return { pushed, stillBlocked };
+}
+
+/** Hook for the Shopify orders webhook (off unless ECCANG_PUSH_ORDERS=1). Never throws. */
 export async function pushOrderIfEnabled(
   clientId: string,
   order: ShopifyOrderForEccang & { cancelled_at?: string | null },
   shop: { id: string; domain: string },
 ) {
-  if (order.cancelled_at) return null;
+  if (!appPushesOrders() || order.cancelled_at) return null;
   const { active, config } = await isEccangActive(clientId);
   if (!active || !config) return null;
   try {
@@ -503,7 +572,10 @@ export async function pullPendingOrders(clientId: string, config?: ClientEccangC
   return result;
 }
 
-// --- Orders created by the client himself (his own ECCANG API key) --------------------
+// --- Orders ECCANG created itself (Shopify store bound in the OMS, UI, client API key) ---
+
+/** getOrderList pages of 100 per run (7 days of a ~600 orders/day client fits). */
+const MAX_ORDER_LIST_PAGES = 60;
 
 async function upsertExternalOrders(clientId: string, records: EccangOrderRecord[]) {
   const rows = records
@@ -524,8 +596,8 @@ async function upsertExternalOrders(clientId: string, records: EccangOrderRecord
 /**
  * getOrderList (modified in the last `days`) → every order of this client's ECCANG
  * account. Orders we pushed (VS-…) are refreshed by pullPendingOrders; the others —
- * created by the client through his own API key or the ECCANG UI — are stored with
- * source "external" so Voltship sees and bills them. First run looks back 90 days.
+ * imported by ECCANG from the client's Shopify store, or created in the ECCANG UI / with
+ * the client's API key — are stored with source "external" so Voltship sees and bills them.
  */
 export async function pullAllOrders(clientId: string, config?: ClientEccangConfig, options: { days?: number } = {}) {
   const cfg = config ?? (await getCredentialsForClient(clientId));
@@ -538,11 +610,15 @@ export async function pullAllOrders(clientId: string, config?: ClientEccangConfi
       .select("id", { count: "exact", head: true })
       .eq("client_id", clientId)
       .eq("source", "external");
-    days = count ? 7 : 90;
+    // Every Shopify order now lands here: short window every 15 min, a 7-day catch-up once
+    // a night (01:00-01:14 UTC), 90 days on the very first run.
+    const now = new Date();
+    const nightly = now.getUTCHours() === 1 && now.getUTCMinutes() < 15;
+    days = count ? (nightly ? 7 : 2) : 90;
   }
   const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 19).replace("T", " ");
   const records: EccangOrderRecord[] = [];
-  for (let page = 1; page <= 20; page += 1) {
+  for (let page = 1; page <= MAX_ORDER_LIST_PAGES; page += 1) {
     const response = await callEccang<EccangOrderRecord[]>(credentials, "getOrderList", {
       page,
       pageSize: 100,
@@ -652,7 +728,7 @@ export async function createAsnForRestock(
     items: [{ product_sku: product.sku, quantity: qty, box_no: 1 }],
   };
   const response = await callEccang<unknown>(credentials, "createAsn", payload);
-  const receivingCode = typeof response.receiving_code === "string" ? response.receiving_code : null;
+  const receivingCode = responseCode(response, "receiving_code");
   const now = new Date().toISOString();
   const { error } = await admin.from("inbound_cache").upsert(
     {
@@ -695,10 +771,15 @@ export async function createAsnIfEnabled(clientId: string, productId: string, qt
 export async function syncClient(clientId: string) {
   const admin = createAdminClient();
   const cfg = await getCredentialsForClient(clientId);
-  const summary = { inventory: 0, orders: 0, externalOrders: 0, asns: 0, errors: [] as string[] };
+  const summary = { inventory: 0, orders: 0, externalOrders: 0, asns: 0, retried: 0, errors: [] as string[] };
   try {
     requireEccangClient(cfg);
     const steps: Array<[string, () => Promise<void>]> = [
+      ...(appPushesOrders()
+        ? ([
+            ["blocked orders", async () => void (summary.retried = (await retryBlockedOrders(clientId, cfg)).pushed)],
+          ] as Array<[string, () => Promise<void>]>)
+        : []),
       ["inventory", async () => void (summary.inventory = (await pullInventory(clientId, cfg)).skus)],
       ["orders", async () => void (summary.orders = (await pullPendingOrders(clientId, cfg)).polled)],
       ["external orders", async () => void (summary.externalOrders = (await pullAllOrders(clientId, cfg)).imported)],

@@ -182,7 +182,7 @@
       "lifecycleTitle": "Winning / Declining 规则",
       "lifecycleLead": "每次 Shopify 同步时用于对该客户商品进行分类的阈值。",
       "carriersTitle": "物流渠道",
-      "carriersLead": "该客户可按商品和市场使用的渠道（未勾选 = 隐藏且从不使用），必要时可为每个市场指定固定渠道。适用于每次 COGS 计算及推送至 ECCANG 的订单；已接受的报价保持不变。"
+      "carriersLead": "该客户可按商品和市场使用的渠道（未勾选 = 隐藏且从不使用），必要时可为每个市场指定固定渠道。适用于每次 COGS 计算；易仓的物流规则需使用相同渠道。已接受的报价保持不变。"
     },
     "clientForms": {
       "tier": "等级",
@@ -219,7 +219,7 @@
       "inbound": "入库单（ASN）",
       "syncError": "同步错误：{error}",
       "mapTitle": "物流商 → ECCANG 运输方式对应关系",
-      "mapHelp": "键 = 价目表中所写的 <code>物流商</code> 或 <code>物流商|渠道</code>（例如 <code>YunExpress|CHC</code>），或 <code>default</code> / <code>default:FR</code>。值 = getShippingMethod 返回的代码。全局表（适用于所有客户）。无对应关系的订单不会推送，并会生成通知。",
+      "mapHelp": "键 = 价目表中所写的 <code>物流商</code> 或 <code>物流商|渠道</code>（例如 <code>YunExpress|CHC</code>），或 <code>default</code> / <code>default:FR</code>。值 = getShippingMethod 返回的代码。全局表（适用于所有客户）。仅在由本系统推送订单时使用（ECCANG_PUSH_ORDERS=1）：默认由易仓直接导入 Shopify 订单并按其物流规则选择渠道。",
       "codePlaceholder": "ECCANG 代码",
       "removeRow": "删除此行",
       "addRow": "+ 添加行",
@@ -1024,7 +1024,17 @@
       "parcelPreview": "1 件包裹：{content} g + 包装 {packaging} g = {total} g",
       "packagingOverride": "特殊包装",
       "packagingAuto": "自动",
-      "packagingOverrideHint": "留空 = 按包裹大小自动计算（定价设置）。仅当该产品有特殊包装时填写。"
+      "packagingOverrideHint": "留空 = 按包裹大小自动计算（定价设置）。仅当该产品有特殊包装时填写。",
+      "customsTitle": "报关与仓库（易仓）",
+      "customsIntro": "随产品同步到易仓，并打印在物流面单上。申报价值：所有产品 {value} 美元。",
+      "declaredNameZh": "中文申报名",
+      "declaredNameEn": "英文申报名",
+      "declaredNameEnHint": "最多 50 个字符，用通用名称（不写品牌）",
+      "hsCode": "海关编码",
+      "lengthCm": "包装长",
+      "widthCm": "包装宽",
+      "heightCm": "包装高",
+      "dimensionsHint": "三个尺寸也用于计算物流体积重。"
     },
     "title": "采购待办队列",
     "soon": "按请求时间从早到晚处理。填写报价字段后，向客户发送最终 COGS（商品成本）。",
