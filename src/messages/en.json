@@ -1877,7 +1877,7 @@
     "skuFix": {
       "kicker": "Sourcing",
       "title": "SKUs to fix",
-      "lead": "Shopify variants with no SKU, or with another item's SKU (duplicated pages). ECCANG recognises products by SKU only: these orders would not find their product, or the wrong one. Tick, check the proposed SKU, and the app writes it into the client's store. Orders already placed keep their old SKU.",
+      "lead": "Shopify variants with no SKU, or with another item's SKU (duplicated pages). ECCANG matches products by SKU only. The proposed SKU is neutral: destination country + code + option (e.g. US-P3X8D, FR-H4N6T-OR), never the client's name or what the product is, since it can be printed on the label. Past orders keep their old SKU.",
       "countSold": "{count} sold in the last 90 days",
       "countTotal": "{count} in total",
       "showAll": "Also show unsold",
@@ -1897,8 +1897,10 @@
       "sharedWith": "Also on: {titles}",
       "alreadyFixed": "Already fixed ({sku})",
       "write": "Write to Shopify",
-      "writeHint": "Only ticked rows are written. « Another item's SKU » rows are not ticked by default: if it is the same item (same device on another page), leave them.",
-      "result": "{done} SKUs written to Shopify, {failed} failed."
+      "writeHint": "Only ticked lines are written. Nothing is pre-ticked until a client is selected. “Another item's SKU” lines and service lines (insurance, shipping) are not ticked by default.",
+      "result": "{done} SKUs written to Shopify, {failed} failed.",
+      "pickClient": "Pick a client to pre-tick their lines: only write for clients who agreed.",
+      "service": "Service line (not a product): leave it without a SKU."
     }
   },
   "impersonate": {

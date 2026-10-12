@@ -949,7 +949,7 @@
     "skuFix": {
       "kicker": "采购寻源",
       "title": "待修正SKU",
-      "lead": "没有SKU，或者用了别的产品SKU的Shopify变体（客户复制页面造成）。易仓只按SKU识别产品：这些订单会找不到产品或匹配错产品。勾选并检查建议的SKU，系统会写入客户店铺。已下的订单保留旧SKU。",
+      "lead": "没有SKU、或使用了其他产品SKU的Shopify变体（复制的页面）。易仓只按SKU识别产品。建议的SKU是中性的：目的国 + 编码 + 选项（例如 US-P3X8D、FR-H4N6T-OR），不含客户名称，也不含产品内容，因为SKU可能会打印在面单上。已下的订单保留旧SKU。",
       "countSold": "近90天有销量 {count} 个",
       "countTotal": "共 {count} 个",
       "showAll": "也显示无销量的",
@@ -969,8 +969,10 @@
       "sharedWith": "也用于：{titles}",
       "alreadyFixed": "已修正（{sku}）",
       "write": "写入Shopify",
-      "writeHint": "只写入勾选的行。「别的产品的SKU」默认不勾选：如果是同一个产品（另一个页面的同款），保持不变。",
-      "result": "已写入 {done} 个SKU，失败 {failed} 个。"
+      "writeHint": "只写入勾选的行。未选择客户时不会预先勾选。「其他产品的SKU」和服务类行（运费险、运费）默认不勾选。",
+      "result": "已写入 {done} 个SKU，失败 {failed} 个。",
+      "pickClient": "请先选择客户再预先勾选：只为已同意的客户写入。",
+      "service": "服务类行（不是产品）：不需要SKU。"
     }
   },
   "orderAlerts": {
