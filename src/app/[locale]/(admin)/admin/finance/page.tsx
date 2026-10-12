@@ -8,6 +8,7 @@ import { isValidDateString, weekStartOfDate, type FinanceWeek } from "@/lib/fina
 import { formatAmount, formatDate, formatNumber } from "@/lib/format";
 import { ConfidentialTag, KpiTile, SignedAmount } from "@/components/admin/margin-ui";
 import { WeeklyResultChart } from "@/components/admin/finance-chart";
+import { ResultsTabs } from "@/components/admin/section-tabs";
 
 // Confidential: voltship_admin only (admin layout + loader both enforce it).
 export const dynamic = "force-dynamic";
@@ -50,6 +51,7 @@ export default async function AdminFinancePage({
 
   return (
     <div>
+      <ResultsTabs active="week" />
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-[11px] font-semibold tracking-[0.2em] text-[var(--gold)] uppercase">{t("kicker")}</p>
         <ConfidentialTag />
