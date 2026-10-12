@@ -7,6 +7,7 @@ import { loadWeeklyFinance } from "@/lib/finance/weekly";
 import { formatAmount, formatNumber } from "@/lib/format";
 import { loadPricingTiers } from "@/lib/clients/pricing-tier";
 import { pricingTierLabel } from "@/lib/domain/pricing-tiers";
+import { countRequiredTodo } from "@/lib/products/todo";
 
 type RecentProduct = {
   id: string;
@@ -61,6 +62,8 @@ export default async function AdminDashboardPage() {
     eccangErrorsResult,
     stuckOrders,
     finance,
+    openAlertsResult,
+    todoCount,
   ] = await Promise.all([
     admin.from("clients").select("id", { count: "exact", head: true }),
     admin.from("profiles").select("id", { count: "exact", head: true }),
@@ -131,6 +134,8 @@ export default async function AdminDashboardPage() {
     listStuckEccangOrders(48, 10).catch(() => []),
     // Confidential tile (voltship_admin only — the layout already enforces it); never blocks the page.
     loadWeeklyFinance({ count: 1 }).catch(() => null),
+    admin.from("order_alerts").select("id", { count: "exact", head: true }).eq("status", "open"),
+    countRequiredTodo().catch(() => 0),
   ]);
   const currentWeek = finance?.weeks[finance.weeks.length - 1] ?? null;
 
@@ -175,6 +180,17 @@ export default async function AdminDashboardPage() {
           {t("newClient")}
         </Link>
       </div>
+
+      <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-5">
+        <h2 className="text-sm font-semibold">{t("todoNow.title")}</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <TodoTile href="/admin/alerts" label={t("todoNow.alerts")} count={openAlertsResult.count ?? 0} />
+          <TodoTile href="/admin/achats" label={t("todoNow.achats")} hint={t("todoNow.achatsHint")} />
+          <TodoTile href="#restock" label={t("todoNow.restock")} count={restockAlerts.length} />
+          <TodoTile href="/admin/todo" label={t("todoNow.todo")} count={todoCount} />
+          <TodoTile href="#systeme" label={t("todoNow.system")} count={attentionCount} />
+        </div>
+      </section>
 
       <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Link
@@ -225,7 +241,7 @@ export default async function AdminDashboardPage() {
         />
       </section>
 
-      <section className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--card)]">
+      <section id="restock" className="mt-8 rounded-2xl border border-[var(--line)] bg-[var(--card)]">
         <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-4">
           <div>
             <h2 className="text-sm font-semibold">{t("restock.title")}</h2>
@@ -302,7 +318,7 @@ export default async function AdminDashboardPage() {
           )}
         </div>
 
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--card)] p-5">
+        <div id="systeme" className="rounded-2xl border border-[var(--line)] bg-[var(--card)] p-5">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold">{t("attention.title")}</h2>
             <span
@@ -486,6 +502,35 @@ function HealthRow({
   ) : (
     <Link href={href} className={className}>
       {content}
+    </Link>
+  );
+}
+
+function TodoTile({ href, label, count, hint }: { href: string; label: string; count?: number; hint?: string }) {
+  const alert = (count ?? 0) > 0;
+  const className = `flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm transition hover:-translate-y-0.5 ${
+    alert ? "border-[var(--rust-ink)]/30 bg-[var(--rust-soft)]" : "border-[var(--line)] bg-[var(--bg)]"
+  }`;
+  const body = (
+    <>
+      <span>
+        <span className="font-medium">{label}</span>
+        {hint ? <span className="block text-xs text-[var(--muted)]">{hint}</span> : null}
+      </span>
+      {count != null ? (
+        <span className={`font-display tabular text-2xl ${alert ? "text-[var(--rust-ink)]" : "text-[var(--muted)]"}`}>{count}</span>
+      ) : (
+        <span aria-hidden className="text-[var(--muted)]">→</span>
+      )}
+    </>
+  );
+  return href.startsWith("#") ? (
+    <a href={href} className={className}>
+      {body}
+    </a>
+  ) : (
+    <Link href={href} className={className}>
+      {body}
     </Link>
   );
 }
