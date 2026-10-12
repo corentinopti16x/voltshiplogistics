@@ -10,6 +10,7 @@ export const ORDER_ALERT_REASONS = [
   "zero_total",
   "discount_abuse",
   "quantity_spike",
+  "gift_abuse",
 ] as const;
 export type OrderAlertReason = (typeof ORDER_ALERT_REASONS)[number];
 
@@ -17,6 +18,14 @@ export type OrderAlertReason = (typeof ORDER_ALERT_REASONS)[number];
 export const DISCOUNT_ABUSE_SHARE = 0.6;
 /** 10 units or more in one order (Voltship stores average ~1.1 unit per order). */
 export const QUANTITY_SPIKE_UNITS = 10;
+
+/** Free gift line: « FREE », « GRATIS », « offert », « cadeau »… in its title, or a 0 € line. */
+const GIFT_TITLE = /\b(free|gratis|gratuit|gratuite|gratuits|offert|offerte|offerts|cadeau|cadeaux|gift|regalo)\b/i;
+
+export function isGiftLine(line: { title?: string | null; name?: string | null; price?: unknown }) {
+  if (GIFT_TITLE.test(`${line.title ?? ""} ${line.name ?? ""}`)) return true;
+  return amount(line.price) === 0;
+}
 
 export const ORDER_ALERT_LABELS: Record<OrderAlertReason, { title: string; help: string }> = {
   price_anomaly: {
@@ -35,6 +44,10 @@ export const ORDER_ALERT_LABELS: Record<OrderAlertReason, { title: string; help:
     title: "Quantité inhabituelle",
     help: "10 articles ou plus dans une seule commande.",
   },
+  gift_abuse: {
+    title: "Cadeau en trop",
+    help: "Article offert en quantité 2 ou plus, ou plus d'articles offerts que de produits payés : la quantité du cadeau est à bloquer à 1 dans la boutique. On expédie la quantité prévue par l'offre.",
+  },
 };
 
 export type OrderAnomalyInput = {
@@ -46,6 +59,8 @@ export type OrderAnomalyInput = {
   discounts?: unknown;
   discountCodes?: Array<{ code?: string | null } | string> | null;
   units: number;
+  /** Order lines, to spot free gifts taken several times. */
+  lines?: Array<{ title?: string | null; name?: string | null; price?: unknown; quantity?: unknown }> | null;
 };
 
 export type OrderAnomalyDetails = {
@@ -55,6 +70,9 @@ export type OrderAnomalyDetails = {
   discount_pct: number | null;
   discount_codes: string[];
   units: number;
+  /** Units of free gift lines / of paid lines (when the lines were given). */
+  gift_units?: number;
+  paid_units?: number;
 };
 
 function amount(value: unknown) {
@@ -86,6 +104,24 @@ export function detectOrderAnomalies(input: OrderAnomalyInput): {
   }
   if (units >= QUANTITY_SPIKE_UNITS) reasons.push("quantity_spike");
 
+  let giftUnits: number | undefined;
+  let paidUnits: number | undefined;
+  if (input.lines && input.lines.length > 0) {
+    giftUnits = 0;
+    paidUnits = 0;
+    let biggestGift = 0;
+    for (const line of input.lines) {
+      const quantity = Math.max(0, Number(line.quantity) || 0);
+      if (isGiftLine(line)) {
+        giftUnits += quantity;
+        biggestGift = Math.max(biggestGift, quantity);
+      } else {
+        paidUnits += quantity;
+      }
+    }
+    if (giftUnits > 0 && (biggestGift >= 2 || giftUnits > paidUnits)) reasons.push("gift_abuse");
+  }
+
   return {
     reasons,
     details: {
@@ -95,6 +131,7 @@ export function detectOrderAnomalies(input: OrderAnomalyInput): {
       discount_pct: discountPct,
       discount_codes: codes,
       units,
+      ...(giftUnits != null ? { gift_units: giftUnits, paid_units: paidUnits } : {}),
     },
   };
 }

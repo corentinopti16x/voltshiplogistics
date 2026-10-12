@@ -122,6 +122,18 @@ export async function loadAchats(input: { since: string; clientId?: string | nul
     if (ref) remember(`ref:${row.client_id}:${ref}`, state, row.tracking_no);
   }
 
+  // Open « Commandes à vérifier » alerts (promo abuse, extra free gift…): to look at before sending.
+  const alertRows = await allRows<{ shop_id: string; shopify_order_id: string }>((from, to) => {
+    let query = admin
+      .from("order_alerts")
+      .select("shop_id, shopify_order_id")
+      .eq("status", "open")
+      .gte("placed_at", `${input.since}T00:00:00Z`);
+    if (input.clientId) query = query.eq("client_id", input.clientId);
+    return query.order("id").range(from, to);
+  }).catch(() => [] as Array<{ shop_id: string; shopify_order_id: string }>);
+  const openAlerts = new Set(alertRows.map((row) => `${row.shop_id}:${row.shopify_order_id}`));
+
   const pending: PendingOrder[] = [];
   const sold = new Map<string, { clientId: string; clientName: string; sku: string; title: string | null; units: number }>();
   for (const order of orders) {
@@ -159,7 +171,8 @@ export async function loadAchats(input: { since: string; clientId?: string | nul
       units,
       unitsWithoutSku: Math.max(0, (unpacked.units ?? units) - units),
       partial: unpacked.shipping?.status === "partial",
-      flagged: unpacked.suspicious && unpacked.review !== "legit",
+      flagged:
+        (unpacked.suspicious && unpacked.review !== "legit") || openAlerts.has(`${order.shop_id}:${order.shopify_order_id}`),
       eccang: eccang?.state ?? "none",
       eccangTracking: eccang?.tracking ?? null,
     });
