@@ -6,6 +6,7 @@ import { Link, usePathname } from "@/i18n/routing";
 
 const items = [
   { href: "/admin", key: "dashboard" },
+  { href: "/admin/achats", key: "achats" },
   { href: "/admin/clients", key: "clients" },
   { href: "/admin/pricing", key: "pricing" },
   { href: "/admin/margin", key: "margin" },
