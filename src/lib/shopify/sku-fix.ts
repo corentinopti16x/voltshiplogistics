@@ -3,7 +3,8 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchVariantDetails, updateVariantSkus } from "./admin-api";
 import { isFallbackSku } from "./sku";
-import { clientSkuCode, proposeSkus, skuError, type SkuFixKind } from "./sku-fix-core";
+import { isServiceLine, proposeSkus, skuError, type SkuFixKind } from "./sku-fix-core";
+import { parseShopMarkets } from "./shop-markets";
 import { refreshClientEffectiveSkus } from "./sku-resolve";
 import { accessTokenForConnectedShop } from "./sync";
 
@@ -12,6 +13,7 @@ type ShopRow = {
   client_id: string;
   shopify_domain: string;
   access_token_encrypted: string | null;
+  market: string | null;
   clients: { name: string; code: string | null } | Array<{ name: string; code: string | null }>;
 };
 
@@ -51,6 +53,8 @@ export type SkuFixItem = {
   proposal: string;
   /** Fixed on Shopify since the last sync: nothing to do. */
   alreadyFixed: boolean;
+  /** Shipping insurance, free shipping…: not goods, not ticked by default. */
+  service: boolean;
 };
 
 export type SkuFixList = {
@@ -80,10 +84,27 @@ async function loadShops() {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("shops")
-    .select("id, client_id, shopify_domain, access_token_encrypted, clients!inner(name, code)")
+    .select("id, client_id, shopify_domain, access_token_encrypted, market, clients!inner(name, code)")
     .eq("status", "active");
   if (error) throw error;
   return (data ?? []) as ShopRow[];
+}
+
+/** Every SKU in use (all clients, all stores, Voltship products), uppercase. */
+async function loadAllSkus() {
+  const admin = createAdminClient();
+  const variants = await pageAll<{ shopify_sku: string | null }>((from, to) =>
+    admin.from("shopify_products_cache").select("shopify_sku").not("shopify_sku", "is", null).order("id").range(from, to),
+  );
+  const products = await pageAll<{ sku: string | null }>((from, to) =>
+    admin.from("products_cache").select("sku").not("sku", "is", null).order("id").range(from, to),
+  );
+  const out = new Set<string>();
+  for (const row of [...variants.map((v) => v.shopify_sku), ...products.map((p) => p.sku)]) {
+    const sku = row?.trim().toUpperCase();
+    if (sku && !isFallbackSku(sku)) out.add(sku);
+  }
+  return out;
 }
 
 /** Variants that still sold in the last 90 days and need a SKU fix (badge count). */
@@ -149,40 +170,30 @@ export async function loadSkuFixList(options: { clientId?: string | null; all?: 
     }
   }
 
-  // Real SKUs already used by the client (to avoid proposing them), and who uses them.
-  const takenByClient = new Map<string, Set<string>>();
+  // Who uses each real SKU of the client (to show the clash).
   const usersOfSku = new Map<string, Set<string>>();
   for (const row of catalogue) {
     const raw = row.shopify_sku?.trim();
     if (!raw) continue;
-    const set = takenByClient.get(row.client_id) ?? new Set<string>();
-    set.add(raw.toUpperCase());
-    takenByClient.set(row.client_id, set);
     const key = `${row.client_id}|${raw.toUpperCase()}`;
     const users = usersOfSku.get(key) ?? new Set<string>();
     users.add(row.title);
     usersOfSku.set(key, users);
   }
 
-  const proposals = new Map<string, string>();
-  for (const clientId of clientIds) {
-    const shop = shops.find((candidate) => candidate.client_id === clientId)!;
-    const client = clientOf(shop);
-    const code = clientSkuCode(client?.code, client?.name ?? "CLI");
-    const inputs = listed
-      .filter((row) => row.client_id === clientId)
-      .map((row) => {
-        const detail = live.get(`${row.shop_id}:${row.shopify_variant_id}`);
-        return {
-          key: row.id,
-          clientCode: code,
-          groupKey: row.imported_product_id ?? `p:${row.shop_id}:${row.shopify_product_id}`,
-          productTitle: detail?.productTitle ?? row.title,
-          variantTitle: detail?.variantTitle ?? null,
-        };
-      });
-    for (const [key, sku] of proposeSkus(inputs, takenByClient.get(clientId) ?? [])) proposals.set(key, sku);
-  }
+  // Neutral proposals (country + opaque code + option), never a SKU already used anywhere.
+  const taken = await loadAllSkus();
+  const inputs = listed.map((row) => {
+    const shop = shopById.get(row.shop_id)!;
+    const detail = live.get(`${row.shop_id}:${row.shopify_variant_id}`);
+    return {
+      key: row.id,
+      country: parseShopMarkets(shop.market)[0] ?? "",
+      groupKey: row.imported_product_id ?? `p:${row.shop_id}:${row.shopify_product_id}`,
+      variantTitle: detail?.variantTitle ?? null,
+    };
+  });
+  const proposals = proposeSkus(inputs, taken);
 
   const items: SkuFixItem[] = listed.map((row) => {
     const shop = shopById.get(row.shop_id)!;
@@ -210,6 +221,7 @@ export async function loadSkuFixList(options: { clientId?: string | null; all?: 
       proposal: proposals.get(row.id) ?? "",
       // The SKU was changed on Shopify by someone else and no longer clashes: next sync fixes it.
       alreadyFixed: Boolean(detail && currentSku && currentSku !== (row.shopify_sku?.trim() || null) && sharedWith.length === 0),
+      service: isServiceLine(detail?.productTitle ?? row.title),
     };
   });
   return { items, clients, total: broken.length, sold, liveErrors };
@@ -247,31 +259,29 @@ export async function applySkuFixes(picks: Array<{ key: string; sku: string }>):
     else valid.push(row);
   }
 
-  // A SKU must not land on two different items of the same client (same Voltship product is fine).
+  // A SKU must not land on two different items, whatever the client (same Voltship product is fine).
   const owners = new Map<string, Set<string>>();
   for (const row of valid) {
-    const key = `${row.client_id}|${wanted.get(row.id)!.toUpperCase()}`;
+    const key = wanted.get(row.id)!.toUpperCase();
     const set = owners.get(key) ?? new Set<string>();
     set.add(row.imported_product_id ?? `p:${row.shop_id}:${row.shopify_product_id}`);
     owners.set(key, set);
   }
-  const clientIds = [...new Set(valid.map((row) => row.client_id))];
-  const existing = await pageAll<{ client_id: string; shopify_sku: string | null; imported_product_id: string | null; shop_id: string; shopify_product_id: string }>((from, to) =>
+  const existing = await pageAll<{ shopify_sku: string | null; imported_product_id: string | null; shop_id: string; shopify_product_id: string }>((from, to) =>
     admin
       .from("shopify_products_cache")
-      .select("client_id, shopify_sku, imported_product_id, shop_id, shopify_product_id")
-      .in("client_id", clientIds.length ? clientIds : ["00000000-0000-0000-0000-000000000000"])
+      .select("shopify_sku, imported_product_id, shop_id, shopify_product_id")
       .not("shopify_sku", "is", null)
       .order("id")
       .range(from, to),
   );
   for (const row of existing) {
-    const key = `${row.client_id}|${(row.shopify_sku ?? "").trim().toUpperCase()}`;
+    const key = (row.shopify_sku ?? "").trim().toUpperCase();
     const set = owners.get(key);
     if (set) set.add(row.imported_product_id ?? `p:${row.shop_id}:${row.shopify_product_id}`);
   }
   const accepted = valid.filter((row) => {
-    const clash = (owners.get(`${row.client_id}|${wanted.get(row.id)!.toUpperCase()}`)?.size ?? 0) > 1;
+    const clash = (owners.get(wanted.get(row.id)!.toUpperCase())?.size ?? 0) > 1;
     if (clash) result.failed.push({ title: row.title, error: `SKU « ${wanted.get(row.id)} » déjà utilisé par un autre produit` });
     return !clash;
   });

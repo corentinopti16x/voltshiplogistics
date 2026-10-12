@@ -85,6 +85,10 @@ export default async function AdminSkuFixPage({
         ))}
       </div>
 
+      {!query.client && list.items.length > 0 ? (
+        <p className="rounded-xl bg-[var(--card)] px-4 py-3 text-[13px] text-[var(--muted)]">{t("pickClient")}</p>
+      ) : null}
+
       {list.liveErrors.length ? (
         <p className="rounded-xl border border-[var(--rust-soft)] px-4 py-3 text-[13px] text-[var(--rust-ink)]">
           {t("liveError")} {list.liveErrors.join(" · ")}
@@ -119,7 +123,13 @@ export default async function AdminSkuFixPage({
                         type="checkbox"
                         name="pick"
                         value={item.key}
-                        defaultChecked={item.kind === "missing" && !item.alreadyFixed && item.units90d > 0}
+                        defaultChecked={
+                          Boolean(query.client) &&
+                          item.kind === "missing" &&
+                          !item.alreadyFixed &&
+                          !item.service &&
+                          item.units90d > 0
+                        }
                         disabled={item.alreadyFixed}
                         className="mt-1 h-4 w-4"
                       />
@@ -133,6 +143,7 @@ export default async function AdminSkuFixPage({
                             {item.variantTitle ? `${item.variantTitle} · ` : ""}
                             {item.clientName} · {item.shopDomain.replace(".myshopify.com", "")}
                           </p>
+                          {item.service ? <p className="text-[11px] text-[var(--muted)]">{t("service")}</p> : null}
                         </div>
                       </div>
                     </td>
