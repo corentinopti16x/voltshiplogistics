@@ -3,7 +3,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchVariantDetails, updateVariantSkus } from "./admin-api";
 import { isFallbackSku } from "./sku";
-import { isServiceLine, proposeSkus, skuError, type SkuFixKind } from "./sku-fix-core";
+import { isServiceLine, proposeSkus, skuError, type SkuFixKind, type TakenSku } from "./sku-fix-core";
 import { parseShopMarkets } from "./shop-markets";
 import { refreshClientEffectiveSkus } from "./sku-resolve";
 import { accessTokenForConnectedShop } from "./sync";
@@ -90,19 +90,29 @@ async function loadShops() {
   return (data ?? []) as ShopRow[];
 }
 
-/** Every SKU in use (all clients, all stores, Voltship products), uppercase. */
-async function loadAllSkus() {
+/** Every SKU in use (all clients, all stores, Voltship products), with the item that owns it. */
+async function loadAllSkus(): Promise<TakenSku[]> {
   const admin = createAdminClient();
-  const variants = await pageAll<{ shopify_sku: string | null }>((from, to) =>
-    admin.from("shopify_products_cache").select("shopify_sku").not("shopify_sku", "is", null).order("id").range(from, to),
+  const variants = await pageAll<{ shopify_sku: string | null; imported_product_id: string | null; shop_id: string; shopify_product_id: string }>(
+    (from, to) =>
+      admin
+        .from("shopify_products_cache")
+        .select("shopify_sku, imported_product_id, shop_id, shopify_product_id")
+        .not("shopify_sku", "is", null)
+        .order("id")
+        .range(from, to),
   );
-  const products = await pageAll<{ sku: string | null }>((from, to) =>
-    admin.from("products_cache").select("sku").not("sku", "is", null).order("id").range(from, to),
+  const products = await pageAll<{ id: string; sku: string | null }>((from, to) =>
+    admin.from("products_cache").select("id, sku").not("sku", "is", null).order("id").range(from, to),
   );
-  const out = new Set<string>();
-  for (const row of [...variants.map((v) => v.shopify_sku), ...products.map((p) => p.sku)]) {
-    const sku = row?.trim().toUpperCase();
-    if (sku && !isFallbackSku(sku)) out.add(sku);
+  const out: TakenSku[] = [];
+  for (const row of variants) {
+    const sku = row.shopify_sku?.trim();
+    if (sku && !isFallbackSku(sku)) out.push({ sku, owner: row.imported_product_id ?? `p:${row.shop_id}:${row.shopify_product_id}` });
+  }
+  for (const row of products) {
+    const sku = row.sku?.trim();
+    if (sku && !isFallbackSku(sku)) out.push({ sku, owner: row.id });
   }
   return out;
 }
@@ -181,7 +191,7 @@ export async function loadSkuFixList(options: { clientId?: string | null; all?: 
     usersOfSku.set(key, users);
   }
 
-  // Neutral proposals (country + opaque code + option), never a SKU already used anywhere.
+  // Readable proposals (country + product + option number), never a SKU used by another item.
   const taken = await loadAllSkus();
   const inputs = listed.map((row) => {
     const shop = shopById.get(row.shop_id)!;
@@ -190,6 +200,7 @@ export async function loadSkuFixList(options: { clientId?: string | null; all?: 
       key: row.id,
       country: parseShopMarkets(shop.market)[0] ?? "",
       groupKey: row.imported_product_id ?? `p:${row.shop_id}:${row.shopify_product_id}`,
+      productTitle: detail?.productTitle ?? row.title,
       variantTitle: detail?.variantTitle ?? null,
     };
   });

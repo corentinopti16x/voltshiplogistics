@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isServiceLine, neutralCode, proposeSkus, skuError, slugWords } from "./sku-fix-core";
+import { isServiceLine, productWords, proposeSkus, skuError, slugWords } from "./sku-fix-core";
 
 describe("slugWords", () => {
   it("keeps significant words, strips accents and symbols, respects the length", () => {
@@ -11,13 +11,12 @@ describe("slugWords", () => {
   });
 });
 
-describe("neutralCode", () => {
-  it("is stable, 5 characters, without ambiguous letters", () => {
-    const code = neutralCode("product-1");
-    expect(code).toBe(neutralCode("product-1"));
-    expect(code).toMatch(/^[2-9A-HJKMNP-Z]{5}$/);
-    expect(neutralCode("product-1", 1)).not.toBe(code);
-    expect(neutralCode("product-2")).not.toBe(code);
+describe("productWords", () => {
+  it("keeps the words that say what the item is", () => {
+    expect(productWords("Premium Organic Hibiscus Flowers")).toEqual(["HIBISCUS", "FLOWERS"]);
+    expect(productWords("Liora® - Ensemble de bracelets personnalisés")).toEqual(["LIORA", "BRACELETS"]);
+    expect(productWords("Muscle Peptide Dileucine 185 - 84 Capsules")).toEqual(["MUSCLE", "PEPTIDE", "DILEUCINE", "CAPSULES"]);
+    expect(productWords("Premium Set")).toEqual(["PREMIUM", "SET"]);
   });
 });
 
@@ -42,33 +41,43 @@ describe("skuError", () => {
 });
 
 describe("proposeSkus", () => {
-  it("is neutral: country + opaque code + option, same code for duplicated pages", () => {
+  it("is readable: country + product + option number, same SKU for duplicated pages", () => {
     const proposals = proposeSkus(
       [
-        { key: "1", country: "FR", groupKey: "p1", variantTitle: "Default Title" },
-        { key: "2", country: "FR", groupKey: "p1", variantTitle: null },
-        { key: "3", country: "FR", groupKey: "p2", variantTitle: null },
-        { key: "4", country: "us", groupKey: "p3", variantTitle: "Gold" },
-        { key: "5", country: "us", groupKey: "p3", variantTitle: "Argent + Or" },
-        { key: "6", country: "", groupKey: "p4", variantTitle: null },
+        { key: "1", country: "FR", groupKey: "p1", productTitle: "Magnesium Complex", variantTitle: "Default Title" },
+        { key: "2", country: "FR", groupKey: "p1", productTitle: "Magnesium Complex.", variantTitle: null },
+        { key: "3", country: "FR", groupKey: "p2", productTitle: "Magnesium Complex Forte", variantTitle: null },
+        { key: "4", country: "fr", groupKey: "p3", productTitle: "Liora® - Ensemble de bracelets personnalisés", variantTitle: "or" },
+        { key: "5", country: "fr", groupKey: "p3", productTitle: "Liora® - Ensemble de bracelets personnalisés", variantTitle: "argent" },
+        { key: "6", country: "US", groupKey: "p4", productTitle: "Translator Carrying Case", variantTitle: null },
+        { key: "7", country: "", groupKey: "p5", productTitle: "Collagène", variantTitle: null },
       ],
       [],
     );
-    const code1 = neutralCode("p1");
-    const code3 = neutralCode("p3");
-    expect(proposals.get("1")).toBe(`FR-${code1}`);
-    expect(proposals.get("2")).toBe(`FR-${code1}`);
-    expect(proposals.get("3")).toMatch(/^FR-[2-9A-HJKMNP-Z]{5}$/);
-    expect(proposals.get("3")).not.toBe(`FR-${code1}`);
-    expect(proposals.get("4")).toBe(`US-${code3}-GOLD`);
-    expect(proposals.get("5")).toBe(`US-${code3}-ARGENT-OR`);
-    expect(proposals.get("6")).toMatch(/^[2-9A-HJKMNP-Z]{5}$/);
-    for (const sku of proposals.values()) expect(sku).not.toMatch(/MAGNESIUM|ECDF|MELVYN/);
+    expect(proposals.get("1")).toBe("FR-MAGNESIUM-COMPLEX-01");
+    expect(proposals.get("2")).toBe("FR-MAGNESIUM-COMPLEX-01");
+    expect(proposals.get("3")).toBe("FR-MAGNESIUM-COMPLEX-FORTE-01");
+    expect(proposals.get("5")).toBe("FR-LIORA-BRACELETS-01");
+    expect(proposals.get("4")).toBe("FR-LIORA-BRACELETS-02");
+    expect(proposals.get("6")).toBe("US-TRANSLATOR-CARRYING-01");
+    expect(proposals.get("7")).toBe("COLLAGENE-01");
   });
 
-  it("never reuses a taken code", () => {
-    const taken = [`FR-${neutralCode("p1")}`];
-    const proposals = proposeSkus([{ key: "1", country: "FR", groupKey: "p1", variantTitle: null }], taken);
-    expect(proposals.get("1")).toBe(`FR-${neutralCode("p1", 1)}`);
+  it("never takes a name used by another item, and reuses the item's own SKU", () => {
+    const other = proposeSkus(
+      [{ key: "1", country: "FR", groupKey: "p1", productTitle: "Collagène", variantTitle: null }],
+      [{ sku: "FR-COLLAGENE-01", owner: "p9" }],
+    );
+    expect(other.get("1")).toBe("FR-COLLAGENE2-01");
+    const own = proposeSkus(
+      [{ key: "1", country: "FR", groupKey: "p1", productTitle: "Collagène", variantTitle: null }],
+      [{ sku: "FR-COLLAGENE-01", owner: "p1" }],
+    );
+    expect(own.get("1")).toBe("FR-COLLAGENE-01");
+    const longer = proposeSkus(
+      [{ key: "1", country: "FR", groupKey: "p1", productTitle: "Magnesium Complex", variantTitle: null }],
+      [{ sku: "FR-MAGNESIUM-COMPLEX-FORTE-01", owner: "p2" }],
+    );
+    expect(longer.get("1")).toBe("FR-MAGNESIUM-COMPLEX-01");
   });
 });

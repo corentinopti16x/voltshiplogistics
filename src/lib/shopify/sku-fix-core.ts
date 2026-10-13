@@ -5,9 +5,9 @@
  * match the wrong product. These helpers propose a clean SKU per variant; the admin checks
  * them and the app writes them into Shopify.
  *
- * The SKU can be printed on carrier labels and packing slips, so it stays neutral: destination
- * country + an opaque code + the option in the store's language ("US-P3X8D", "FR-H4N6T-OR").
- * Never the client's name, and never what the product is (customs).
+ * The SKU stays internal (carriers replace the label before the last mile and declare the
+ * product under its customs name), so it is readable: destination country + product in clear
+ * + option number ("FR-MAGNESIUM-COMPLEX-01", "FR-LIORA-BRACELETS-02"). Never the client's name.
  */
 
 import { FALLBACK_SKU_PREFIX } from "./sku";
@@ -20,9 +20,14 @@ export type SkuFixInput = {
   country: string;
   /** Same Voltship product (or same Shopify product when not linked): same item. */
   groupKey: string;
+  /** Product title as sold in the store. */
+  productTitle: string;
   /** Shopify option title ("Gold / 3", "Default Title"), when known. */
   variantTitle: string | null;
 };
+
+/** A SKU already in use, and the item (group) that owns it when known. */
+export type TakenSku = { sku: string; owner: string | null };
 
 const STOPWORDS = new Set([
   "THE", "AND", "WITH", "FOR", "OF", "A", "AN", "IN", "ON", "TO", "YOUR",
@@ -30,6 +35,22 @@ const STOPWORDS = new Set([
   "DER", "DIE", "DAS", "UND", "MIT", "FUR", "EL", "LOS", "LAS", "CON", "DEL", "PER", "IL",
   "FREE", "GRATUIT", "OFFERT", "NEW", "NOUVEAU",
 ]);
+
+/** Marketing words that say nothing about the item: skipped in product SKUs. */
+const NOISE = new Set([
+  "PREMIUM", "ORGANIC", "BIO", "DIY", "SMART", "BEST", "SUPER", "ULTRA", "PRO", "MAX", "PLUS",
+  "ENSEMBLE", "SET", "KIT", "PACK", "LOT", "COFFRET", "BUNDLE",
+  "PERSONALIZED", "PERSONALISED", "CUSTOM", "PERSONNALISE", "PERSONNALISES", "PERSONNALISEE", "PERSONNALISEES",
+]);
+
+/** Significant words of a product title, uppercase ASCII (no stopwords, no marketing words, no lone numbers). */
+export function productWords(title: string) {
+  const all = plainUpper(title)
+    .split(/[^A-Z0-9]+/)
+    .filter((part) => part && !STOPWORDS.has(part) && !/^\d+$/.test(part));
+  const words = all.filter((part) => !NOISE.has(part));
+  return words.length > 0 ? words : all;
+}
 
 export function plainUpper(text: string) {
   return text
@@ -83,59 +104,87 @@ export function isServiceLine(title: string) {
   );
 }
 
-// No 0/O, 1/I/L: the code is read by people in the warehouse.
-const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
-const CODE_LENGTH = 5;
+const PRODUCT_MAX = 24;
 
-/** Stable opaque code of an item (same group → same code), e.g. "K7M2Q". */
-export function neutralCode(groupKey: string, salt = 0) {
-  let hash = 0x811c9dc5;
-  for (const char of `${groupKey}#${salt}`) hash = Math.imul(hash ^ char.codePointAt(0)!, 0x01000193) >>> 0;
+/** `FR-MAGNESIUM-COMPLEX-01` uses the name `FR-MAGNESIUM-COMPLEX` (not `FR-MAGNESIUM`). */
+function ownsPrefix(sku: string, prefix: string) {
+  return sku === prefix || (sku.startsWith(`${prefix}-`) && /^\d+$/.test(sku.slice(prefix.length + 1)));
+}
+
+function productPart(words: string[], count: number) {
   let out = "";
-  for (let i = 0; i < CODE_LENGTH; i += 1) {
-    hash = Math.imul(hash ^ (i + 0x9e37), 0x01000193) >>> 0;
-    out += CODE_ALPHABET[hash % CODE_ALPHABET.length];
+  for (const word of words.slice(0, count)) {
+    const next = out ? `${out}-${word}` : word;
+    if (next.length > PRODUCT_MAX) {
+      if (!out) out = word.slice(0, PRODUCT_MAX);
+      break;
+    }
+    out = next;
   }
-  return out;
+  return out || "ITEM";
 }
 
 /**
- * One proposal per variant. Variants of the same item (same group, same option) get the
- * same SKU — duplicated pages then share it, which is what ECCANG needs. Each item gets its
- * own code, and proposals never reuse a SKU already used anywhere (`taken`).
+ * One proposal per variant: `COUNTRY-PRODUCT-NN`. The product part is the shortest readable
+ * name (2 significant words, more on a clash) that no other item already uses; NN numbers
+ * the options of the item (01 when there is none). Variants of the same item with the same
+ * option get the same SKU, so duplicated pages share it, which is what ECCANG needs.
  */
-export function proposeSkus(inputs: SkuFixInput[], taken: Iterable<string>) {
-  const used = new Set([...taken].map((sku) => sku.trim().toUpperCase()));
-  const usedCodes = new Set<string>();
-  for (const sku of used) {
-    const match = /^(?:[A-Z]{2}-)?([A-Z0-9]{5})(?:-|$)/.exec(sku);
-    if (match) usedCodes.add(match[1]);
+export function proposeSkus(inputs: SkuFixInput[], taken: TakenSku[]) {
+  const takenList = taken.map((entry) => ({ sku: entry.sku.trim().toUpperCase(), owner: entry.owner }));
+  const usedSkus = new Set(takenList.map((entry) => entry.sku));
+  const prefixOwner = new Map<string, string>();
+  const clashes = (prefix: string, groupKey: string) => {
+    const owner = prefixOwner.get(prefix);
+    if (owner && owner !== groupKey) return true;
+    return takenList.some((entry) => entry.owner !== groupKey && ownsPrefix(entry.sku, prefix));
+  };
+
+  const byGroup = new Map<string, SkuFixInput[]>();
+  for (const input of [...inputs].sort((a, b) => a.key.localeCompare(b.key))) {
+    byGroup.set(input.groupKey, [...(byGroup.get(input.groupKey) ?? []), input]);
   }
-  const codeOfGroup = new Map<string, string>();
-  const skuOfVariant = new Map<string, string>();
+
   const result = new Map<string, string>();
-  const ordered = [...inputs].sort((a, b) => a.groupKey.localeCompare(b.groupKey) || a.key.localeCompare(b.key));
-  for (const input of ordered) {
-    let code = codeOfGroup.get(input.groupKey);
-    if (!code) {
-      let salt = 0;
-      code = neutralCode(input.groupKey, salt);
-      while (usedCodes.has(code)) code = neutralCode(input.groupKey, (salt += 1));
-      usedCodes.add(code);
-      codeOfGroup.set(input.groupKey, code);
+  for (const groupKey of [...byGroup.keys()].sort()) {
+    const group = byGroup.get(groupKey)!;
+    const first = group[0];
+    const country = /^[A-Z]{2}$/i.test(first.country) ? first.country.toUpperCase() : "";
+    const words = productWords(first.productTitle);
+    let prefix = "";
+    for (let count = 2; count <= Math.max(2, words.length) && !prefix; count += 1) {
+      const candidate = [country, productPart(words, count)].filter(Boolean).join("-");
+      if (!clashes(candidate, groupKey)) prefix = candidate;
     }
-    const variantId = `${input.groupKey}|${normVariant(input.variantTitle)}`;
-    let sku = skuOfVariant.get(variantId);
-    if (!sku) {
-      const country = /^[A-Z]{2}$/i.test(input.country) ? input.country.toUpperCase() : "";
-      const option = isDefaultVariantTitle(input.variantTitle) ? "" : slugWords(input.variantTitle ?? "", 3, 14);
-      const base = [country, code, option].filter(Boolean).join("-");
-      sku = base;
-      for (let n = 2; used.has(sku.toUpperCase()); n += 1) sku = `${base}-${n}`;
-      used.add(sku.toUpperCase());
-      skuOfVariant.set(variantId, sku);
+    if (!prefix) {
+      const base = [country, productPart(words, 2)].filter(Boolean).join("-");
+      for (let n = 2; !prefix; n += 1) if (!clashes(`${base}${n}`, groupKey)) prefix = `${base}${n}`;
     }
-    result.set(input.key, sku);
+    prefixOwner.set(prefix, groupKey);
+
+    // Option numbers: no option first, then options in alphabetical order; skip numbers in use.
+    const options = [...new Set(group.map((input) => normVariant(input.variantTitle)))].sort((a, b) =>
+      a === "" ? -1 : b === "" ? 1 : a.localeCompare(b),
+    );
+    const skuOfOption = new Map<string, string>();
+    // A single-option item already written elsewhere (duplicated page): reuse its SKU.
+    const own = takenList.find((entry) => entry.owner === groupKey && ownsPrefix(entry.sku, prefix) && entry.sku !== prefix);
+    if (options.length === 1 && own) {
+      for (const input of group) result.set(input.key, own.sku);
+      continue;
+    }
+    let n = 1;
+    for (const option of options) {
+      let sku = `${prefix}-${String(n).padStart(2, "0")}`;
+      while (usedSkus.has(sku.toUpperCase())) {
+        n += 1;
+        sku = `${prefix}-${String(n).padStart(2, "0")}`;
+      }
+      usedSkus.add(sku.toUpperCase());
+      skuOfOption.set(option, sku);
+      n += 1;
+    }
+    for (const input of group) result.set(input.key, skuOfOption.get(normVariant(input.variantTitle))!);
   }
   return result;
 }
