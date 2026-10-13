@@ -1877,7 +1877,7 @@
     "skuFix": {
       "kicker": "Sourcing",
       "title": "SKUs to fix",
-      "lead": "Shopify variants with no SKU, or with another item's SKU (duplicated pages). ECCANG matches products by SKU only. The proposed SKU is neutral: destination country + code + option (e.g. US-P3X8D, FR-H4N6T-OR), never the client's name or what the product is, since it can be printed on the label. Past orders keep their old SKU.",
+      "lead": "Shopify variants with no SKU, or with another item's SKU (duplicated pages). ECCANG matches products by SKU only. The proposed SKU is readable: country + product type + option number (e.g. FR-MAGNESIUM-COMPLEX-01, FR-BRACELETS-02), with no client name and no brand. It stays internal: carriers replace the label and declare the product under its customs name. Editable before writing. Past orders keep their old SKU.",
       "countSold": "{count} sold in the last 90 days",
       "countTotal": "{count} in total",
       "showAll": "Also show unsold",

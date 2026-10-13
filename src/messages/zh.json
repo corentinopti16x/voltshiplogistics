@@ -949,7 +949,7 @@
     "skuFix": {
       "kicker": "采购寻源",
       "title": "待修正SKU",
-      "lead": "没有SKU、或使用了其他产品SKU的Shopify变体（复制的页面）。易仓只按SKU识别产品。建议的SKU是中性的：目的国 + 编码 + 选项（例如 US-P3X8D、FR-H4N6T-OR），不含客户名称，也不含产品内容，因为SKU可能会打印在面单上。已下的订单保留旧SKU。",
+      "lead": "没有SKU、或使用了其他产品SKU的Shopify变体（复制的页面）。易仓只按SKU识别产品。建议的SKU清晰易懂：国家 + 产品类型 + 选项编号（例如 FR-MAGNESIUM-COMPLEX-01、FR-BRACELETS-02），不含客户名称和品牌。SKU只在内部使用：物流商会更换面单，并按申报品名报关。写入前可以手动修改。已下的订单保留旧SKU。",
       "countSold": "近90天有销量 {count} 个",
       "countTotal": "共 {count} 个",
       "showAll": "也显示无销量的",
