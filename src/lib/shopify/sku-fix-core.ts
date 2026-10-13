@@ -7,7 +7,8 @@
  *
  * The SKU stays internal (carriers replace the label before the last mile and declare the
  * product under its customs name), so it is readable: destination country + product in clear
- * + option number ("FR-MAGNESIUM-COMPLEX-01", "FR-LIORA-BRACELETS-02"). Never the client's name.
+ * + option number ("FR-MAGNESIUM-COMPLEX-01", "FR-BRACELETS-02"). Never the client's name nor
+ * the brand: the product's Shopify vendor, the client's name/code and words marked ®/™ are left out.
  */
 
 import { FALLBACK_SKU_PREFIX } from "./sku";
@@ -22,6 +23,8 @@ export type SkuFixInput = {
   groupKey: string;
   /** Product title as sold in the store. */
   productTitle: string;
+  /** Words to leave out: brand (Shopify vendor), client name and code. */
+  brands?: Array<string | null | undefined>;
   /** Shopify option title ("Gold / 3", "Default Title"), when known. */
   variantTitle: string | null;
 };
@@ -43,20 +46,34 @@ const NOISE = new Set([
   "PERSONALIZED", "PERSONALISED", "CUSTOM", "PERSONNALISE", "PERSONNALISES", "PERSONNALISEE", "PERSONNALISEES",
 ]);
 
-/** Significant words of a product title, uppercase ASCII (no stopwords, no marketing words, no lone numbers). */
-export function productWords(title: string) {
+/** Words to leave out of SKUs: every word of the brand / client names given. */
+export function brandWords(names: Array<string | null | undefined>) {
+  const out = new Set<string>();
+  for (const name of names) {
+    for (const part of plainUpper(name ?? "").split(/[^A-Z0-9]+/)) if (part.length >= 2) out.add(part);
+  }
+  return out;
+}
+
+/**
+ * Significant words of a product title, uppercase ASCII: no brand (words marked ®/™/© and the
+ * `brands` given), no stopwords, no marketing words, no lone numbers.
+ */
+export function productWords(title: string, brands: Iterable<string> = []) {
+  const skip = new Set(brands);
+  for (const match of title.matchAll(/([\p{L}\p{N}]+)\s*[®™©]/gu)) skip.add(plainUpper(match[1]));
   const all = plainUpper(title)
     .split(/[^A-Z0-9]+/)
-    .filter((part) => part && !STOPWORDS.has(part) && !/^\d+$/.test(part));
+    .filter((part) => part && !STOPWORDS.has(part) && !/^\d+$/.test(part) && !skip.has(part));
   const words = all.filter((part) => !NOISE.has(part));
   return words.length > 0 ? words : all;
 }
 
 export function plainUpper(text: string) {
   return text
+    .replace(/[®™©]/g, "")
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
-    .replace(/[®™©]/g, "")
     .toUpperCase();
 }
 
@@ -150,7 +167,7 @@ export function proposeSkus(inputs: SkuFixInput[], taken: TakenSku[]) {
     const group = byGroup.get(groupKey)!;
     const first = group[0];
     const country = /^[A-Z]{2}$/i.test(first.country) ? first.country.toUpperCase() : "";
-    const words = productWords(first.productTitle);
+    const words = productWords(first.productTitle, brandWords(first.brands ?? []));
     let prefix = "";
     for (let count = 2; count <= Math.max(2, words.length) && !prefix; count += 1) {
       const candidate = [country, productPart(words, count)].filter(Boolean).join("-");

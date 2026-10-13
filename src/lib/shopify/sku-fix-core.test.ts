@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isServiceLine, productWords, proposeSkus, skuError, slugWords } from "./sku-fix-core";
+import { brandWords, isServiceLine, productWords, proposeSkus, skuError, slugWords } from "./sku-fix-core";
 
 describe("slugWords", () => {
   it("keeps significant words, strips accents and symbols, respects the length", () => {
@@ -14,7 +14,10 @@ describe("slugWords", () => {
 describe("productWords", () => {
   it("keeps the words that say what the item is", () => {
     expect(productWords("Premium Organic Hibiscus Flowers")).toEqual(["HIBISCUS", "FLOWERS"]);
-    expect(productWords("Liora® - Ensemble de bracelets personnalisés")).toEqual(["LIORA", "BRACELETS"]);
+    expect(productWords("Liora® - Ensemble de bracelets personnalisés")).toEqual(["BRACELETS"]);
+    expect(productWords("Everpine™ Cedar Garland – 6 ft")).toEqual(["CEDAR", "GARLAND", "FT"]);
+    expect(productWords("ECDF Clip & Desk Fan — 100 Speeds", brandWords(["ECDF", "Maxime"]))).toEqual(["CLIP", "DESK", "FAN", "SPEEDS"]);
+    expect(productWords("Liora Personalized Couple Bracelet Set", brandWords(["LIORA"]))).toEqual(["COUPLE", "BRACELET"]);
     expect(productWords("Muscle Peptide Dileucine 185 - 84 Capsules")).toEqual(["MUSCLE", "PEPTIDE", "DILEUCINE", "CAPSULES"]);
     expect(productWords("Premium Set")).toEqual(["PREMIUM", "SET"]);
   });
@@ -49,7 +52,7 @@ describe("proposeSkus", () => {
         { key: "3", country: "FR", groupKey: "p2", productTitle: "Magnesium Complex Forte", variantTitle: null },
         { key: "4", country: "fr", groupKey: "p3", productTitle: "Liora® - Ensemble de bracelets personnalisés", variantTitle: "or" },
         { key: "5", country: "fr", groupKey: "p3", productTitle: "Liora® - Ensemble de bracelets personnalisés", variantTitle: "argent" },
-        { key: "6", country: "US", groupKey: "p4", productTitle: "Translator Carrying Case", variantTitle: null },
+        { key: "6", country: "US", groupKey: "p4", productTitle: "ECDF Translator Carrying Case", brands: ["ECDF", null], variantTitle: null },
         { key: "7", country: "", groupKey: "p5", productTitle: "Collagène", variantTitle: null },
       ],
       [],
@@ -57,10 +60,11 @@ describe("proposeSkus", () => {
     expect(proposals.get("1")).toBe("FR-MAGNESIUM-COMPLEX-01");
     expect(proposals.get("2")).toBe("FR-MAGNESIUM-COMPLEX-01");
     expect(proposals.get("3")).toBe("FR-MAGNESIUM-COMPLEX-FORTE-01");
-    expect(proposals.get("5")).toBe("FR-LIORA-BRACELETS-01");
-    expect(proposals.get("4")).toBe("FR-LIORA-BRACELETS-02");
+    expect(proposals.get("5")).toBe("FR-BRACELETS-01");
+    expect(proposals.get("4")).toBe("FR-BRACELETS-02");
     expect(proposals.get("6")).toBe("US-TRANSLATOR-CARRYING-01");
     expect(proposals.get("7")).toBe("COLLAGENE-01");
+    for (const sku of proposals.values()) expect(sku).not.toMatch(/LIORA|ECDF/);
   });
 
   it("never takes a name used by another item, and reuses the item's own SKU", () => {

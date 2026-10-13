@@ -167,7 +167,7 @@ export async function loadSkuFixList(options: { clientId?: string | null; all?: 
 
   // Live Shopify read (titles of options, current SKU), one batch per shop.
   const liveErrors: string[] = [];
-  const live = new Map<string, { productTitle: string; variantTitle: string; sku: string | null }>();
+  const live = new Map<string, { productTitle: string; vendor: string; variantTitle: string; sku: string | null }>();
   for (const shop of shops) {
     const ids = listed.filter((row) => row.shop_id === shop.id).map((row) => row.shopify_variant_id);
     if (ids.length === 0) continue;
@@ -201,6 +201,7 @@ export async function loadSkuFixList(options: { clientId?: string | null; all?: 
       country: parseShopMarkets(shop.market)[0] ?? "",
       groupKey: row.imported_product_id ?? `p:${row.shop_id}:${row.shopify_product_id}`,
       productTitle: detail?.productTitle ?? row.title,
+      brands: [detail?.vendor, clientOf(shop)?.name, clientOf(shop)?.code],
       variantTitle: detail?.variantTitle ?? null,
     };
   });

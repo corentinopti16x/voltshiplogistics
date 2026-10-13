@@ -244,6 +244,8 @@ export type ShopifyVariantDetail = {
   variantId: string;
   productId: string;
   productTitle: string;
+  /** Shopify "vendor" of the product: usually the brand. */
+  vendor: string;
   variantTitle: string;
   sku: string | null;
 };
@@ -258,14 +260,14 @@ export async function fetchVariantDetails(shop: string, accessToken: string, var
         legacyResourceId?: string;
         title?: string;
         sku?: string | null;
-        product?: { legacyResourceId: string; title: string };
+        product?: { legacyResourceId: string; title: string; vendor?: string | null };
       } | null>;
     }>(
       shop,
       accessToken,
       `query VariantDetails($ids: [ID!]!) {
         nodes(ids: $ids) {
-          ... on ProductVariant { legacyResourceId title sku product { legacyResourceId title } }
+          ... on ProductVariant { legacyResourceId title sku product { legacyResourceId title vendor } }
         }
       }`,
       { ids: ids.slice(i, i + 100).map((id) => `gid://shopify/ProductVariant/${id}`) },
@@ -276,6 +278,7 @@ export async function fetchVariantDetails(shop: string, accessToken: string, var
         variantId: node.legacyResourceId,
         productId: node.product.legacyResourceId,
         productTitle: node.product.title,
+        vendor: node.product.vendor?.trim() ?? "",
         variantTitle: node.title ?? "",
         sku: node.sku?.trim() || null,
       });
