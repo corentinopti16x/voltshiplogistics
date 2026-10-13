@@ -23,6 +23,7 @@ import {
   findRateCell,
   autoCarriersFor,
   gridChannel,
+  parcelLead,
   parcelWeightG as parcelWeightOf,
   packagingWeightFor,
   activeAnnouncedPrices,
@@ -479,8 +480,9 @@ function orderShippingOf(order: EccangOrderLite): OrderMargin["shipping"] {
 
 /**
  * Margin of one shipped parcel. The client side is priced with the live grid (same
- * engine as the quote) on the FIRST matched product's channel and primary market, at
- * the ECCANG billed weight when known. The carrier cost is real when the ECCANG fee
+ * engine as the quote) on the channel of the parcel's most constraining item (battery >
+ * sensitive > cosmetics > magnetic > standard) and that item's primary market, at
+ * the ECCANG billed weight when known (else every shipped line's weight + packaging). The carrier cost is real when the ECCANG fee
  * details carry a shipping line, otherwise estimated from the grid cell.
  */
 function marginForOrder(
@@ -514,12 +516,24 @@ function marginForOrder(
   };
   if (priced.length === 0) return { ...base, margin: null, carrierSource: null };
 
-  const lead = priced[0].product;
-  const channel = (lead.shipping_channel ?? "standard") as ShippingChannel;
+  // Everything that goes in the box, priced or not (a free gift still ships and weighs).
+  const shipped = matched.filter(
+    (line): line is typeof line & { product: ProductRow } => line.product != null && line.quantity > 0,
+  );
+  // The parcel ships on the line of its most constraining item (battery > sensitive >
+  // cosmetics > magnetic > standard), whatever the order of the lines: a translator + its
+  // cases is a battery parcel even when the case comes first.
+  const parcel = parcelLead(shipped.map((line) => line.product));
+  const channel = (parcel?.channel ?? priced[0].product.shipping_channel ?? "standard") as ShippingChannel;
+  // Lead (market, carrier choice, packaging): a priced product on that line, else the item that set it.
+  const lead =
+    priced.find((line) => gridChannel(line.product.shipping_channel ?? "standard") === channel)?.product ??
+    parcel?.lead ??
+    priced[0].product;
   const destination = getProductMarkets(lead)[0];
   // Each line: (unit weight + box) × qty; packaging once per parcel.
   const extrasOf = (product: ProductRow) => parcelExtras(product.quote_json, settings);
-  const contentWeightG = priced.reduce(
+  const contentWeightG = shipped.reduce(
     (sum, line) => sum + parcelWeightOf(line.product.weight_g ?? 0, line.quantity, { boxWeightG: extrasOf(line.product).boxWeightG }),
     0,
   );
@@ -538,7 +552,7 @@ function marginForOrder(
           weightG: parcelWeightG,
           channel,
           destination,
-          batteryInternal: hasInternalBattery(lead.quote_json),
+          batteryInternal: shipped.some((line) => hasInternalBattery(line.product.quote_json)),
           ...carrierChoice(lead, destination, cells, rules, settings),
         }) : null;
   const discount = Math.min(100, Math.max(0, profile.logisticsDiscountPct)) / 100;
@@ -556,7 +570,7 @@ function marginForOrder(
       }
     : null;
   // One product in the parcel and a price promised for this quantity: the client pays it.
-  const single = new Set(priced.map((line) => line.product.id)).size === 1;
+  const single = new Set(priced.map((line) => line.product.id)).size === 1 && lead.id === priced[0].product.id;
   const announced = single
     ? announcedPriceFor(activeAnnouncedPrices(lead.quote_json), destination, units)
     : null;
