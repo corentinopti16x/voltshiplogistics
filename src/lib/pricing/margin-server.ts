@@ -480,8 +480,8 @@ function orderShippingOf(order: EccangOrderLite): OrderMargin["shipping"] {
 
 /**
  * Margin of one shipped parcel. The client side is priced with the live grid (same
- * engine as the quote) on the channel of the parcel's most constraining item (battery >
- * sensitive > cosmetics > magnetic > standard) and that item's primary market, at
+ * engine as the quote) on the channel of the parcel's most constraining item (sensitive >
+ * battery > cosmetics > magnetic > standard) and that item's primary market, at
  * the ECCANG billed weight when known (else every shipped line's weight + packaging). The carrier cost is real when the ECCANG fee
  * details carry a shipping line, otherwise estimated from the grid cell.
  */
@@ -520,9 +520,9 @@ function marginForOrder(
   const shipped = matched.filter(
     (line): line is typeof line & { product: ProductRow } => line.product != null && line.quantity > 0,
   );
-  // The parcel ships on the line of its most constraining item (battery > sensitive >
-  // cosmetics > magnetic > standard), whatever the order of the lines: a translator + its
-  // cases is a battery parcel even when the case comes first.
+  // The parcel ships on the line of its most constraining item (sensitive > battery >
+  // cosmetics > magnetic > standard; cosmetics + battery/magnetic → sensitive), whatever the
+  // order of the lines: a translator + its cases is a battery parcel even when the case comes first.
   const parcel = parcelLead(shipped.map((line) => line.product));
   const channel = (parcel?.channel ?? priced[0].product.shipping_channel ?? "standard") as ShippingChannel;
   // Lead (market, carrier choice, packaging): a priced product on that line, else the item that set it.
@@ -645,7 +645,10 @@ async function buildOrderPricingContext(clientIds: string[]): Promise<OrderPrici
     productsByClient.set(product.client_id, map);
   }
   const markets = [...new Set(relevant.map((product) => getProductMarkets(product)[0]))];
-  const channels = [...new Set(relevant.map((product) => product.shipping_channel).filter(Boolean))] as string[];
+  // A mixed parcel can move to the sensitive line (battery + cosmetics): load it too.
+  const channels = [
+    ...new Set([...relevant.map((product) => product.shipping_channel).filter(Boolean), "sensitive_other"]),
+  ] as string[];
   const cells = activeGridVersion ? await loadInternalRateCells(activeGridVersion, markets, channels) : [];
 
   const profiles = new Map<string, ClientPricingProfile>();
