@@ -827,6 +827,21 @@ export function parcelChannel(channels: Array<ShippingChannel | string | null | 
   return PARCEL_CHANNEL_ORDER.find((channel) => present.has(channel)) ?? null;
 }
 
+/**
+ * Product that leads a parcel holding several products: the one on the most constraining
+ * line (battery > sensitive > cosmetics > magnetic > standard), whatever the order of the
+ * lines. The whole parcel is priced on that line; its market and carrier choice apply.
+ * Products without a channel count as standard. Null when the list is empty.
+ */
+export function parcelLead<T extends { shipping_channel?: string | null }>(
+  products: T[],
+): { lead: T; channel: ShippingChannel } | null {
+  if (products.length === 0) return null;
+  const channel = parcelChannel(products.map((product) => product.shipping_channel ?? "standard")) ?? "standard";
+  const lead = products.find((product) => gridChannel(product.shipping_channel ?? "standard") === channel) ?? products[0];
+  return { lead, channel };
+}
+
 /** One product line of a composed parcel (main product + its upsells). */
 export type BundleItem = {
   productId: string;
