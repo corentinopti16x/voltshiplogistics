@@ -70,9 +70,18 @@ describe("parcelChannel", () => {
   it("ships the parcel on the most constraining channel", () => {
     expect(parcelChannel(["standard", "electronics_battery"])).toBe("electronics_battery");
     expect(parcelChannel(["liquid_perfume", "standard"])).toBe("cosmetics");
-    expect(parcelChannel(["magnetic", "cosmetics"])).toBe("cosmetics");
+    expect(parcelChannel(["magnetic", "standard"])).toBe("magnetic");
+    expect(parcelChannel(["cosmetics", "standard"])).toBe("cosmetics");
+    expect(parcelChannel(["electronics_battery", "magnetic", "standard"])).toBe("electronics_battery");
     expect(parcelChannel(["standard", "sensitive_other", "cosmetics"])).toBe("sensitive_other");
+    expect(parcelChannel(["electronics_battery", "sensitive_other"])).toBe("sensitive_other");
     expect(parcelChannel([null, undefined])).toBeNull();
+  });
+
+  it("moves cosmetics mixed with a battery or magnetic item to the sensitive line", () => {
+    expect(parcelChannel(["electronics_battery", "cosmetics"])).toBe("sensitive_other");
+    expect(parcelChannel(["liquid_perfume", "electronics_battery", "standard"])).toBe("sensitive_other");
+    expect(parcelChannel(["magnetic", "cosmetics"])).toBe("sensitive_other");
   });
 });
 
@@ -83,6 +92,16 @@ describe("parcelLead", () => {
   it("lets the battery item lead even when a standard item comes first", () => {
     expect(parcelLead([caseItem, translatorItem])).toEqual({ lead: translatorItem, channel: "electronics_battery" });
     expect(parcelLead([translatorItem, caseItem])).toEqual({ lead: translatorItem, channel: "electronics_battery" });
+  });
+
+  it("puts a battery + cosmetics parcel on the sensitive line, led by the battery item", () => {
+    const cream = { id: "cream", shipping_channel: "cosmetics" };
+    expect(parcelLead([cream, translatorItem])).toEqual({ lead: translatorItem, channel: "sensitive_other" });
+  });
+
+  it("lets a sensitive item lead over a battery item", () => {
+    const supplement = { id: "supplement", shipping_channel: "sensitive_other" };
+    expect(parcelLead([translatorItem, supplement])).toEqual({ lead: supplement, channel: "sensitive_other" });
   });
 
   it("keeps the first item when every item is on the same line", () => {
