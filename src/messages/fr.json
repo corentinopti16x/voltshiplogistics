@@ -1877,7 +1877,7 @@
     "skuFix": {
       "kicker": "Sourcing",
       "title": "SKU à corriger",
-      "lead": "Variantes Shopify sans SKU, ou avec le SKU d'un autre produit (pages dupliquées). ECCANG reconnaît les produits uniquement par le SKU. Le SKU proposé est neutre : pays de destination + code + option (ex. US-P3X8D, FR-H4N6T-OR), jamais le nom du client ni le contenu du produit, car il peut être imprimé sur l'étiquette. Les commandes déjà passées gardent l'ancien SKU.",
+      "lead": "Variantes Shopify sans SKU, ou avec le SKU d'un autre produit (pages dupliquées). ECCANG reconnaît les produits uniquement par le SKU. Le SKU proposé est lisible : pays + produit + numéro d'option (ex. FR-MAGNESIUM-COMPLEX-01, FR-LIORA-BRACELETS-02), jamais le nom du client. Il reste interne : les transporteurs remplacent l'étiquette et déclarent le produit sous son nom de douane. Modifiable à la main avant d'écrire. Les commandes déjà passées gardent l'ancien SKU.",
       "countSold": "{count} vendues ces 90 jours",
       "countTotal": "{count} au total",
       "showAll": "Afficher aussi les non vendues",
