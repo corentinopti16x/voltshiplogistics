@@ -1897,7 +1897,7 @@
       "sharedWith": "Aussi sur : {titles}",
       "alreadyFixed": "Déjà corrigé ({sku})",
       "write": "Écrire dans Shopify",
-      "writeHint": "Seules les lignes cochées sont écrites. Rien n'est pré-coché tant qu'aucun client n'est choisi. Les lignes « SKU d'un autre produit » et les lignes de service (assurance, livraison) ne sont pas cochées par défaut.",
+      "writeHint": "Seules les lignes cochées sont écrites. Rien n'est pré-coché tant qu'aucun client n'est choisi. Même produit sur plusieurs pages : mets le même SKU (les pages au même titre l'ont déjà ; sinon copie-le, par ex. le SKU existant du traducteur). Les lignes « SKU d'un autre produit » et les lignes de service (assurance, livraison) ne sont pas cochées par défaut.",
       "result": "{done} SKU écrits dans Shopify, {failed} en échec.",
       "pickClient": "Choisis un client pour pré-cocher ses lignes : n'écris que pour les clients qui ont donné leur accord.",
       "service": "Ligne de service (pas un produit) : à laisser sans SKU."

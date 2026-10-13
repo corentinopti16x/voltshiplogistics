@@ -46,6 +46,11 @@ const NOISE = new Set([
   "PERSONALIZED", "PERSONALISED", "CUSTOM", "PERSONNALISE", "PERSONNALISES", "PERSONNALISEE", "PERSONNALISEES",
 ]);
 
+/** Key of a product title to spot duplicated pages ("Magnesium Complex." = "magnesium complex"). */
+export function itemTitleKey(title: string) {
+  return plainUpper(title).replace(/[^A-Z0-9]+/g, " ").trim();
+}
+
 /** Words to leave out of SKUs: every word of the brand / client names given. */
 export function brandWords(names: Array<string | null | undefined>) {
   const out = new Set<string>();

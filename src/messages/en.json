@@ -1897,7 +1897,7 @@
       "sharedWith": "Also on: {titles}",
       "alreadyFixed": "Already fixed ({sku})",
       "write": "Write to Shopify",
-      "writeHint": "Only ticked lines are written. Nothing is pre-ticked until a client is selected. “Another item's SKU” lines and service lines (insurance, shipping) are not ticked by default.",
+      "writeHint": "Only ticked lines are written. Nothing is pre-ticked until a client is selected. Same item on several pages: give it the same SKU (pages with the same title already share it; otherwise copy it, e.g. the translator's existing SKU). “Another item's SKU” lines and service lines (insurance, shipping) are not ticked by default.",
       "result": "{done} SKUs written to Shopify, {failed} failed.",
       "pickClient": "Pick a client to pre-tick their lines: only write for clients who agreed.",
       "service": "Service line (not a product): leave it without a SKU."

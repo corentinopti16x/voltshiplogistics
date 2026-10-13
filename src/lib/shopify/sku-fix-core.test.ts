@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brandWords, isServiceLine, productWords, proposeSkus, skuError, slugWords } from "./sku-fix-core";
+import { brandWords, isServiceLine, itemTitleKey, productWords, proposeSkus, skuError, slugWords } from "./sku-fix-core";
 
 describe("slugWords", () => {
   it("keeps significant words, strips accents and symbols, respects the length", () => {
@@ -20,6 +20,14 @@ describe("productWords", () => {
     expect(productWords("Liora Personalized Couple Bracelet Set", brandWords(["LIORA"]))).toEqual(["COUPLE", "BRACELET"]);
     expect(productWords("Muscle Peptide Dileucine 185 - 84 Capsules")).toEqual(["MUSCLE", "PEPTIDE", "DILEUCINE", "CAPSULES"]);
     expect(productWords("Premium Set")).toEqual(["PREMIUM", "SET"]);
+  });
+});
+
+describe("itemTitleKey", () => {
+  it("matches duplicated pages of the same product", () => {
+    expect(itemTitleKey("Magnesium Complex.")).toBe(itemTitleKey("magnesium complex"));
+    expect(itemTitleKey("Collagène")).toBe("COLLAGENE");
+    expect(itemTitleKey("Smart Voice Translator")).not.toBe(itemTitleKey("Smart Voice Translator Stick"));
   });
 });
 
