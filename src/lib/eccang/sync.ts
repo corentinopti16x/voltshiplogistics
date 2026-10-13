@@ -36,6 +36,7 @@ import {
   type ShopifyOrderForEccang,
 } from "@/lib/eccang/mapping";
 import { calculateProductCogsMatrix } from "@/lib/pricing/server";
+import { parcelLead } from "@/lib/domain/pricing";
 import { packPieces } from "@/lib/products/extras";
 import { createNotification } from "@/lib/notifications/server";
 import { decryptShopifyToken } from "@/lib/shopify/crypto";
@@ -248,12 +249,18 @@ async function pickShippingMethod(clientId: string, order: ShopifyOrderForEccang
   const map = await getShippingMethodMap();
   const country = (order.shipping_address?.country_code ?? "").toUpperCase();
   const admin = createAdminClient();
-  const { data: product } = await admin
+  // The parcel ships on the line of its most constraining item (battery > … > standard),
+  // not on the first line's: load every SKU of the order and let that item lead.
+  const skus = [...new Set(items.map((item) => item.product_sku).filter(Boolean))];
+  const { data: rows } = await admin
     .from("products_cache")
     .select("*")
     .eq("client_id", clientId)
-    .eq("sku", items[0].product_sku)
-    .maybeSingle<ProductRow>();
+    .in("sku", skus)
+    .returns<ProductRow[]>();
+  const bySku = new Map((rows ?? []).map((row) => [row.sku, row]));
+  const ordered = skus.map((sku) => bySku.get(sku)).filter((row): row is ProductRow => row != null);
+  const product = parcelLead(ordered)?.lead ?? null;
   let carrier: string | null = null;
   let lineName: string | null = null;
   if (product && /^[A-Z]{2}$/.test(country)) {
