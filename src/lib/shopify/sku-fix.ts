@@ -3,7 +3,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchVariantDetails, updateVariantSkus } from "./admin-api";
 import { isFallbackSku } from "./sku";
-import { isServiceLine, proposeSkus, skuError, type SkuFixKind, type TakenSku } from "./sku-fix-core";
+import { isServiceLine, itemTitleKey, proposeSkus, skuError, type SkuFixKind, type TakenSku } from "./sku-fix-core";
 import { parseShopMarkets } from "./shop-markets";
 import { refreshClientEffectiveSkus } from "./sku-resolve";
 import { accessTokenForConnectedShop } from "./sync";
@@ -191,15 +191,38 @@ export async function loadSkuFixList(options: { clientId?: string | null; all?: 
     usersOfSku.set(key, users);
   }
 
+  // Same item = same Voltship product, or same product title in the same store (duplicated
+  // pages): one SKU per item and option.
+  const parent = new Map<string, string>();
+  const find = (key: string): string => {
+    let root = key;
+    while (parent.has(root) && parent.get(root) !== root) root = parent.get(root)!;
+    return root;
+  };
+  const rawKey = (row: VariantRow) => row.imported_product_id ?? `p:${row.shop_id}:${row.shopify_product_id}`;
+  const firstOfTitle = new Map<string, string>();
+  for (const row of listed) {
+    const key = rawKey(row);
+    if (!parent.has(key)) parent.set(key, key);
+    const title = live.get(`${row.shop_id}:${row.shopify_variant_id}`)?.productTitle ?? row.title;
+    const titleKey = `${row.shop_id}|${itemTitleKey(title)}`;
+    const first = firstOfTitle.get(titleKey);
+    if (!first) firstOfTitle.set(titleKey, key);
+    else if (find(first) !== find(key)) parent.set(find(key), find(first));
+  }
+
   // Readable proposals (country + product + option number), never a SKU used by another item.
-  const taken = await loadAllSkus();
+  const taken = (await loadAllSkus()).map((entry) => ({
+    ...entry,
+    owner: entry.owner && parent.has(entry.owner) ? find(entry.owner) : entry.owner,
+  }));
   const inputs = listed.map((row) => {
     const shop = shopById.get(row.shop_id)!;
     const detail = live.get(`${row.shop_id}:${row.shopify_variant_id}`);
     return {
       key: row.id,
       country: parseShopMarkets(shop.market)[0] ?? "",
-      groupKey: row.imported_product_id ?? `p:${row.shop_id}:${row.shopify_product_id}`,
+      groupKey: find(rawKey(row)),
       productTitle: detail?.productTitle ?? row.title,
       brands: [detail?.vendor, clientOf(shop)?.name, clientOf(shop)?.code],
       variantTitle: detail?.variantTitle ?? null,
@@ -271,30 +294,28 @@ export async function applySkuFixes(picks: Array<{ key: string; sku: string }>):
     else valid.push(row);
   }
 
-  // A SKU must not land on two different items, whatever the client (same Voltship product is fine).
-  const owners = new Map<string, Set<string>>();
+  // The admin may give one SKU to several pages of a client (same item); a SKU used by ANOTHER
+  // client is refused.
+  const clientsOfSku = new Map<string, Set<string>>();
   for (const row of valid) {
     const key = wanted.get(row.id)!.toUpperCase();
-    const set = owners.get(key) ?? new Set<string>();
-    set.add(row.imported_product_id ?? `p:${row.shop_id}:${row.shopify_product_id}`);
-    owners.set(key, set);
+    clientsOfSku.set(key, (clientsOfSku.get(key) ?? new Set<string>()).add(row.client_id));
   }
-  const existing = await pageAll<{ shopify_sku: string | null; imported_product_id: string | null; shop_id: string; shopify_product_id: string }>((from, to) =>
+  const existing = await pageAll<{ shopify_sku: string | null; client_id: string }>((from, to) =>
     admin
       .from("shopify_products_cache")
-      .select("shopify_sku, imported_product_id, shop_id, shopify_product_id")
+      .select("shopify_sku, client_id")
       .not("shopify_sku", "is", null)
       .order("id")
       .range(from, to),
   );
   for (const row of existing) {
-    const key = (row.shopify_sku ?? "").trim().toUpperCase();
-    const set = owners.get(key);
-    if (set) set.add(row.imported_product_id ?? `p:${row.shop_id}:${row.shopify_product_id}`);
+    const set = clientsOfSku.get((row.shopify_sku ?? "").trim().toUpperCase());
+    if (set) set.add(row.client_id);
   }
   const accepted = valid.filter((row) => {
-    const clash = (owners.get(wanted.get(row.id)!.toUpperCase())?.size ?? 0) > 1;
-    if (clash) result.failed.push({ title: row.title, error: `SKU « ${wanted.get(row.id)} » déjà utilisé par un autre produit` });
+    const clash = (clientsOfSku.get(wanted.get(row.id)!.toUpperCase())?.size ?? 0) > 1;
+    if (clash) result.failed.push({ title: row.title, error: `SKU « ${wanted.get(row.id)} » déjà utilisé chez un autre client` });
     return !clash;
   });
 
