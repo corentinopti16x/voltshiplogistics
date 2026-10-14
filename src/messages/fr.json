@@ -1864,7 +1864,8 @@
     "tabs": {
       "operations": {
         "achats": "Achats & expéditions",
-        "alerts": "À vérifier"
+        "alerts": "À vérifier",
+        "lines": "Lignes"
       },
       "results": {
         "week": "Par semaine",
@@ -1953,7 +1954,83 @@
         "client": "Client invalide.",
         "rows": "Lignes invalides.",
         "fileTooLarge": "Fichier trop gros (5 Mo maximum).",
-        "unknown": "Envoi interrompu."
+        "unknown": "Envoi interrompu.",
+    "linesPage": {
+      "kicker": "Opérations Voltship",
+      "title": "Lignes de transport",
+      "lead": "L’app choisit la ligne de chaque colis : la moins chère qui livre le code postal. Ici : les colis partis sur une autre ligne que prévu, et la liste des codes postaux de chaque ligne.",
+      "missingTable": "Lance la migration 00023_line_routing.sql dans Supabase pour activer le contrôle des lignes.",
+      "checkNow": "Contrôler maintenant",
+      "checking": "Contrôle…",
+      "checkDone": "{checked} colis contrôlés · {moreExpensive} sur une ligne plus chère (+{extra} ¥)",
+      "rerouteOn": "Correction automatique activée : les commandes encore en attente de validation dans ECCANG passent sur la ligne prévue.",
+      "rerouteOff": "Correction automatique désactivée (ECCANG_REROUTE_ORDERS) : l’app signale les écarts sans modifier ECCANG.",
+      "autoCarriers": "Sans liste de codes postaux, seuls ces transporteurs sont utilisés : {list}.",
+      "rerouted": "corrigée",
+      "stats": {
+        "checked": "Colis contrôlés ({days} j)",
+        "ok": "Sur la ligne prévue",
+        "moreExpensive": "Sur une ligne plus chère",
+        "extra": "+{rmb} ¥ (≈ {eur})",
+        "unknown": "Ligne ECCANG non reconnue"
+      },
+      "unmapped": {
+        "title": "Méthodes ECCANG non reliées à une ligne",
+        "lead": "Ces codes manquent dans la correspondance transporteur → méthode ECCANG (fiche client → Entrepôt). Ajoute-les pour que leurs colis soient contrôlés."
+      },
+      "table": {
+        "title": "Colis à regarder",
+        "lead": "Les plus gros surcoûts d’abord. Coûts transporteur en RMB, internes à Voltship.",
+        "empty": "Aucun écart sur les 7 derniers jours.",
+        "order": "Commande",
+        "client": "Client",
+        "zip": "Code postal",
+        "weight": "Poids",
+        "actual": "Ligne utilisée",
+        "planned": "Ligne prévue",
+        "extra": "Surcoût",
+        "status": "État"
+      },
+      "status": {
+        "ok": "OK",
+        "more_expensive": "Plus chère",
+        "cheaper": "Moins chère",
+        "unknown_line": "Ligne inconnue",
+        "no_plan": "Aucune ligne",
+        "no_data": "Données manquantes"
+      },
+      "coverage": {
+        "title": "Codes postaux par ligne",
+        "lead": "Une ligne avec une liste ne prend que ses codes (ou tous sauf ses codes). Huahan n’est utilisé qu’une fois sa liste importée.",
+        "empty": "Aucune liste importée.",
+        "only": "{count, plural, one {# code livré} other {# codes livrés}}",
+        "except": "{count, plural, one {# code exclu} other {# codes exclus}}",
+        "delete": "Supprimer"
+      },
+      "form": {
+        "line": "Ligne",
+        "linePlaceholder": "Choisir une ligne…",
+        "mode": "La liste contient",
+        "modeOnly": "les codes livrés",
+        "modeExcept": "les codes non livrés",
+        "zips": "Codes postaux",
+        "zipsPlaceholder": "10001\n10002\n945 (= tous les 945xx)\n90210-90299",
+        "file": "Ou un fichier .csv / .txt",
+        "note": "Note",
+        "notePlaceholder": "ex. liste Huahan reçue le 15/10",
+        "help": "Un code par ligne ou séparés par des virgules. Les codes courts sont des préfixes, les plages 90210-90299 sont acceptées. La nouvelle liste remplace l’ancienne.",
+        "save": "Enregistrer la liste",
+        "saving": "Enregistrement…",
+        "saved": "{count, plural, one {# code enregistré} other {# codes enregistrés}}.",
+        "invalid": "Ignorés :"
+      },
+      "errors": {
+        "admin": "Accès admin requis.",
+        "pick_line": "Choisis une ligne.",
+        "file_too_large": "Fichier trop lourd (5 Mo maximum).",
+        "no_zip": "Aucun code postal reconnu.",
+        "too_many": "Liste trop longue ({count} codes, 60 000 maximum).",
+        "not_configured": "ECCANG n’est pas configuré (ECCANG_API_HOST)."
       }
     }
   },

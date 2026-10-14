@@ -333,6 +333,8 @@ export function normalizeDestination(value: string, fallback = "FR") {
  * divisor per carrier), so a bulky parcel may fall into a heavier bracket for one
  * carrier and not another. Same price → narrowest bracket wins.
  */
+export type RateCellQuery = CellQuery;
+
 type CellQuery = Pick<
   PricingInput,
   | "weightG"
@@ -381,6 +383,15 @@ function matchingCells(cells: RateCell[], input: CellQuery) {
     matches.push(cellAtWeight(cell, weight));
   }
   return matches.sort(byPriceThenNarrowest);
+}
+
+/**
+ * Every cell that can ship the parcel at its billed weight (same destination / channel /
+ * blocked-line / built-in-battery rules as `findRateCell`), priced at the exact gram,
+ * cheapest first. Used by the line routing (postcode coverage + carrier cost).
+ */
+export function rateCellsAt(cells: RateCell[], input: RateCellQuery) {
+  return matchingCells(cells, input);
 }
 
 function byPriceThenNarrowest(a: RateCell, b: RateCell) {
