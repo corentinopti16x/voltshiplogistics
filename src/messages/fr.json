@@ -1954,7 +1954,9 @@
         "client": "Client invalide.",
         "rows": "Lignes invalides.",
         "fileTooLarge": "Fichier trop gros (5 Mo maximum).",
-        "unknown": "Envoi interrompu.",
+        "unknown": "Envoi interrompu."
+      }
+    },
     "linesPage": {
       "kicker": "Opérations Voltship",
       "title": "Lignes de transport",

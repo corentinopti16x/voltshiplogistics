@@ -1026,7 +1026,9 @@
         "client": "客户无效。",
         "rows": "数据行无效。",
         "fileTooLarge": "文件太大（最大 5 MB）。",
-        "unknown": "发送中断。",
+        "unknown": "发送中断。"
+      }
+    },
     "linesPage": {
       "kicker": "Voltship 运营",
       "title": "物流渠道",

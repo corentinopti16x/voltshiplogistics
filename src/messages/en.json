@@ -1954,7 +1954,9 @@
         "client": "Invalid client.",
         "rows": "Invalid lines.",
         "fileTooLarge": "File too large (5 MB max).",
-        "unknown": "Sending stopped.",
+        "unknown": "Sending stopped."
+      }
+    },
     "linesPage": {
       "kicker": "Voltship operations",
       "title": "Carrier lines",

@@ -202,8 +202,8 @@ function lineOptions(cells: RateCell[], input: RouteInput) {
 
 /**
  * Lines that can ship the parcel, cheapest carrier cost first, and the one Voltship uses
- * (`best`): the preferred line when it can take the parcel, else the cheapest line covering
- * the postcode. Lines without carrier cost come after the costed ones. `best` is null when
+ * (`best`): the preferred line when it is eligible (bracket at this weight, postcode
+ * covered), else the cheapest eligible line. Lines without carrier cost come after the costed ones. `best` is null when
  * no line is eligible (no bracket at this weight, or no line covers the postcode).
  */
 export function rankLines(
@@ -221,9 +221,9 @@ export function rankLines(
     const zipCovered = lineCoversZip(coverage, destination, line, zip);
     let reason: RouteIneligibleReason | null = null;
     if (zipCovered === false) reason = zip ? "zip_not_covered" : "no_zip";
-    // A chosen / forced line is not limited to the automatic carriers (like the COGS engine).
-    else if (zipCovered === null && auto.size > 0 && !auto.has(cell.carrier.toLowerCase()) && !sameLine(line, preferred))
-      reason = "no_zip_list";
+    // Unlike the COGS display, a chosen / forced line gets no exemption: a carrier outside the
+    // automatic set only ships where its postcode list says so.
+    else if (zipCovered === null && auto.size > 0 && !auto.has(cell.carrier.toLowerCase())) reason = "no_zip_list";
     return { ...line, key, costRmb: costOf(cell), price: cell.price, zipCovered, eligible: reason === null, reason };
   });
   options.sort((a, b) => compareOptions(a, b) || a.key.localeCompare(b.key));

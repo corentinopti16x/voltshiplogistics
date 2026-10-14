@@ -55,6 +55,12 @@ create table if not exists public.eccang_order_line_checks (
     check (status in ('ok', 'more_expensive', 'cheaper', 'unknown_line', 'no_plan', 'no_data'))
 );
 
+-- Columns added after the first draft of this migration (no-op on a fresh install).
+alter table public.eccang_order_line_checks
+  add column if not exists order_status text,
+  add column if not exists has_tracking boolean not null default false,
+  add column if not exists fingerprint text;
+
 comment on table public.eccang_order_line_checks is
   'INTERNAL: planned vs actual carrier line of each ECCANG order (costs in RMB). Service role only.';
 
