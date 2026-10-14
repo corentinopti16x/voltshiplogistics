@@ -789,7 +789,7 @@ export async function syncClient(clientId: string) {
     asns: 0,
     retried: 0,
     /** Parcels on a dearer line than planned (and the extra carrier cost, RMB) in this run. */
-    lines: { checked: 0, moreExpensive: 0, extraRmb: 0, rerouted: 0 },
+    lines: { checked: 0, moreExpensive: 0, extraRmb: 0 },
     errors: [] as string[],
   };
   try {
@@ -807,13 +807,8 @@ export async function syncClient(clientId: string) {
       [
         "line check",
         async () => {
-          const lines = await checkOrderLines(clientId, { config: cfg });
-          summary.lines = {
-            checked: lines.checked,
-            moreExpensive: lines.moreExpensive,
-            extraRmb: lines.extraRmb,
-            rerouted: lines.rerouted,
-          };
+          const lines = await checkOrderLines(clientId);
+          summary.lines = { checked: lines.checked, moreExpensive: lines.moreExpensive, extraRmb: lines.extraRmb };
         },
       ],
     ];

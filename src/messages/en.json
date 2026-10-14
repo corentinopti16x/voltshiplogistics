@@ -1963,16 +1963,16 @@
       "checkNow": "Check now",
       "checking": "Checking…",
       "checkDone": "{checked} parcels checked · {moreExpensive} on a dearer line (+{extra} ¥)",
-      "rerouteOn": "Automatic fix on: orders still awaiting review in ECCANG are moved to the planned line.",
-      "rerouteOff": "Automatic fix off (ECCANG_REROUTE_ORDERS): the app reports the gaps without changing ECCANG.",
       "autoCarriers": "Without a postcode list, only these carriers are used: {list}.",
-      "rerouted": "fixed",
+      "howItWorks": "The app does not change ECCANG: a parcel still without label on a dearer line is flagged here, to switch in ECCANG before packing.",
+      "openHint": "No label yet: switch before packing",
       "stats": {
         "checked": "Parcels checked ({days} d)",
         "ok": "On the planned line",
         "moreExpensive": "On a dearer line",
         "extra": "+{rmb} ¥ (≈ {eur})",
-        "unknown": "Unknown ECCANG line"
+        "unknown": "Unknown ECCANG line",
+        "open": "{count, plural, one {# still without label} other {# still without label}}"
       },
       "unmapped": {
         "title": "ECCANG methods not linked to a line",

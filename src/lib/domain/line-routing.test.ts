@@ -58,9 +58,15 @@ describe("postcodes", () => {
   });
 
   it("parses a pasted list: codes, ZIP+4, Excel-stripped zeros, prefixes and ranges", () => {
-    const { zips, invalid } = parseZipList("US", "10001\n10002, 2134;100011234\t945\n90210-90212 hello");
-    expect(zips).toEqual(["02134", "10001", "10002", "90210", "90211", "90212", "945"]);
+    const { zips, invalid } = parseZipList("US", "10001\n10002, 2134;100011234\t945\n90210-90212 hello 10003-1234");
+    expect(zips).toEqual(["02134", "10001", "10002", "10003", "90210", "90211", "90212", "945"]);
     expect(invalid).toEqual(["hello"]);
+  });
+
+  it("restores the leading zero of 4-digit codes and ranges in 5-digit markets", () => {
+    expect(parseZipList("US", "2101-2103").zips).toEqual(["02101", "02102", "02103"]);
+    expect(parseZipList("FR", "1000 75011").zips).toEqual(["01000", "75011"]);
+    expect(parseZipList("BE", "1000").zips).toEqual(["1000"]);
   });
 
   it("matches a code by itself or by one of its prefixes", () => {
@@ -115,6 +121,26 @@ describe("rankLines", () => {
   it("never offers Huahan 内电 to a product without a built-in battery", () => {
     const { options } = rankLines(cells, { ...translator, batteryInternal: false, zip: "10001" }, buildCoverageIndex([huahanList]), AUTO);
     expect(options.some((option) => option.lineName === HUAHAN_INTERNAL)).toBe(false);
+  });
+
+  it("uses the forced / chosen line when it can take the parcel, even outside the automatic carriers", () => {
+    const preferredLine = { carrier: "YunExpress", lineName: TEHUI };
+    expect(rankLines(cells, { ...translator, zip: "10001", preferredLine }, buildCoverageIndex([]), AUTO).best?.lineName).toBe(TEHUI);
+    const huahan = { carrier: "Huahan", lineName: HUAHAN_INTERNAL };
+    expect(rankLines(cells, { ...translator, zip: "10001", preferredLine: huahan }, buildCoverageIndex([]), AUTO).best?.carrier).toBe("Huahan");
+    // …but not when its postcode list excludes the code.
+    const listed = buildCoverageIndex([huahanList]);
+    expect(rankLines(cells, { ...translator, zip: "90210", preferredLine: huahan }, listed, AUTO).best?.lineName).toBe(SHANGPAI);
+  });
+
+  it("ranks lines without carrier cost after the costed ones and compares them on price", () => {
+    const noCost = cells.map((item) => (item.carrier === "Tongyou" ? { ...item, carrierCostRmb: null, price: 1 } : item));
+    const { options } = rankLines(noCost, { ...translator, zip: "10001" }, buildCoverageIndex([]), AUTO);
+    expect(options[options.length - 1].carrier).toBe("Tongyou");
+    expect(options[options.length - 1].costRmb).toBeNull();
+    const check = checkParcelLine(noCost, { ...translator, zip: "10001" }, buildCoverageIndex([]), AUTO, { carrier: "Tongyou", lineName: TONGYOU });
+    expect(check.extraRmb).toBeNull();
+    expect(check.status).toBe("cheaper");
   });
 
   it("keeps blocked lines out", () => {

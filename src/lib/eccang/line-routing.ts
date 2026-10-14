@@ -1,18 +1,20 @@
 /**
  * Pure helpers linking ECCANG orders to the line routing (`@/lib/domain/line-routing`):
- * which grid line an ECCANG shipping method is, what a parcel weighs and on which channel
- * it ships, and the modifyOrder payload that moves an order to another line.
+ * which grid line an ECCANG shipping method is (and back), what a parcel weighs and on
+ * which channel it ships.
  */
 
 import { parseLineKey } from "../domain/carrier-rules";
 import {
+  gridChannel,
   packagingWeightFor,
   parcelChannel,
   type CarrierLineRef,
   type PackagingStep,
+  type ParcelDimensionsCm,
   type ShippingChannel,
 } from "../domain/pricing";
-import { billedWeightG, eccangOrderItems, type ShippingMethodMap } from "./mapping";
+import { billedWeightG, eccangOrderItems, shippingMethodKey, type ShippingMethodMap } from "./mapping";
 
 /**
  * ECCANG shipping method code → the grid line it ships (reverse of the method map
@@ -31,6 +33,18 @@ export function lineForShippingMethod(map: ShippingMethodMap, code: string | nul
     carrierOnly ??= ref;
   }
   return carrierOnly;
+}
+
+/**
+ * ECCANG method of exactly this line ("Carrier|Line" key, or the carrier key for a line-less
+ * grid). No carrier-only / default fallback: a planned 商派 parcel must never be sent with
+ * the carrier's default method (which may be another, dearer line).
+ */
+export function exactShippingMethod(map: ShippingMethodMap, line: CarrierLineRef | null | undefined): string | null {
+  if (!line) return null;
+  const wanted = shippingMethodKey(line.carrier, line.lineName).toLowerCase();
+  for (const [key, value] of Object.entries(map)) if (key.trim().toLowerCase() === wanted) return value;
+  return null;
 }
 
 export type OrderParcelFacts = {
@@ -101,6 +115,10 @@ export type ParcelProduct = {
   boxWeightG: number;
   /** Packaging fixed for this product (grams), null = ladder. */
   packagingWeightG: number | null;
+  /** Unit dimensions (cm, per unit sold) for the volumetric weight; null = unknown. */
+  dimensionsCm?: ParcelDimensionsCm | null;
+  /** Client's own line per market (`_carrier_pref`). */
+  carrierPrefs?: Record<string, CarrierLineRef>;
 };
 
 export type ParcelEstimate = {
@@ -110,7 +128,15 @@ export type ParcelEstimate = {
   batteryInternal: boolean;
   /** SKUs without product data (weight unknown): the estimate is a lower bound. */
   missing: string[];
+  /** SKU of the item that sets the parcel's line (most constraining channel, first such item). */
+  lead: string | null;
+  /** Single-product parcel: units sold of that product (for its volumetric weight). */
+  singleUnits: number | null;
 };
+
+function productOf(products: ReadonlyMap<string, ParcelProduct>, sku: string) {
+  return products.get(sku) ?? products.get(sku.toUpperCase()) ?? null;
+}
 
 /**
  * Weight and channel of a parcel from its warehouse lines (pieces): contents + box per
@@ -128,7 +154,7 @@ export function parcelFromItems(
   let batteryItems = 0;
   let internalBatteryItems = 0;
   for (const item of items) {
-    const product = products.get(item.sku) ?? products.get(item.sku.toUpperCase());
+    const product = productOf(products, item.sku);
     if (!product || !(Number(product.weightG) > 0)) {
       missing.push(item.sku);
       if (product) channels.push(product.channel);
@@ -148,53 +174,17 @@ export function parcelFromItems(
   const skus = new Set(items.map((item) => item.sku));
   const ladderG = packagingWeightFor(contentG, ladder);
   const packaging = fixedPackaging == null ? ladderG : skus.size === 1 ? fixedPackaging : Math.max(fixedPackaging, ladderG);
+  const channel = parcelChannel(channels.length ? channels : ["standard"]);
+  const lead =
+    items.find((item) => gridChannel(productOf(products, item.sku)?.channel ?? "standard") === channel)?.sku ?? items[0]?.sku ?? null;
+  const single = skus.size === 1 ? productOf(products, items[0].sku) : null;
+  const singlePieces = items.reduce((sum, item) => sum + item.quantity, 0);
   return {
     weightG: Math.round(contentG + (contentG > 0 ? packaging : 0)),
-    channel: parcelChannel(channels.length ? channels : ["standard"]),
+    channel,
     batteryInternal: batteryItems > 0 && batteryItems === internalBatteryItems,
     missing,
+    lead,
+    singleUnits: single ? Math.max(1, Math.ceil(singlePieces / Math.max(1, single.pieces || 1))) : null,
   };
-}
-
-/**
- * modifyOrder payload moving an ECCANG order (getOrderList record) to `shippingMethod`.
- * Address and lines are sent back as ECCANG gave them; `verify` is left out so the order
- * keeps its review status. Null when the record lacks a required field.
- */
-export function modifyOrderPayload(record: Json, shippingMethod: string) {
-  const items = (Array.isArray(record.items) ? (record.items as Json[]) : [])
-    .map((item) => {
-      const line: Json = { product_sku: text(item.product_sku), quantity: Math.max(1, Number(item.quantity) || 1) };
-      for (const key of ["product_declared_value", "product_name", "product_name_en", "transaction_id", "item_id"]) {
-        if (item[key] != null && item[key] !== "") line[key] = item[key];
-      }
-      return line;
-    })
-    .filter((item) => item.product_sku);
-  const payload: Json = {
-    order_code: text(record.order_code),
-    reference_no: text(record.reference_no),
-    shipping_method: shippingMethod,
-    warehouse_code: text(record.warehouse_code),
-    country_code: text(record.consignee_country_code),
-    province: text(record.consignee_state),
-    city: text(record.consignee_city),
-    address1: text(record.consignee_street1),
-    address2: text(record.consignee_street2),
-    address3: text(record.consignee_street3),
-    zipcode: text(record.consigne_zipcode) || text(record.consignee_zipcode),
-    doorplate: text(record.consignee_doorplate),
-    name: text(record.consignee_name),
-    phone: text(record.consignee_phone),
-    cell_phone: text(record.consignee_phone2),
-    email: text(record.consignee_email),
-    platform: text(record.platform) || "OTHER",
-    platform_shop: text(record.platform_shop),
-    order_desc: text(record.order_desc),
-    items,
-  };
-  const required = ["order_code", "reference_no", "warehouse_code", "country_code", "address1", "zipcode", "name"];
-  if (required.some((key) => !payload[key]) || items.length === 0) return null;
-  for (const [key, value] of Object.entries(payload)) if (value === "") delete payload[key];
-  return payload;
 }

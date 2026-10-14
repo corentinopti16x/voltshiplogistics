@@ -9,8 +9,9 @@
 --   than a full code are prefixes ("945" = 945xx). A line without a list is trusted for the
 --   market's automatic carriers (pricing_settings.auto_carriers) and skipped for the others.
 -- * eccang_order_line_checks: per ECCANG order, the line the app planned and the line the
---   parcel left on, with their carrier cost in RMB. INTERNAL (Voltship costs): its own
---   table, service role only — eccang_orders is readable by the client.
+--   parcel is on in ECCANG, with their carrier cost in RMB. INTERNAL (Voltship costs): its
+--   own table, service role only — eccang_orders is readable by the client. Read-only on
+--   ECCANG: a dearer parcel still without label is shown so the team switches it in time.
 
 create table if not exists public.carrier_zip_coverage (
   id uuid primary key default gen_random_uuid(),
@@ -39,15 +40,16 @@ create table if not exists public.eccang_order_line_checks (
   zip text,
   weight_g integer,
   shipping_method text,
+  order_status text,
+  has_tracking boolean not null default false,
   planned_line text,
   planned_cost_rmb numeric,
   actual_line text,
   actual_cost_rmb numeric,
   extra_rmb numeric,
   status text not null,
-  rerouted_at timestamptz,
-  reroute_error text,
-  order_updated_at timestamptz,
+  -- Hash of what the check used (order data, grid, postcode lists, method map): unchanged = skipped.
+  fingerprint text,
   checked_at timestamptz not null default now(),
   constraint eccang_order_line_checks_status_check
     check (status in ('ok', 'more_expensive', 'cheaper', 'unknown_line', 'no_plan', 'no_data'))

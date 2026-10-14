@@ -65,36 +65,41 @@ export function normalizeZip(destination: string, raw: string | null | undefined
 
 /**
  * Codes from a pasted list or a CSV column: one per line or separated by commas,
- * semicolons, tabs or spaces. "10000-10299" (numeric, same length) is expanded; entries
- * shorter than a full code are prefixes. US: ZIP+4 → ZIP, and a 4-digit entry is a ZIP that
- * lost its leading zero in Excel (2134 → 02134); 1-3 digits are prefixes.
+ * semicolons, tabs or spaces. "10000-10299" (numeric, same length) is expanded; 1-3 digit
+ * entries are prefixes. In 5-digit markets (US, FR, DE, IT, ES) a 4-digit entry or range is
+ * a code that lost its leading zero in Excel (2134 → 02134, 2101-2199 → 02101…02199).
+ * US: ZIP+4 → ZIP.
  */
 export function parseZipList(destination: string, text: string): { zips: string[]; invalid: string[] } {
   const market = normalizeDestination(destination, "");
   const full = ZIP_LENGTH[market] ?? 10;
+  const padTo = full === 5 ? 5 : 0;
+  const pad = (code: string) => (padTo && /^\d{4}$/.test(code) ? code.padStart(padTo, "0") : code);
   const zips = new Set<string>();
   const invalid: string[] = [];
   for (const token of text.split(/[\n\r,;\t ]+/)) {
     const entry = token.trim().replace(/^["']+|["']+$/g, "");
     if (!entry) continue;
     const range = entry.match(/^(\d+)[-–~](\d+)$/);
-    if (range && range[1].length === range[2].length && range[1].length <= full) {
+    // US "12345-6789" is a ZIP+4, not a range.
+    const zipPlus4 = market === "US" && range && range[1].length === 5 && range[2].length === 4;
+    if (range && !zipPlus4 && range[1].length === range[2].length && range[1].length <= full) {
       const from = Number(range[1]);
       const to = Number(range[2]);
       if (to >= from && to - from < MAX_ZIP_RANGE) {
-        for (let code = from; code <= to; code += 1) zips.add(String(code).padStart(range[1].length, "0"));
+        const width = padTo && range[1].length === 4 ? padTo : range[1].length;
+        for (let code = from; code <= to; code += 1) zips.add(String(code).padStart(width, "0"));
         continue;
       }
     }
     const code = entry.toUpperCase().replace(/[\s-]+/g, "");
     if (market === "US") {
       if (/^\d{9}$/.test(code)) zips.add(code.slice(0, 5));
-      else if (/^\d{4}$/.test(code)) zips.add(code.padStart(5, "0"));
-      else if (/^\d{1,3}$|^\d{5}$/.test(code)) zips.add(code);
+      else if (/^\d{1,5}$/.test(code)) zips.add(pad(code));
       else invalid.push(entry);
       continue;
     }
-    if (/^[A-Z0-9]+$/.test(code) && code.length <= full) zips.add(code);
+    if (/^[A-Z0-9]+$/.test(code) && code.length <= full) zips.add(pad(code));
     else invalid.push(entry);
   }
   return { zips: [...zips].sort(), invalid };
@@ -144,19 +149,22 @@ export function lineCoversZip(
 export type RouteInput = RateCellQuery & {
   /** Consignee postcode (any format; normalised per market). */
   zip: string | null | undefined;
-  /** RMB per EUR, to compare a line without carrier cost on its grid price. */
+  /** RMB per EUR (kept for callers that convert costs for display). */
   fxRmbPerEur: number;
+  /**
+   * Line to use when it can take the parcel: the line Voltship forces on the market, else
+   * the client's own choice for the product (`_carrier_pref`). Null = cheapest.
+   */
+  preferredLine?: CarrierLineRef | null;
 };
 
 export type RouteIneligibleReason = "zip_not_covered" | "no_zip_list" | "no_zip";
 
 export type RouteOption = CarrierLineRef & {
   key: string;
-  /** Carrier cost of the parcel in RMB at its billed weight (grid cost, else price × FX). */
-  costRmb: number;
-  /** True when `costRmb` comes from the carrier cost of the grid (not estimated from the price). */
-  costKnown: boolean;
-  /** Client grid price (EUR) of the bracket, for display. */
+  /** INTERNAL carrier cost of the parcel in RMB at its billed weight; null when the grid has none. */
+  costRmb: number | null;
+  /** Client grid price (EUR) at the billed weight (used to compare lines without carrier cost). */
   price: number;
   /** The line's postcode list says yes / no; null = the line has no list. */
   zipCovered: boolean | null;
@@ -166,27 +174,37 @@ export type RouteOption = CarrierLineRef & {
 
 export type RouteResult = { best: RouteOption | null; options: RouteOption[] };
 
-/** One option per line (its cheapest bracket at the billed weight), all lines, cheapest first. */
+function costOf(cell: RateCell) {
+  const cost = cell.carrierCostRmb;
+  return cost != null && Number.isFinite(cost) && cost > 0 ? round2(cost) : null;
+}
+
+/** Cheaper first: by carrier cost when both lines have one, else by client grid price. */
+function compareOptions(a: Pick<RouteOption, "costRmb" | "price">, b: Pick<RouteOption, "costRmb" | "price">) {
+  if (a.costRmb != null && b.costRmb != null && a.costRmb !== b.costRmb) return a.costRmb - b.costRmb;
+  if (a.costRmb != null && b.costRmb == null) return -1;
+  if (a.costRmb == null && b.costRmb != null) return 1;
+  return a.price - b.price;
+}
+
+/** One option per line (its cheapest bracket at the billed weight). */
 function lineOptions(cells: RateCell[], input: RouteInput) {
   const byLine = new Map<string, RateCell>();
   for (const cell of rateCellsAt(cells, input)) {
     const key = lineKey(cell.carrier, cell.lineName);
     const known = byLine.get(key);
-    if (!known || costOf(cell, input.fxRmbPerEur).value < costOf(known, input.fxRmbPerEur).value) byLine.set(key, cell);
+    if (!known || compareOptions({ costRmb: costOf(cell), price: cell.price }, { costRmb: costOf(known), price: known.price }) < 0) {
+      byLine.set(key, cell);
+    }
   }
   return [...byLine.entries()];
 }
 
-function costOf(cell: RateCell, fx: number) {
-  const cost = cell.carrierCostRmb;
-  if (cost != null && Number.isFinite(cost) && cost > 0) return { value: cost, known: true };
-  return { value: cell.price * (fx > 0 ? fx : 7.5), known: false };
-}
-
 /**
- * Lines that can ship the parcel, cheapest carrier cost first, with the one Voltship
- * should use (`best`): the cheapest line covering the postcode. `best` is null when no
- * line is eligible (no bracket at this weight, or no line covers the postcode).
+ * Lines that can ship the parcel, cheapest carrier cost first, and the one Voltship uses
+ * (`best`): the preferred line when it can take the parcel, else the cheapest line covering
+ * the postcode. Lines without carrier cost come after the costed ones. `best` is null when
+ * no line is eligible (no bracket at this weight, or no line covers the postcode).
  */
 export function rankLines(
   cells: RateCell[],
@@ -197,26 +215,20 @@ export function rankLines(
   const destination = normalizeDestination(input.destination);
   const zip = normalizeZip(destination, input.zip);
   const auto = new Set((autoCarriers ?? []).map((carrier) => carrier.toLowerCase()));
+  const preferred = input.preferredLine ?? null;
   const options: RouteOption[] = lineOptions(cells, input).map(([key, cell]) => {
     const line = { carrier: cell.carrier, lineName: cell.lineName ?? null };
     const zipCovered = lineCoversZip(coverage, destination, line, zip);
     let reason: RouteIneligibleReason | null = null;
     if (zipCovered === false) reason = zip ? "zip_not_covered" : "no_zip";
-    else if (zipCovered === null && auto.size > 0 && !auto.has(cell.carrier.toLowerCase())) reason = "no_zip_list";
-    const cost = costOf(cell, input.fxRmbPerEur);
-    return {
-      ...line,
-      key,
-      costRmb: round2(cost.value),
-      costKnown: cost.known,
-      price: cell.price,
-      zipCovered,
-      eligible: reason === null,
-      reason,
-    };
+    // A chosen / forced line is not limited to the automatic carriers (like the COGS engine).
+    else if (zipCovered === null && auto.size > 0 && !auto.has(cell.carrier.toLowerCase()) && !sameLine(line, preferred))
+      reason = "no_zip_list";
+    return { ...line, key, costRmb: costOf(cell), price: cell.price, zipCovered, eligible: reason === null, reason };
   });
-  options.sort((a, b) => a.costRmb - b.costRmb || a.price - b.price || a.key.localeCompare(b.key));
-  return { best: options.find((option) => option.eligible) ?? null, options };
+  options.sort((a, b) => compareOptions(a, b) || a.key.localeCompare(b.key));
+  const chosen = preferred ? options.find((option) => option.eligible && sameLine(option, preferred)) : undefined;
+  return { best: chosen ?? options.find((option) => option.eligible) ?? null, options };
 }
 
 // --- Planned vs actual ------------------------------------------------------------------
@@ -237,7 +249,10 @@ export type LineCheck = {
   status: LineCheckStatus;
   planned: RouteOption | null;
   actual: RouteOption | null;
-  /** Actual − planned carrier cost (RMB) when both are known; > 0 = money lost. */
+  /**
+   * Actual − planned carrier cost (RMB) when both lines have one; > 0 = money lost. Null
+   * when a cost is missing (the status then compares the client grid prices).
+   */
   extraRmb: number | null;
 };
 
@@ -258,9 +273,11 @@ export function checkParcelLine(
   const actual = actualLine ? (everyLine.options.find((option) => sameLine(option, actualLine)) ?? null) : null;
   if (!actual) return { status: "unknown_line", planned: best, actual: null, extraRmb: null };
   if (!best) return { status: "no_plan", planned: null, actual, extraRmb: null };
-  const extra = round2(actual.costRmb - best.costRmb);
-  const status: LineCheckStatus = sameLine(actual, best) || Math.abs(extra) < 0.005 ? "ok" : extra > 0 ? "more_expensive" : "cheaper";
-  return { status, planned: best, actual, extraRmb: status === "ok" ? 0 : extra };
+  if (sameLine(actual, best)) return { status: "ok", planned: best, actual, extraRmb: 0 };
+  const extraRmb = actual.costRmb != null && best.costRmb != null ? round2(actual.costRmb - best.costRmb) : null;
+  const diff = extraRmb ?? actual.price - best.price;
+  const status: LineCheckStatus = Math.abs(diff) < 0.005 ? "ok" : diff > 0 ? "more_expensive" : "cheaper";
+  return { status, planned: best, actual, extraRmb: status === "ok" ? 0 : extraRmb };
 }
 
 function round2(value: number) {

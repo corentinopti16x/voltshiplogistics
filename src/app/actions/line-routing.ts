@@ -25,7 +25,7 @@ export type LineRoutingActionResult = {
   saved?: number;
   /** Entries that are not postcodes (shown so the admin can fix the file). */
   invalid?: string[];
-  summary?: { checked: number; moreExpensive: number; extraRmb: number; rerouted: number };
+  summary?: { checked: number; moreExpensive: number; extraRmb: number };
 };
 
 /** Largest postcode list accepted in one import (the whole US ≈ 42 000 ZIPs). */
@@ -116,14 +116,13 @@ export async function runLineCheckAction(): Promise<LineRoutingActionResult> {
   if (!ctx) return { ok: false, code: "admin" };
   if (!isEccangConfigured()) return { ok: false, code: "not_configured" };
   try {
-    const context = await loadRoutingContext();
-    const summary = { checked: 0, moreExpensive: 0, extraRmb: 0, rerouted: 0 };
+    const context = await loadRoutingContext({ fresh: true });
+    const summary = { checked: 0, moreExpensive: 0, extraRmb: 0 };
     for (const clientId of await listEccangEnabledClientIds()) {
       const result = await checkOrderLines(clientId, { days: 7, context, force: true });
       summary.checked += result.checked;
       summary.moreExpensive += result.moreExpensive;
       summary.extraRmb += result.extraRmb;
-      summary.rerouted += result.rerouted;
     }
     summary.extraRmb = Math.round(summary.extraRmb * 100) / 100;
     revalidate();
