@@ -983,16 +983,16 @@
       "checkNow": "立即核查",
       "checking": "核查中…",
       "checkDone": "已核查 {checked} 票 · {moreExpensive} 票走了更贵的渠道（+{extra} ¥）",
-      "rerouteOn": "自动纠正已开启：易仓中仍待审核的订单会改到计划渠道。",
-      "rerouteOff": "自动纠正已关闭（ECCANG_REROUTE_ORDERS）：系统只提示差异，不修改易仓。",
       "autoCarriers": "没有邮编清单时，只使用以下物流商：{list}。",
-      "rerouted": "已纠正",
+      "howItWorks": "系统不会修改易仓：还没有面单但走了更贵渠道的包裹会显示在这里，请在打包前在易仓中更改渠道。",
+      "openHint": "尚无面单：打包前请更改",
       "stats": {
         "checked": "已核查包裹（{days} 天）",
         "ok": "走计划渠道",
         "moreExpensive": "走了更贵的渠道",
         "extra": "+{rmb} ¥（≈ {eur}）",
-        "unknown": "无法识别的易仓渠道"
+        "unknown": "无法识别的易仓渠道",
+        "open": "{count} 票尚无面单"
       },
       "unmapped": {
         "title": "未对应渠道的易仓运输方式",

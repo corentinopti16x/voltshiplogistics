@@ -1911,16 +1911,16 @@
       "checkNow": "Contrôler maintenant",
       "checking": "Contrôle…",
       "checkDone": "{checked} colis contrôlés · {moreExpensive} sur une ligne plus chère (+{extra} ¥)",
-      "rerouteOn": "Correction automatique activée : les commandes encore en attente de validation dans ECCANG passent sur la ligne prévue.",
-      "rerouteOff": "Correction automatique désactivée (ECCANG_REROUTE_ORDERS) : l’app signale les écarts sans modifier ECCANG.",
       "autoCarriers": "Sans liste de codes postaux, seuls ces transporteurs sont utilisés : {list}.",
-      "rerouted": "corrigée",
+      "howItWorks": "L’app ne modifie pas ECCANG : un colis encore sans étiquette sur une ligne plus chère est signalé ici, à changer dans ECCANG avant l’emballage.",
+      "openHint": "Sans étiquette : à changer avant l’emballage",
       "stats": {
         "checked": "Colis contrôlés ({days} j)",
         "ok": "Sur la ligne prévue",
         "moreExpensive": "Sur une ligne plus chère",
         "extra": "+{rmb} ¥ (≈ {eur})",
-        "unknown": "Ligne ECCANG non reconnue"
+        "unknown": "Ligne ECCANG non reconnue",
+        "open": "{count, plural, one {# encore sans étiquette} other {# encore sans étiquette}}"
       },
       "unmapped": {
         "title": "Méthodes ECCANG non reliées à une ligne",

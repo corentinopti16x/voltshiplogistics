@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PACKAGING_LADDER } from "../domain/pricing";
 import {
+  exactShippingMethod,
   lineForShippingMethod,
-  modifyOrderPayload,
   parcelFactsFromRow,
   parcelFromItems,
   type ParcelProduct,
@@ -22,6 +22,14 @@ describe("lineForShippingMethod", () => {
     expect(lineForShippingMethod(map, "TY_US")).toEqual({ carrier: "Tongyou", lineName: null });
     expect(lineForShippingMethod(map, "UNKNOWN")).toBeNull();
     expect(lineForShippingMethod(map, null)).toBeNull();
+  });
+
+  it("maps a planned line to its own method only (no carrier or default fallback)", () => {
+    expect(exactShippingMethod(map, { carrier: "YunExpress", lineName: "商派特惠带电 YTSPTHDD" })).toBe("US_BAT_YTSP");
+    expect(exactShippingMethod(map, { carrier: "yunexpress", lineName: "特惠带电 THZXR" })).toBe("US_BAT_YTTH");
+    expect(exactShippingMethod(map, { carrier: "YunExpress", lineName: "化妆品" })).toBeNull();
+    expect(exactShippingMethod(map, { carrier: "Tongyou", lineName: null })).toBe("TY_US");
+    expect(exactShippingMethod(map, { carrier: "Tongyou", lineName: "美国专线带电" })).toBeNull();
   });
 });
 
@@ -82,11 +90,22 @@ describe("parcelFromItems", () => {
 
   it("weighs 2 translators + 2 cases like the app (292 g + 25 g packaging), battery line, built-in battery", () => {
     const parcel = parcelFromItems([{ sku: "T", quantity: 2 }, { sku: "C", quantity: 2 }], products, DEFAULT_PACKAGING_LADDER);
-    expect(parcel).toEqual({ weightG: 317, channel: "electronics_battery", batteryInternal: true, missing: [] });
+    expect(parcel).toEqual({
+      weightG: 317,
+      channel: "electronics_battery",
+      batteryInternal: true,
+      missing: [],
+      lead: "T",
+      singleUnits: null,
+    });
   });
 
   it("uses the product's own packaging for a single-product parcel (1 translator = 120 g)", () => {
-    expect(parcelFromItems([{ sku: "T", quantity: 1 }], products, DEFAULT_PACKAGING_LADDER).weightG).toBe(120);
+    expect(parcelFromItems([{ sku: "T", quantity: 1 }], products, DEFAULT_PACKAGING_LADDER)).toMatchObject({
+      weightG: 120,
+      lead: "T",
+      singleUnits: 1,
+    });
     expect(parcelFromItems([{ sku: "T", quantity: 1 }, { sku: "C", quantity: 1 }], products, DEFAULT_PACKAGING_LADDER).weightG).toBe(166);
   });
 
@@ -94,47 +113,16 @@ describe("parcelFromItems", () => {
     const parcel = parcelFromItems([{ sku: "SET2", quantity: 2 }, { sku: "X", quantity: 1 }], products, DEFAULT_PACKAGING_LADDER);
     expect(parcel.weightG).toBe(100);
     expect(parcel.missing).toEqual(["X"]);
+    // 4 pieces of a set of 2 = 2 units sold.
+    expect(parcelFromItems([{ sku: "SET2", quantity: 4 }], products, DEFAULT_PACKAGING_LADDER).singleUnits).toBe(2);
+  });
+
+  it("leads with the battery item even when a standard item comes first", () => {
+    expect(parcelFromItems([{ sku: "C", quantity: 1 }, { sku: "T", quantity: 1 }], products, DEFAULT_PACKAGING_LADDER).lead).toBe("T");
   });
 
   it("does not allow built-in-battery lines when one battery item has a removable battery", () => {
     const parcel = parcelFromItems([{ sku: "T", quantity: 1 }, { sku: "W", quantity: 1 }], products, DEFAULT_PACKAGING_LADDER);
     expect(parcel.batteryInternal).toBe(false);
-  });
-});
-
-describe("modifyOrderPayload", () => {
-  const record = {
-    order_code: "C000121-261013-0293",
-    reference_no: "#14025",
-    warehouse_code: "CN0003",
-    consignee_country_code: "US",
-    consignee_state: "NY",
-    consignee_city: "New York",
-    consignee_street1: "1 Main St",
-    consignee_street2: "",
-    consigne_zipcode: "10001",
-    consignee_name: "Jane Doe",
-    consignee_phone: "123",
-    platform: "SHOPIFY",
-    items: [{ product_sku: "SMART-VOICE-LANGUAGE-COMPANION", quantity: "2", product_declared_value: 1.01 }],
-  };
-
-  it("sends the order back with the new shipping method, empty fields dropped", () => {
-    const payload = modifyOrderPayload(record, "US_BAT_YTSP");
-    expect(payload).toMatchObject({
-      order_code: "C000121-261013-0293",
-      reference_no: "#14025",
-      shipping_method: "US_BAT_YTSP",
-      warehouse_code: "CN0003",
-      zipcode: "10001",
-      items: [{ product_sku: "SMART-VOICE-LANGUAGE-COMPANION", quantity: 2, product_declared_value: 1.01 }],
-    });
-    expect(payload).not.toHaveProperty("address2");
-    expect(payload).not.toHaveProperty("verify");
-  });
-
-  it("refuses a record without address or lines", () => {
-    expect(modifyOrderPayload({ ...record, consigne_zipcode: "" }, "X")).toBeNull();
-    expect(modifyOrderPayload({ ...record, items: [] }, "X")).toBeNull();
   });
 });

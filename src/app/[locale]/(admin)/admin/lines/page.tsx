@@ -6,12 +6,7 @@ import { deleteZipCoverageAction } from "@/app/actions/line-routing";
 import { parseLineKey } from "@/lib/domain/carrier-rules";
 import { readPricingSettings } from "@/lib/pricing/settings";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  appReroutesOrders,
-  lineCheckOverview,
-  listGridLines,
-  listZipCoverage,
-} from "@/lib/eccang/line-routing-server";
+import { lineCheckOverview, listGridLines, listZipCoverage } from "@/lib/eccang/line-routing-server";
 import { formatAmount, formatDate, formatNumber } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -79,6 +74,11 @@ export default async function AdminLinesPage() {
               eur: formatAmount(overview.extraRmb / fx, locale),
             })}
           </p>
+          {overview.moreExpensiveOpen > 0 ? (
+            <p className="mt-1 text-xs font-semibold text-[var(--rust-ink)]">
+              {t("stats.open", { count: overview.moreExpensiveOpen })}
+            </p>
+          ) : null}
         </div>
         <div className={tile}>
           <p className="text-xs text-[var(--muted)]">{t("stats.unknown")}</p>
@@ -87,7 +87,7 @@ export default async function AdminLinesPage() {
       </section>
 
       <p className="text-sm text-[var(--muted)]">
-        {appReroutesOrders() ? t("rerouteOn") : t("rerouteOff")} {autoCarriers ? t("autoCarriers", { list: autoCarriers }) : null}
+        {t("howItWorks")} {autoCarriers ? t("autoCarriers", { list: autoCarriers }) : null}
       </p>
 
       {overview.unmappedMethods.length > 0 ? (
@@ -141,7 +141,10 @@ export default async function AdminLinesPage() {
                     <td className="py-2 pr-3">
                       {row.actualLine ? lineLabel(row.actualLine) : <span className="font-mono text-xs">{row.shippingMethod ?? "—"}</span>}
                     </td>
-                    <td className="py-2 pr-3">{lineLabel(row.plannedLine)}</td>
+                    <td className="py-2 pr-3">
+                      {lineLabel(row.plannedLine)}
+                      {row.plannedMethod ? <span className="block font-mono text-xs text-[var(--muted)]">{row.plannedMethod}</span> : null}
+                    </td>
                     <td className="py-2 pr-3 text-right">
                       {row.extraRmb != null && row.extraRmb !== 0 ? `${row.extraRmb > 0 ? "+" : ""}${formatNumber(row.extraRmb, locale, 2)} ¥` : "—"}
                     </td>
@@ -149,8 +152,9 @@ export default async function AdminLinesPage() {
                       <Badge tone={row.status === "more_expensive" ? "rust" : row.status === "cheaper" ? "green" : "grey"}>
                         {t(`status.${row.status}`)}
                       </Badge>
-                      {row.reroutedAt ? <span className="ml-2 text-xs text-emerald-800">{t("rerouted")}</span> : null}
-                      {row.rerouteError ? <span className="block text-xs text-red-700">{row.rerouteError}</span> : null}
+                      {row.open && row.status === "more_expensive" ? (
+                        <span className="mt-1 block text-xs font-semibold text-[var(--rust-ink)]">{t("openHint")}</span>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
