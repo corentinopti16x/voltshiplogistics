@@ -123,13 +123,14 @@ describe("rankLines", () => {
     expect(options.some((option) => option.lineName === HUAHAN_INTERNAL)).toBe(false);
   });
 
-  it("uses the forced / chosen line when it can take the parcel, even outside the automatic carriers", () => {
+  it("uses the forced / chosen line when it is eligible, never a carrier without postcode list", () => {
     const preferredLine = { carrier: "YunExpress", lineName: TEHUI };
     expect(rankLines(cells, { ...translator, zip: "10001", preferredLine }, buildCoverageIndex([]), AUTO).best?.lineName).toBe(TEHUI);
     const huahan = { carrier: "Huahan", lineName: HUAHAN_INTERNAL };
-    expect(rankLines(cells, { ...translator, zip: "10001", preferredLine: huahan }, buildCoverageIndex([]), AUTO).best?.carrier).toBe("Huahan");
-    // …but not when its postcode list excludes the code.
+    // No Huahan list yet: the chosen Huahan line is not used (cheapest eligible instead).
+    expect(rankLines(cells, { ...translator, zip: "10001", preferredLine: huahan }, buildCoverageIndex([]), AUTO).best?.lineName).toBe(SHANGPAI);
     const listed = buildCoverageIndex([huahanList]);
+    expect(rankLines(cells, { ...translator, zip: "10001", preferredLine: huahan }, listed, AUTO).best?.carrier).toBe("Huahan");
     expect(rankLines(cells, { ...translator, zip: "90210", preferredLine: huahan }, listed, AUTO).best?.lineName).toBe(SHANGPAI);
   });
 

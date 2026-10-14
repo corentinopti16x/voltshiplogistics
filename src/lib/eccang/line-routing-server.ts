@@ -38,9 +38,13 @@ import {
   type ParcelProduct,
 } from "@/lib/eccang/line-routing";
 
+/** Migration 00023 not applied (missing TABLE only — a missing column must surface as an error). */
 function isMissingTable(error: { code?: string; message?: string } | null) {
   return Boolean(
-    error && (error.code === "42P01" || error.code === "PGRST205" || /does not exist|schema cache/i.test(error.message ?? "")),
+    error &&
+      (error.code === "42P01" ||
+        error.code === "PGRST205" ||
+        /relation "[^"]+" does not exist|could not find the table/i.test(error.message ?? "")),
   );
 }
 
@@ -217,7 +221,14 @@ async function buildRoutingContext(): Promise<RoutingContext | null> {
   const cells = new Map<string, Promise<RateCell[]>>();
   return {
     gridVersion,
-    version: `${gridVersion}|${coverage.version}|${JSON.stringify(methodMap)}|${JSON.stringify(settings.auto_carriers)}`,
+    version: JSON.stringify([
+      gridVersion,
+      coverage.version,
+      methodMap,
+      settings.auto_carriers,
+      settings.packaging_ladder,
+      settings.volumetric_divisors,
+    ]),
     fx: settings.fx_rmb_per_eur,
     autoCarriers: settings.auto_carriers,
     ladder: settings.packaging_ladder,
@@ -239,7 +250,8 @@ async function buildRoutingContext(): Promise<RoutingContext | null> {
 
 /** Live grid, pricing settings, postcode lists and ECCANG method map (cells loaded on demand). */
 export async function loadRoutingContext(options: { fresh?: boolean } = {}): Promise<RoutingContext | null> {
-  if (options.fresh || !contextCache || Date.now() - contextCache.at > CACHE_MS) {
+  if (options.fresh) forgetRoutingCache();
+  if (!contextCache || Date.now() - contextCache.at > CACHE_MS) {
     const value = buildRoutingContext();
     contextCache = { at: Date.now(), value };
     value.catch(() => (contextCache = null));
@@ -292,13 +304,20 @@ async function buildParcelProducts(clientId: string): Promise<Map<string, Parcel
     });
   }
   // ECCANG lines carry the warehouse SKU (sku_maps.eccang_sku) when Voltship set one.
-  const { data: maps } = await admin
-    .from("sku_maps")
-    .select("shopify_sku, eccang_sku")
-    .eq("client_id", clientId)
-    .not("eccang_sku", "is", null)
-    .limit(1000);
-  for (const map of (maps ?? []) as Array<{ shopify_sku: string | null; eccang_sku: string | null }>) {
+  const maps: Array<{ shopify_sku: string | null; eccang_sku: string | null }> = [];
+  for (let from = 0; from < 50_000; from += 1000) {
+    const { data, error } = await admin
+      .from("sku_maps")
+      .select("shopify_sku, eccang_sku")
+      .eq("client_id", clientId)
+      .not("eccang_sku", "is", null)
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw error;
+    maps.push(...((data ?? []) as typeof maps));
+    if (!data || data.length < 1000) break;
+  }
+  for (const map of maps) {
     const warehouse = map.eccang_sku?.trim();
     const product = map.shopify_sku ? products.get(map.shopify_sku.trim()) : undefined;
     if (warehouse && product && !products.has(warehouse)) put(warehouse, product);
@@ -412,12 +431,25 @@ export type LineCheckSummary = { checked: number; moreExpensive: number; extraRm
 
 const EMPTY_SUMMARY: LineCheckSummary = { checked: 0, moreExpensive: 0, extraRmb: 0, unknownLine: 0 };
 
-/** What the check depends on: a row is re-checked only when one of these changed. */
-function fingerprint(ctx: RoutingContext, row: OrderRow, facts: OrderParcelFacts) {
+/**
+ * What the check depends on: the order (status, tracking, line, weight, address, lines), its
+ * products' data, the client's line rules, and the grid / postcode lists / method map /
+ * settings. A row is re-checked only when one of these changed.
+ */
+function fingerprint(
+  ctx: RoutingContext,
+  rules: CarrierRules,
+  products: ReadonlyMap<string, ParcelProduct>,
+  row: OrderRow,
+  facts: OrderParcelFacts,
+) {
+  const productFacts = facts.items.map((item) => products.get(item.sku) ?? products.get(item.sku.toUpperCase()) ?? null);
   return createHash("sha1")
     .update(
       JSON.stringify([
         ctx.version,
+        rules,
+        productFacts,
         row.status,
         row.tracking_no,
         facts.shippingMethod,
@@ -486,7 +518,7 @@ export async function checkOrderLines(
 
   for (const row of rows) {
     const facts = parcelFactsFromRow(row);
-    const print = fingerprint(ctx, row, facts);
+    const print = fingerprint(ctx, rules, products, row, facts);
     if (!options.force && previous.get(row.id) === print) continue;
     const shipped = row.status === "D";
     const plan = await planParcel(ctx, rules, facts, products, { preferBilledWeight: shipped });
