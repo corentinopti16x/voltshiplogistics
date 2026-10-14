@@ -1863,7 +1863,8 @@
     "tabs": {
       "operations": {
         "achats": "Purchasing & shipping",
-        "alerts": "To review"
+        "alerts": "To review",
+        "lines": "Carrier lines"
       },
       "results": {
         "week": "By week",
@@ -1901,6 +1902,84 @@
       "result": "{done} SKUs written to Shopify, {failed} failed.",
       "pickClient": "Pick a client to pre-tick their lines: only write for clients who agreed.",
       "service": "Service line (not a product): leave it without a SKU."
+    },
+    "linesPage": {
+      "kicker": "Voltship operations",
+      "title": "Carrier lines",
+      "lead": "The app picks the line of every parcel: the cheapest one that delivers the postcode. Here: parcels that left on another line than planned, and the postcode list of each line.",
+      "missingTable": "Run the 00023_line_routing.sql migration in Supabase to turn on the line check.",
+      "checkNow": "Check now",
+      "checking": "Checking…",
+      "checkDone": "{checked} parcels checked · {moreExpensive} on a dearer line (+{extra} ¥)",
+      "rerouteOn": "Automatic fix on: orders still awaiting review in ECCANG are moved to the planned line.",
+      "rerouteOff": "Automatic fix off (ECCANG_REROUTE_ORDERS): the app reports the gaps without changing ECCANG.",
+      "autoCarriers": "Without a postcode list, only these carriers are used: {list}.",
+      "rerouted": "fixed",
+      "stats": {
+        "checked": "Parcels checked ({days} d)",
+        "ok": "On the planned line",
+        "moreExpensive": "On a dearer line",
+        "extra": "+{rmb} ¥ (≈ {eur})",
+        "unknown": "Unknown ECCANG line"
+      },
+      "unmapped": {
+        "title": "ECCANG methods not linked to a line",
+        "lead": "These codes are missing from the carrier → ECCANG method map (client page → Warehouse). Add them so their parcels get checked."
+      },
+      "table": {
+        "title": "Parcels to look at",
+        "lead": "Biggest extra costs first. Carrier costs in RMB, internal to Voltship.",
+        "empty": "No gap over the last 7 days.",
+        "order": "Order",
+        "client": "Client",
+        "zip": "Postcode",
+        "weight": "Weight",
+        "actual": "Line used",
+        "planned": "Planned line",
+        "extra": "Extra cost",
+        "status": "Status"
+      },
+      "status": {
+        "ok": "OK",
+        "more_expensive": "Dearer",
+        "cheaper": "Cheaper",
+        "unknown_line": "Unknown line",
+        "no_plan": "No line",
+        "no_data": "Missing data"
+      },
+      "coverage": {
+        "title": "Postcodes per line",
+        "lead": "A line with a list only takes its codes (or every code but its codes). Huahan is only used once its list is imported.",
+        "empty": "No list imported.",
+        "only": "{count, plural, one {# code delivered} other {# codes delivered}}",
+        "except": "{count, plural, one {# code excluded} other {# codes excluded}}",
+        "delete": "Delete"
+      },
+      "form": {
+        "line": "Line",
+        "linePlaceholder": "Pick a line…",
+        "mode": "The list holds",
+        "modeOnly": "the codes delivered",
+        "modeExcept": "the codes not delivered",
+        "zips": "Postcodes",
+        "zipsPlaceholder": "10001\n10002\n945 (= every 945xx)\n90210-90299",
+        "file": "Or a .csv / .txt file",
+        "note": "Note",
+        "notePlaceholder": "e.g. Huahan list received on 15/10",
+        "help": "One code per line or comma-separated. Short codes are prefixes, ranges such as 90210-90299 are accepted. The new list replaces the old one.",
+        "save": "Save the list",
+        "saving": "Saving…",
+        "saved": "{count, plural, one {# code saved} other {# codes saved}}.",
+        "invalid": "Ignored:"
+      },
+      "errors": {
+        "admin": "Admin access required.",
+        "pick_line": "Pick a line.",
+        "file_too_large": "File too large (5 MB max).",
+        "no_zip": "No postcode recognised.",
+        "too_many": "List too long ({count} codes, 60,000 max).",
+        "not_configured": "ECCANG is not configured (ECCANG_API_HOST)."
+      }
     }
   },
   "impersonate": {

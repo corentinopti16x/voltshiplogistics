@@ -36,6 +36,7 @@ import {
   type ShopifyOrderForEccang,
 } from "@/lib/eccang/mapping";
 import { calculateProductCogsMatrix } from "@/lib/pricing/server";
+import { checkOrderLines, routeShopifyOrder } from "@/lib/eccang/line-routing-server";
 import { packPieces } from "@/lib/products/extras";
 import { createNotification } from "@/lib/notifications/server";
 import { decryptShopifyToken } from "@/lib/shopify/crypto";
@@ -245,6 +246,9 @@ async function skuKnown(clientId: string, skus: string[]) {
 }
 
 async function pickShippingMethod(clientId: string, order: ShopifyOrderForEccang, items: ReturnType<typeof orderLinesForEccang>) {
+  // Voltship decides the line: cheapest line covering the postcode for the whole parcel.
+  const routed = await routeShopifyOrder(clientId, order.shipping_address, items).catch(() => null);
+  if (routed?.code) return routed;
   const map = await getShippingMethodMap();
   const country = (order.shipping_address?.country_code ?? "").toUpperCase();
   const admin = createAdminClient();
@@ -771,7 +775,16 @@ export async function createAsnIfEnabled(clientId: string, productId: string, qt
 export async function syncClient(clientId: string) {
   const admin = createAdminClient();
   const cfg = await getCredentialsForClient(clientId);
-  const summary = { inventory: 0, orders: 0, externalOrders: 0, asns: 0, retried: 0, errors: [] as string[] };
+  const summary = {
+    inventory: 0,
+    orders: 0,
+    externalOrders: 0,
+    asns: 0,
+    retried: 0,
+    /** Parcels on a dearer line than planned (and the extra carrier cost, RMB) in this run. */
+    lines: { checked: 0, moreExpensive: 0, extraRmb: 0, rerouted: 0 },
+    errors: [] as string[],
+  };
   try {
     requireEccangClient(cfg);
     const steps: Array<[string, () => Promise<void>]> = [
@@ -784,6 +797,18 @@ export async function syncClient(clientId: string) {
       ["orders", async () => void (summary.orders = (await pullPendingOrders(clientId, cfg)).polled)],
       ["external orders", async () => void (summary.externalOrders = (await pullAllOrders(clientId, cfg)).imported)],
       ["asn", async () => void (summary.asns = (await pullAsn(clientId, cfg)).asns)],
+      [
+        "line check",
+        async () => {
+          const lines = await checkOrderLines(clientId, { config: cfg });
+          summary.lines = {
+            checked: lines.checked,
+            moreExpensive: lines.moreExpensive,
+            extraRmb: lines.extraRmb,
+            rerouted: lines.rerouted,
+          };
+        },
+      ],
     ];
     for (const [name, step] of steps) {
       try {
