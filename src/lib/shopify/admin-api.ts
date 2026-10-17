@@ -337,6 +337,7 @@ export async function createFulfillmentForOrder(
   accessToken: string,
   shopifyOrderId: string,
   tracking: ShopifyTrackingInfo,
+  options: { notifyCustomer?: boolean } = {},
 ) {
   const orderGid = shopifyOrderId.startsWith("gid://")
     ? shopifyOrderId
@@ -364,7 +365,7 @@ export async function createFulfillmentForOrder(
       ...(tracking.company ? { company: tracking.company } : {}),
       ...(tracking.url ? { url: tracking.url } : {}),
     },
-    notifyCustomer: true,
+    notifyCustomer: options.notifyCustomer ?? true,
   };
   type Result = { fulfillment: { id: string } | null; userErrors: Array<{ message: string }> };
   const mutationFor = (name: string) =>

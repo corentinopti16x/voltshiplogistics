@@ -1049,7 +1049,8 @@
         "clients": "Clients",
         "money": "Argent"
       },
-      "results": "Résultats"
+      "results": "Résultats",
+      "tracking": "Suivis → Shopify"
     },
     "rateImport": {
       "kicker": "Admin Voltship",
@@ -1901,6 +1902,59 @@
       "result": "{done} SKU écrits dans Shopify, {failed} en échec.",
       "pickClient": "Choisis un client pour pré-cocher ses lignes : n'écris que pour les clients qui ont donné leur accord.",
       "service": "Ligne de service (pas un produit) : à laisser sans SKU."
+    },
+    "trackingPage": {
+      "kicker": "Opérations",
+      "title": "Suivis → Shopify",
+      "lead": "Importe un fichier de suivis (le nôtre, ECCANG, transporteur ou ancien agent) : chaque commande passe « Expédiée » dans la boutique Shopify du client, avec le numéro de suivi et le transporteur. Une commande déjà expédiée n'est pas touchée : on peut relancer le même fichier sans risque.",
+      "client": "Client",
+      "shop": "Boutique",
+      "allShops": "Toutes ses boutiques (automatique)",
+      "shopHint": "Automatique : la commande est cherchée par son ID Shopify dans toutes les boutiques du client. Choisis une boutique si le fichier n'a que les numéros de commande (#14236) et que le client a plusieurs boutiques.",
+      "file": "Fichier CSV",
+      "fileHint": "Colonnes reconnues : Order Name (#14236) et/ou Shopify Order ID, Tracking Number, Tracking Company (facultatif). Séparateur virgule, point-virgule ou tabulation.",
+      "paste": "… ou colle le contenu ici",
+      "missingColumns": "Colonnes introuvables : {columns}.",
+      "columns": {
+        "order": "commande (Order Name ou Shopify Order ID)",
+        "tracking": "numéro de suivi (Tracking Number)"
+      },
+      "preview": {
+        "rows": "{count} commandes à envoyer",
+        "duplicates": "{count} doublons ignorés",
+        "invalid": "{count} lignes ignorées (lignes {lines}…)",
+        "tooMany": "Plus de {max} lignes : découpe le fichier."
+      },
+      "notify": "Envoyer l'e-mail d'expédition Shopify au client final (avec le lien de suivi).",
+      "consent": "Le client {client} est d'accord pour que Voltship marque ses commandes comme expédiées dans sa boutique Shopify.",
+      "start": "Envoyer {count} suivis à Shopify",
+      "running": "Envoi… {done} / {total}",
+      "stop": "Arrêter",
+      "download": "Télécharger le rapport (CSV)",
+      "allGood": "Toutes les commandes sont marquées expédiées dans Shopify.",
+      "noClients": "Aucun client n'a de boutique Shopify connectée.",
+      "status": {
+        "fulfilled": "Expédiée",
+        "already_fulfilled": "Déjà expédiée",
+        "not_found": "Introuvable",
+        "ambiguous": "Plusieurs boutiques",
+        "error": "Erreur"
+      },
+      "table": {
+        "line": "Ligne",
+        "order": "Commande",
+        "tracking": "Suivi",
+        "status": "Statut",
+        "message": "Détail"
+      },
+      "errors": {
+        "admin": "Réservé aux admins Voltship.",
+        "consent": "Coche l'accord du client avant d'envoyer.",
+        "client": "Client invalide.",
+        "rows": "Lignes invalides.",
+        "fileTooLarge": "Fichier trop gros (5 Mo maximum).",
+        "unknown": "Envoi interrompu."
+      }
     }
   },
   "impersonate": {

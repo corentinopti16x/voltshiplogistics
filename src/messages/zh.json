@@ -373,7 +373,8 @@
         "clients": "客户",
         "money": "财务"
       },
-      "results": "经营结果"
+      "results": "经营结果",
+      "tracking": "物流单号 → Shopify"
     },
     "rateImport": {
       "kicker": "Voltship 管理后台",
@@ -973,6 +974,59 @@
       "result": "已写入 {done} 个SKU，失败 {failed} 个。",
       "pickClient": "请先选择客户再预先勾选：只为已同意的客户写入。",
       "service": "服务类行（不是产品）：不需要SKU。"
+    },
+    "trackingPage": {
+      "kicker": "运营",
+      "title": "物流单号 → Shopify",
+      "lead": "导入物流单号文件（我们的、易仓、物流商或前代理的）：每个订单在客户的 Shopify 店铺中标记为已发货，并填写单号和物流商。已发货的订单不会改动，同一文件可以重复导入。",
+      "client": "客户",
+      "shop": "店铺",
+      "allShops": "该客户所有店铺（自动）",
+      "shopHint": "自动：按 Shopify 订单 ID 在客户所有店铺中查找。如果文件只有订单号（#14236）且客户有多个店铺，请选择店铺。",
+      "file": "CSV 文件",
+      "fileHint": "可识别的列：Order Name（#14236）和/或 Shopify Order ID、Tracking Number、Tracking Company（可选）。逗号、分号或制表符分隔。",
+      "paste": "……或粘贴内容",
+      "missingColumns": "找不到列：{columns}。",
+      "columns": {
+        "order": "订单（Order Name 或 Shopify Order ID）",
+        "tracking": "物流单号（Tracking Number）"
+      },
+      "preview": {
+        "rows": "待发送 {count} 个订单",
+        "duplicates": "忽略 {count} 个重复",
+        "invalid": "忽略 {count} 行（第 {lines} 行……）",
+        "tooMany": "超过 {max} 行：请拆分文件。"
+      },
+      "notify": "向终端客户发送 Shopify 发货邮件（含物流链接）。",
+      "consent": "客户 {client} 同意 Voltship 在其 Shopify 店铺中将订单标记为已发货。",
+      "start": "发送 {count} 个单号到 Shopify",
+      "running": "发送中…… {done} / {total}",
+      "stop": "停止",
+      "download": "下载报告（CSV）",
+      "allGood": "所有订单已在 Shopify 标记为已发货。",
+      "noClients": "没有客户连接 Shopify 店铺。",
+      "status": {
+        "fulfilled": "已发货",
+        "already_fulfilled": "之前已发货",
+        "not_found": "找不到",
+        "ambiguous": "多个店铺",
+        "error": "错误"
+      },
+      "table": {
+        "line": "行",
+        "order": "订单",
+        "tracking": "单号",
+        "status": "状态",
+        "message": "说明"
+      },
+      "errors": {
+        "admin": "仅限 Voltship 管理员。",
+        "consent": "发送前请勾选客户同意。",
+        "client": "客户无效。",
+        "rows": "数据行无效。",
+        "fileTooLarge": "文件太大（最大 5 MB）。",
+        "unknown": "发送中断。"
+      }
     }
   },
   "orderAlerts": {

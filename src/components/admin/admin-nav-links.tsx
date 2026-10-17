@@ -19,6 +19,7 @@ const groups: NavGroup[] = [
     items: [
       { href: "/admin/achats", key: "achats" },
       { href: "/admin/orders", key: "orders" },
+      { href: "/admin/tracking", key: "tracking" },
     ],
   },
   {
