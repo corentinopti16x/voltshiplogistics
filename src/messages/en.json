@@ -1049,7 +1049,8 @@
         "clients": "Clients",
         "money": "Money"
       },
-      "results": "Results"
+      "results": "Results",
+      "tracking": "Tracking → Shopify"
     },
     "rateImport": {
       "kicker": "Voltship admin",
@@ -1901,6 +1902,59 @@
       "result": "{done} SKUs written to Shopify, {failed} failed.",
       "pickClient": "Pick a client to pre-tick their lines: only write for clients who agreed.",
       "service": "Service line (not a product): leave it without a SKU."
+    },
+    "trackingPage": {
+      "kicker": "Operations",
+      "title": "Tracking → Shopify",
+      "lead": "Import a tracking file (ours, ECCANG, carrier or previous agent): each order is marked shipped in the client's Shopify store with its tracking number and carrier. Orders already shipped are left untouched, so the same file can be sent again safely.",
+      "client": "Client",
+      "shop": "Store",
+      "allShops": "All their stores (automatic)",
+      "shopHint": "Automatic: the order is looked up by its Shopify ID in every store of the client. Pick a store when the file only has order numbers (#14236) and the client has several stores.",
+      "file": "CSV file",
+      "fileHint": "Recognised columns: Order Name (#14236) and/or Shopify Order ID, Tracking Number, Tracking Company (optional). Comma, semicolon or tab separated.",
+      "paste": "… or paste the content here",
+      "missingColumns": "Columns not found: {columns}.",
+      "columns": {
+        "order": "order (Order Name or Shopify Order ID)",
+        "tracking": "tracking number (Tracking Number)"
+      },
+      "preview": {
+        "rows": "{count} orders to send",
+        "duplicates": "{count} duplicates skipped",
+        "invalid": "{count} lines skipped (lines {lines}…)",
+        "tooMany": "More than {max} lines: split the file."
+      },
+      "notify": "Send Shopify's shipping email to the end customer (with the tracking link).",
+      "consent": "{client} agrees that Voltship marks their orders as shipped in their Shopify store.",
+      "start": "Send {count} trackings to Shopify",
+      "running": "Sending… {done} / {total}",
+      "stop": "Stop",
+      "download": "Download the report (CSV)",
+      "allGood": "Every order is marked shipped in Shopify.",
+      "noClients": "No client has a connected Shopify store.",
+      "status": {
+        "fulfilled": "Shipped",
+        "already_fulfilled": "Already shipped",
+        "not_found": "Not found",
+        "ambiguous": "Several stores",
+        "error": "Error"
+      },
+      "table": {
+        "line": "Line",
+        "order": "Order",
+        "tracking": "Tracking",
+        "status": "Status",
+        "message": "Detail"
+      },
+      "errors": {
+        "admin": "Voltship admins only.",
+        "consent": "Tick the client's consent before sending.",
+        "client": "Invalid client.",
+        "rows": "Invalid lines.",
+        "fileTooLarge": "File too large (5 MB max).",
+        "unknown": "Sending stopped."
+      }
     }
   },
   "impersonate": {
