@@ -10,7 +10,7 @@ type NavGroup = { key: string; href?: string; items?: NavItem[] };
 /**
  * Admin menu in 5 sections: Accueil · Opérations ▾ · Produits ▾ · Clients · Argent ▾.
  * Pages of the same rubrique are tabs on the page itself (SectionTabs / SourcingTabs), not menu entries:
- * Achats & expéditions + À vérifier, Sourcing + À compléter, Clients + Boutiques Shopify, Résultats (semaine + commande).
+ * Achats & expéditions + À vérifier + Lignes, Sourcing + À compléter, Clients + Boutiques Shopify, Résultats (semaine + commande).
  */
 const groups: NavGroup[] = [
   { key: "dashboard", href: "/admin" },
@@ -40,7 +40,7 @@ const groups: NavGroup[] = [
 
 /** Other pages shown as a tab of a menu entry. */
 const TAB_OF: Record<string, string[]> = {
-  "/admin/achats": ["/admin/alerts"],
+  "/admin/achats": ["/admin/alerts", "/admin/lines"],
   "/sourcer": ["/admin/todo", "/admin/skus"],
   "/admin/clients": ["/admin/shops"],
   "/admin/finance": ["/admin/margin"],
