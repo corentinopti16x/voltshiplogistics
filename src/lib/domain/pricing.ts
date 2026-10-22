@@ -818,13 +818,50 @@ export function gridChannel<T extends string | null | undefined>(channel: T): T 
   return channel === "liquid_perfume" ? "cosmetics" : channel;
 }
 
-/** Most constraining line first: a parcel ships on the channel of its most sensitive item. */
-const PARCEL_CHANNEL_ORDER: ShippingChannel[] = ["electronics_battery", "sensitive_other", "cosmetics", "magnetic", "standard"];
+/**
+ * Most constraining line first: a parcel ships on the channel of its most sensitive item.
+ * Carrier answers (Oct. 2026 — Tongyou, YunExpress, Huahan, 4PX):
+ * - a sensitive line (Tongyou 特敏感, Huahan PK0573) takes battery, magnetic, cosmetics,
+ *   supplements and liquids together;
+ * - a battery line takes battery + weak magnetic + standard, not (liquid) cosmetics;
+ * - a cosmetics line takes cosmetics; a standard line takes standard only.
+ */
+const PARCEL_CHANNEL_ORDER: ShippingChannel[] = ["sensitive_other", "electronics_battery", "cosmetics", "magnetic", "standard"];
 
-/** Grid channel of a parcel holding several products (battery > sensitive > cosmetics > magnetic > standard). */
+/**
+ * Grid channel of a parcel holding several products. Sensitive > battery > cosmetics >
+ * magnetic > standard, except that cosmetics mixed with a battery or magnetic item need a
+ * line taking both: the sensitive line.
+ */
 export function parcelChannel(channels: Array<ShippingChannel | string | null | undefined>): ShippingChannel | null {
   const present = new Set(channels.map((channel) => gridChannel(channel)).filter(Boolean));
+  if (present.has("cosmetics") && (present.has("electronics_battery") || present.has("magnetic"))) {
+    return "sensitive_other";
+  }
   return PARCEL_CHANNEL_ORDER.find((channel) => present.has(channel)) ?? null;
+}
+
+/**
+ * Product that leads a parcel holding several products: the one on the parcel's line
+ * (see parcelChannel), else — when the line comes from a mix (battery + cosmetics →
+ * sensitive) — the item on the most constraining line of its own, whatever the order of the
+ * lines. The whole parcel is priced on that line; the lead's market and carrier choice apply.
+ * Products without a channel count as standard. Null when the list is empty.
+ */
+export function parcelLead<T extends { shipping_channel?: string | null }>(
+  products: T[],
+): { lead: T; channel: ShippingChannel } | null {
+  if (products.length === 0) return null;
+  const own = (product: T) => gridChannel(product.shipping_channel ?? "standard");
+  const channel = parcelChannel(products.map((product) => product.shipping_channel ?? "standard")) ?? "standard";
+  const rank = (product: T) => {
+    const index = PARCEL_CHANNEL_ORDER.indexOf(own(product) as ShippingChannel);
+    return index < 0 ? PARCEL_CHANNEL_ORDER.length : index;
+  };
+  const lead =
+    products.find((product) => own(product) === channel) ??
+    products.reduce((best, product) => (rank(product) < rank(best) ? product : best), products[0]);
+  return { lead, channel };
 }
 
 /** One product line of a composed parcel (main product + its upsells). */
