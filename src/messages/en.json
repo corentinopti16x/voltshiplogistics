@@ -2171,7 +2171,8 @@
         "client": "Client · shops",
         "price": "Product price · weight",
         "cogs": "COGS ×1 · carrier per market",
-        "sales90": "90-day sales"
+        "sales90": "90-day sales",
+        "quick": "Quick entry"
       },
       "set": "Set of {count}",
       "battery": "Built-in battery",
@@ -2195,7 +2196,10 @@
       "upsellOf": "Upsell of {products}",
       "upsellStock": "stock {count}",
       "upsellStockUnknown": "stock unknown",
-      "detectUpsells": "Detect upsells (90 days)"
+      "detectUpsells": "Detect upsells (90 days)",
+      "quickOn": "✎ Quick entry",
+      "quickOff": "Done",
+      "boxEqualsFactory": "⚠ box = factory price"
     },
     "upsells": {
       "title": "Upsells",
@@ -2240,6 +2244,15 @@
       "noLine": "No line covers this weight on this market.",
       "market": "Market",
       "hint": "Updated as you type, same grid and rules as the matrix. Remember to save."
+    },
+    "quick": {
+      "factory": "Factory ¥",
+      "weight": "Weight g",
+      "channel": "Channel",
+      "status": "Status",
+      "save": "Save",
+      "saving": "…",
+      "saved": "✓ saved"
     }
   },
   "support": {
