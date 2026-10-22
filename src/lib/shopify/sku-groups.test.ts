@@ -26,6 +26,21 @@ describe("resolveEffectiveSkus", () => {
     expect(skus.get("case2")).toBe("SHOPIFY-P200");
   });
 
+  it("recognises the same item translated in another language in one store", () => {
+    const skus = resolveEffectiveSkus([
+      v("en", "100", "AI Translator", "smart-voice-language-companion"),
+      v("es", "200", "Traductor de Voz con IA", "SMART-VOICE-LANGUAGE-COMPANION"),
+      v("gift", "300", "2 FREE carrying cases", "ECDF-GIFT-2CASE"),
+      v("gift-es", "400", "2 estuches GRATIS", "ECDF-GIFT-2CASE"),
+      v("mom-de", "500", "Mama-Armband — Die Vornamen ihrer Kinder", "BRA-1"),
+      v("mom-fr", "600", "Bracelet Maman — Les prénoms de ses enfants", "BRA-1"),
+    ]);
+    expect(skus.get("es")).toBe("SMART-VOICE-LANGUAGE-COMPANION");
+    expect(skus.get("gift-es")).toBe("ECDF-GIFT-2CASE");
+    expect(skus.get("mom-de")).toBe("BRA-1");
+    expect(skus.get("mom-fr")).toBe("BRA-1");
+  });
+
   it("never splits a SKU across stores (translated titles)", () => {
     const skus = resolveEffectiveSkus([
       v("fr", "100", "Collier Maman — prénoms gravés", "COL-1"),
