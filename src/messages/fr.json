@@ -2263,6 +2263,21 @@
       "none": "0 vente / 7 j",
       "hint": "{previous} les 7 jours d'avant",
       "noneHint": "Rien vendu sur les 14 derniers jours"
+    },
+    "buy": {
+      "title": "Combien en acheter ?",
+      "pieces": "{count} pièces",
+      "nothing": "Rien à acheter pour l'instant",
+      "urgent": "Urgent",
+      "backlog": "Commandes en attente",
+      "perDay": "Ventes / jour (14 j)",
+      "stock": "Stock",
+      "incoming": "En route",
+      "leadTime": "Délai de réassort",
+      "cover": "Couverture",
+      "days": "{days} j",
+      "empty": "Aucune vente ni commande en attente sur 60 jours pour ce produit.",
+      "howto": "Même calcul que la page Achats : commandes pas encore expédiées + ventes par jour × (délai + couverture) − stock − en route. Stock et en route viennent d'ECCANG."
     }
   },
   "support": {

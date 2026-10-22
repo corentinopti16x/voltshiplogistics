@@ -2263,6 +2263,21 @@
       "none": "0 sold / 7 d",
       "hint": "{previous} the 7 days before",
       "noneHint": "Nothing sold in the last 14 days"
+    },
+    "buy": {
+      "title": "How many to buy?",
+      "pieces": "{count} pieces",
+      "nothing": "Nothing to buy for now",
+      "urgent": "Urgent",
+      "backlog": "Orders to send",
+      "perDay": "Sales / day (14 d)",
+      "stock": "Stock",
+      "incoming": "Incoming",
+      "leadTime": "Lead time",
+      "cover": "Cover",
+      "days": "{days} d",
+      "empty": "No sale and no pending order in the last 60 days for this product.",
+      "howto": "Same computation as the Purchasing page: orders not sent yet + daily sales × (lead time + cover) − stock − incoming. Stock and incoming come from ECCANG."
     }
   },
   "support": {

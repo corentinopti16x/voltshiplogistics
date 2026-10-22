@@ -1371,6 +1371,21 @@
       "none": "7 天 0 件",
       "hint": "前 7 天 {previous} 件",
       "noneHint": "最近 14 天没有销量"
+    },
+    "buy": {
+      "title": "要买多少？",
+      "pieces": "{count} 件",
+      "nothing": "暂时不用采购",
+      "urgent": "紧急",
+      "backlog": "待发订单",
+      "perDay": "日销量（14 天）",
+      "stock": "库存",
+      "incoming": "在途",
+      "leadTime": "补货周期",
+      "cover": "覆盖天数",
+      "days": "{days} 天",
+      "empty": "该产品最近 60 天没有销量和待发订单。",
+      "howto": "和采购页同一算法：未发订单 + 日销量 ×（周期 + 覆盖）− 库存 − 在途。库存和在途来自易仓。"
     }
   },
   "app": {

@@ -23,6 +23,10 @@ import { composerItem, upsellParentsOf } from "@/lib/products/upsells";
 import { unitsSold90d } from "@/lib/products/sales90";
 import { loadClientSalesVariants, loadSevenDayTrends } from "@/lib/products/sales7-server";
 import { SalesTrendBadge } from "@/components/sourcer/sales-trend-badge";
+import { BuyAdvice } from "@/components/sourcer/buy-advice";
+import { loadProductBuyLines } from "@/lib/orders/to-ship-server";
+import { DEFAULT_BUY_OPTIONS } from "@/lib/orders/to-ship";
+import { productSkuKeys } from "@/lib/products/sales90";
 
 export default async function SourcerProductPage({
   params,
@@ -82,6 +86,10 @@ export default async function SourcerProductPage({
   const salesVariants = await loadClientSalesVariants(product.client_id).catch(() => []);
   const trend = (await loadSevenDayTrends([product], salesVariants).catch(() => new Map())).get(product.id);
   const sales90 = unitsSold90d([product], salesVariants).get(product.id) ?? 0;
+  // How many to buy: same plan as admin « Achats & expéditions », this product's SKUs only
+  // (orders of the last 60 days still to send + sales × (lead + cover) − stock − incoming).
+  const skuKeys = productSkuKeys([product], salesVariants).get(product.id) ?? new Set<string>();
+  const buyLines = await loadProductBuyLines(product.client_id, product.id, skuKeys).catch(() => []);
 
   return (
     <SourcerShell role={ctx.role}>
@@ -139,6 +147,10 @@ export default async function SourcerProductPage({
           ) : null}
         </dl>
       </section>
+
+      <div className="mt-6">
+        <BuyAdvice lines={buyLines} locale={locale} coverDays={DEFAULT_BUY_OPTIONS.coverDays} />
+      </div>
 
       <div className="mt-6">
         <SourcingWorkForm
