@@ -16,6 +16,8 @@ import { stockBySku, upsellOwners } from "@/lib/products/upsells-server";
 import { refreshUpsellsAction } from "@/app/actions/upsells";
 import { readPricingSettings } from "@/lib/pricing/settings";
 import { QuickEditRow } from "@/components/sourcer/quick-edit-row";
+import { loadSevenDayTrends } from "@/lib/products/sales7-server";
+import { SalesTrendBadge } from "@/components/sourcer/sales-trend-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +91,8 @@ export default async function CatalogPage({
     ]),
   );
   const sales = unitsSold90d(products, variants);
+  // This week vs last week, shown next to the 90-day total (what to fill in first).
+  const trends = await loadSevenDayTrends(products, variants).catch(() => new Map());
   // Shops selling each product (variant imported into it, or same SKU on the client's shops).
   const skuOwner = new Map<string, string>();
   for (const product of products) {
@@ -273,7 +277,7 @@ export default async function CatalogPage({
                 <th className="px-4 py-3">{t("columns.client")}</th>
                 <th className="px-4 py-3 text-right">{t("columns.price")}</th>
                 <th className="px-4 py-3">{t("columns.cogs")}</th>
-                <th className="px-4 py-3 text-right">{t("columns.sales90")}</th>
+                <th className="px-4 py-3 text-right">{t("columns.sales")}</th>
                 {editMode ? <th className="px-4 py-3">{t("columns.quick")}</th> : null}
               </tr>
             </thead>
@@ -421,8 +425,13 @@ export default async function CatalogPage({
                         </ul>
                       )}
                     </td>
-                    <td className="tabular px-4 py-3 text-right font-medium">
-                      {(sales.get(row.id) ?? 0).toLocaleString(locale)}
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex flex-col items-end gap-1">
+                        <SalesTrendBadge trend={trends.get(row.id)} locale={locale} />
+                        <span className="tabular text-xs text-[var(--muted)]">
+                          {t("sales90Short", { count: (sales.get(row.id) ?? 0).toLocaleString(locale) })}
+                        </span>
+                      </div>
                     </td>
                     {editMode ? (
                       <td className="px-4 py-3">

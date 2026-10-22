@@ -1130,7 +1130,8 @@
       "destinationMarkets": "目标市场",
       "notes": "备注",
       "reference": "参考链接",
-      "openSourceLink": "打开参考链接"
+      "openSourceLink": "打开参考链接",
+      "sales90": "90 天售出 {count} 件"
     },
     "shell": {
       "queueLink": "采购队列",
@@ -1280,7 +1281,8 @@
         "price": "产品价格 · 重量",
         "cogs": "COGS ×1 · 各市场渠道",
         "sales90": "90 天销量",
-        "quick": "快速录入"
+        "quick": "快速录入",
+        "sales": "销量 7 天 · 90 天"
       },
       "set": "{count} 件套",
       "battery": "内置电池",
@@ -1307,7 +1309,8 @@
       "detectUpsells": "识别加购产品（90 天）",
       "quickOn": "✎ 快速录入",
       "quickOff": "完成录入",
-      "boxEqualsFactory": "⚠ 盒子价 = 出厂价"
+      "boxEqualsFactory": "⚠ 盒子价 = 出厂价",
+      "sales90Short": "90 天 {count}"
     },
     "upsells": {
       "title": "加购产品（Upsell）",
@@ -1361,6 +1364,13 @@
       "save": "保存",
       "saving": "…",
       "saved": "✓ 已保存"
+    },
+    "sales7": {
+      "last7": "7 天售出 {count}",
+      "new": "新品",
+      "none": "7 天 0 件",
+      "hint": "前 7 天 {previous} 件",
+      "noneHint": "最近 14 天没有销量"
     }
   },
   "app": {
