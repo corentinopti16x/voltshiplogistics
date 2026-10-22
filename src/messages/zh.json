@@ -1227,7 +1227,14 @@
       "lengthCm": "包装长",
       "widthCm": "包装宽",
       "heightCm": "包装高",
-      "dimensionsHint": "三个尺寸也用于计算物流体积重。"
+      "dimensionsHint": "三个尺寸也用于计算物流体积重。",
+      "factoryPriceFirst": "先填这个：客户产品价格（€）会自动计算。",
+      "clientPriceLinked": "根据出厂价自动计算（¥ ÷ {rate}）。如需手动设定，直接输入其他数值。",
+      "boxEqualsFactory": "⚠ 和出厂价一样：很可能填错了。盒子会在产品之外另外收费。",
+      "advancedTitle": "高级选项",
+      "advancedHint": "盒子、特殊包装、套装销售 — 很少用到",
+      "customsPrefill": "一键填写（{name}）",
+      "customsPrefillHint": "点击“一键填写”自动填入常用申报名、海关编码和尺寸，然后检查一下。"
     },
     "title": "采购待办队列",
     "soon": "按请求时间从早到晚处理。填写报价字段后，向客户发送最终 COGS（商品成本）。",
@@ -1325,6 +1332,22 @@
       "queue": "客户需求",
       "todo": "待完善",
       "skus": "待修正SKU"
+    },
+    "live": {
+      "title": "实时成本 COGS",
+      "computing": "计算中…",
+      "unsaved": "未保存",
+      "error": "暂时无法计算。",
+      "missingData": "填写价格、重量和渠道后显示成本。",
+      "missingGrid": "没有生效的运费表。",
+      "oneUnit": "1 件订单 · {market}",
+      "product": "产品",
+      "box": "盒子",
+      "shipping": "运费（{weight} g）",
+      "handling": "操作费 + 佣金",
+      "noLine": "该市场没有覆盖这个重量的渠道。",
+      "market": "市场",
+      "hint": "输入时自动更新，和下面的成本表用同一个运费表和规则。记得保存。"
     }
   },
   "app": {

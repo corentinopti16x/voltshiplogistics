@@ -2121,7 +2121,14 @@
       "lengthCm": "Packed length",
       "widthCm": "Packed width",
       "heightCm": "Packed height",
-      "dimensionsHint": "The 3 dimensions also count for the shipping volumetric weight."
+      "dimensionsHint": "The 3 dimensions also count for the shipping volumetric weight.",
+      "factoryPriceFirst": "Fill this first: the client product price (€) is computed automatically.",
+      "clientPriceLinked": "Computed from the factory price (¥ ÷ {rate}). Type another value to set it by hand.",
+      "boxEqualsFactory": "⚠ Same value as the factory price: probably a mistake. The box is billed on top of the product.",
+      "advancedTitle": "Advanced options",
+      "advancedHint": "box, specific packaging, sold as a set — rarely used",
+      "customsPrefill": "Pre-fill ({name})",
+      "customsPrefillHint": "Click « Pre-fill » for the usual declared name, HS code and dimensions, then check."
     },
     "announced": {
       "title": "Prices announced to the client",
@@ -2217,6 +2224,22 @@
       "queue": "Client requests",
       "todo": "To complete",
       "skus": "SKUs to fix"
+    },
+    "live": {
+      "title": "Live COGS",
+      "computing": "Computing…",
+      "unsaved": "not saved",
+      "error": "Cannot compute right now.",
+      "missingData": "Fill in price, weight and channel to see the COGS.",
+      "missingGrid": "No active rate grid.",
+      "oneUnit": "Order of 1 · {market}",
+      "product": "Product",
+      "box": "Box",
+      "shipping": "Shipping ({weight} g)",
+      "handling": "Handling + commission",
+      "noLine": "No line covers this weight on this market.",
+      "market": "Market",
+      "hint": "Updated as you type, same grid and rules as the matrix. Remember to save."
     }
   },
   "support": {
