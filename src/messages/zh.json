@@ -936,7 +936,8 @@
     "tabs": {
       "operations": {
         "achats": "采购与发货",
-        "alerts": "待核查"
+        "alerts": "待核查",
+        "lines": "物流渠道"
       },
       "results": {
         "week": "按周",
@@ -1026,6 +1027,84 @@
         "rows": "数据行无效。",
         "fileTooLarge": "文件太大（最大 5 MB）。",
         "unknown": "发送中断。"
+      }
+    },
+    "linesPage": {
+      "kicker": "Voltship 运营",
+      "title": "物流渠道",
+      "lead": "系统为每个包裹选择渠道：能派送该邮编的最便宜渠道。这里显示：没有按计划渠道发出的包裹，以及每条渠道的邮编清单。",
+      "missingTable": "请在 Supabase 中执行迁移 00023_line_routing.sql 以启用渠道核查。",
+      "checkNow": "立即核查",
+      "checking": "核查中…",
+      "checkDone": "已核查 {checked} 票 · {moreExpensive} 票走了更贵的渠道（+{extra} ¥）",
+      "autoCarriers": "没有邮编清单时，只使用以下物流商：{list}。",
+      "howItWorks": "系统不会修改易仓：还没有面单但走了更贵渠道的包裹会显示在这里，请在打包前在易仓中更改渠道。",
+      "openHint": "尚无面单：打包前请更改",
+      "stats": {
+        "checked": "已核查包裹（{days} 天）",
+        "ok": "走计划渠道",
+        "moreExpensive": "走了更贵的渠道",
+        "extra": "+{rmb} ¥（≈ {eur}）",
+        "unknown": "无法识别的易仓渠道",
+        "open": "{count} 票尚无面单"
+      },
+      "unmapped": {
+        "title": "未对应渠道的易仓运输方式",
+        "lead": "这些代码不在「物流商 → 易仓运输方式」对照表中（客户页面 → 仓库）。添加后其包裹才会被核查。"
+      },
+      "table": {
+        "title": "需要查看的包裹",
+        "lead": "按多付金额从高到低。物流成本为人民币，仅供 Voltship 内部使用。",
+        "empty": "最近 7 天没有差异。",
+        "order": "订单",
+        "client": "客户",
+        "zip": "邮编",
+        "weight": "重量",
+        "actual": "实际渠道",
+        "planned": "计划渠道",
+        "extra": "多付",
+        "status": "状态"
+      },
+      "status": {
+        "ok": "正常",
+        "more_expensive": "更贵",
+        "cheaper": "更便宜",
+        "unknown_line": "未知渠道",
+        "no_plan": "无可用渠道",
+        "no_data": "数据缺失"
+      },
+      "coverage": {
+        "title": "各渠道邮编",
+        "lead": "有清单的渠道只派送清单内的邮编（或除清单外的全部邮编）。华翰只有在导入清单后才会使用。",
+        "empty": "尚未导入清单。",
+        "only": "{count} 个可派送邮编",
+        "except": "{count} 个不派送邮编",
+        "delete": "删除"
+      },
+      "form": {
+        "line": "渠道",
+        "linePlaceholder": "选择渠道…",
+        "mode": "清单内容",
+        "modeOnly": "可派送的邮编",
+        "modeExcept": "不派送的邮编",
+        "zips": "邮编",
+        "zipsPlaceholder": "10001\n10002\n945（= 所有 945xx）\n90210-90299",
+        "file": "或上传 .csv / .txt 文件",
+        "note": "备注",
+        "notePlaceholder": "例如：10/15 收到的华翰清单",
+        "help": "每行一个邮编，或用逗号分隔。较短的代码视为前缀，支持 90210-90299 这样的区间。新清单会替换旧清单。",
+        "save": "保存清单",
+        "saving": "保存中…",
+        "saved": "已保存 {count} 个邮编。",
+        "invalid": "已忽略："
+      },
+      "errors": {
+        "admin": "需要管理员权限。",
+        "pick_line": "请选择渠道。",
+        "file_too_large": "文件过大（最大 5 MB）。",
+        "no_zip": "未识别到邮编。",
+        "too_many": "清单过长（{count} 个，最多 60 000 个）。",
+        "not_configured": "易仓未配置（ECCANG_API_HOST）。"
       }
     }
   },

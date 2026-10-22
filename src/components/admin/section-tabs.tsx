@@ -25,16 +25,21 @@ export function SectionTabs({ tabs, active, spaced = true }: { tabs: SectionTab[
   );
 }
 
-/** « Achats & expéditions »: what to buy / ship, and the orders to review before sending. */
-export async function OperationsTabs({ active }: { active: "achats" | "alerts" }) {
+/**
+ * « Achats & expéditions »: what to buy / ship, the orders to review before sending, and the
+ * carrier lines the parcels actually left on.
+ */
+export async function OperationsTabs({ active }: { active: "achats" | "alerts" | "lines" }) {
   const [t, alerts] = await Promise.all([getTranslations("admin.tabs.operations"), countOpenOrderAlerts().catch(() => 0)]);
+  const hrefs = { achats: "/admin/achats", alerts: "/admin/alerts", lines: "/admin/lines" } as const;
   return (
     <SectionTabs
       spaced={false}
-      active={active === "achats" ? "/admin/achats" : "/admin/alerts"}
+      active={hrefs[active]}
       tabs={[
-        { href: "/admin/achats", label: t("achats") },
-        { href: "/admin/alerts", label: t("alerts"), count: alerts },
+        { href: hrefs.achats, label: t("achats") },
+        { href: hrefs.alerts, label: t("alerts"), count: alerts },
+        { href: hrefs.lines, label: t("lines") },
       ]}
     />
   );
