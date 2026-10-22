@@ -23,6 +23,8 @@ import {
   productPackagingG,
 } from "@/lib/products/extras";
 import { ECCANG_DECLARED_VALUE_USD } from "@/lib/eccang/mapping";
+import { customsPresetFor } from "@/lib/products/customs-presets";
+import { LiveCogsPanel } from "@/components/sourcer/live-cogs-panel";
 
 const initial: SourcingActionResult = { ok: false };
 // No "liquid" choice: the carrier grid has no liquid sheet, liquids go in Cosmétique.
@@ -80,6 +82,27 @@ export function SourcingWorkForm({
   const storedBox = productBox(product.quote_json);
   const customs = productCustoms(product.quote_json);
   const [boxRmb, setBoxRmb] = useState<string>(storedBox?.priceRmb ? String(storedBox.priceRmb) : "");
+  const [boxWeight, setBoxWeight] = useState<string>(storedBox?.weightG ? String(storedBox.weightG) : "");
+  const [declaredZh, setDeclaredZh] = useState<string>(customs.declaredNameZh ?? "");
+  const [declaredEn, setDeclaredEn] = useState<string>(customs.declaredNameEn ?? "");
+  const [hsCode, setHsCode] = useState<string>(customs.hsCode ?? "");
+  const [lengthCm, setLengthCm] = useState<string>(customs.lengthCm != null ? String(customs.lengthCm) : "");
+  const [widthCm, setWidthCm] = useState<string>(customs.widthCm != null ? String(customs.widthCm) : "");
+  const [heightCm, setHeightCm] = useState<string>(customs.heightCm != null ? String(customs.heightCm) : "");
+  const customsPreset = customsPresetFor(product.title);
+  const customsEmpty = !declaredZh.trim() && !declaredEn.trim() && !hsCode.trim();
+  const applyCustomsPreset = () => {
+    if (!customsPreset) return;
+    setDeclaredZh(customsPreset.declaredNameZh);
+    setDeclaredEn(customsPreset.declaredNameEn);
+    setHsCode(customsPreset.hsCode);
+    if (customsPreset.dimensionsCm && !lengthCm.trim() && !widthCm.trim() && !heightCm.trim()) {
+      const [l, w, h] = customsPreset.dimensionsCm;
+      setLengthCm(String(l));
+      setWidthCm(String(w));
+      setHeightCm(String(h));
+    }
+  };
   const boxEur =
     boxRmb.trim() && Number(boxRmb) > 0 ? boxPriceEur({ priceRmb: Number(boxRmb), weightG: 0 }, fxRmbPerEur) : null;
   const piecesCount = Number.isInteger(Number(pieces)) && Number(pieces) > 1 ? Number(pieces) : 1;
@@ -87,6 +110,26 @@ export function SourcingWorkForm({
     factoryRmb.trim() && Number.isFinite(Number(factoryRmb)) && fxRmbPerEur > 0
       ? Math.round((Number(factoryRmb) / fxRmbPerEur) * 100) / 100
       : null;
+  // Client price follows the factory price (¥ ÷ rate) until the sourcer types his own:
+  // one entry instead of two, and no more ¥ value copied into the wrong field.
+  const toEur = (rmb: string) =>
+    rmb.trim() && Number.isFinite(Number(rmb)) && Number(rmb) > 0 && fxRmbPerEur > 0
+      ? String(Math.round((Number(rmb) / fxRmbPerEur) * 100) / 100)
+      : "";
+  const [priceLinked, setPriceLinked] = useState<boolean>(
+    () => !clientPrice.trim() || (toEur(factoryRmb) !== "" && Number(toEur(factoryRmb)) === Number(clientPrice)),
+  );
+  const onFactoryChange = (value: string) => {
+    setFactoryRmb(value);
+    if (priceLinked) setClientPrice(toEur(value));
+  };
+  const boxLooksLikeFactory =
+    boxRmb.trim() !== "" && Number(boxRmb) > 0 && factoryRmb.trim() !== "" && Number(boxRmb) === Number(factoryRmb);
+  const advancedOpen =
+    Boolean(boxRmb.trim() && Number(boxRmb) > 0) ||
+    Boolean(boxWeight.trim() && Number(boxWeight) > 0) ||
+    Boolean(packagingOverride.trim()) ||
+    piecesCount > 1;
   const [saveState, saveAction, saving] = useActionState(saveSourcingDraftAction, initial);
   const [sendState, sendAction, sending] = useActionState(sendQuoteAction, initial);
   const [flagState, flagAction, flagging] = useActionState(flagSourcingAction, initial);
@@ -95,6 +138,7 @@ export function SourcingWorkForm({
   const request = getProductRequest(product);
   const suggested = isShippingChannel(request.suggested_channel) ? request.suggested_channel : null;
   const ticked = tickedAttributes(parseProductAttributes(request.attributes));
+  const [channel, setChannel] = useState<string>(gridChannel(product.shipping_channel ?? suggested ?? ""));
 
   useEffect(() => {
     if (sendState.ok && sendState.nextId) {
@@ -103,7 +147,8 @@ export function SourcingWorkForm({
   }, [router, sendState]);
 
   return (
-    <div className="space-y-6">
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="min-w-0 space-y-6">
       <form action={saveAction} className="space-y-6">
         <input type="hidden" name="product_id" value={product.id} />
         <section className="rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
@@ -112,16 +157,66 @@ export function SourcingWorkForm({
             {t("clientFieldsIntro")}
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-1 rounded-md bg-amber-50 p-2 ring-1 ring-amber-200">
+              <Input
+                name="factory_purchase_price"
+                label={t("factoryPrice")}
+                hint={t("factoryPriceFirst")}
+                unit="¥ RMB"
+                type="number"
+                min="0"
+                step="0.0001"
+                value={factoryRmb}
+                onChange={(event) => onFactoryChange(event.target.value)}
+              />
+              {piecesCount > 1 ? (
+                <p className="text-xs text-[var(--muted)]">
+                  {t("setFactoryHint", { count: piecesCount })}
+                  {factoryRmb.trim() && Number(factoryRmb) > 0
+                    ? ` ${t("perPiece", { value: (Number(factoryRmb) / piecesCount).toFixed(2) })}`
+                    : ""}
+                </p>
+              ) : null}
+              {factoryEur != null ? (
+                <p className="text-xs text-[var(--muted)]">
+                  {t("fxConversion", { eur: factoryEur.toFixed(2), rate: String(fxRmbPerEur) })}
+                  {String(factoryEur) !== clientPrice ? (
+                    <>
+                      {" · "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setClientPrice(String(factoryEur));
+                          setPriceLinked(true);
+                        }}
+                        className="cursor-pointer font-semibold underline"
+                      >
+                        {t("useAsClientPrice")}
+                      </button>
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
+            </div>
             <Input
               name="client_price"
               label={t("clientPrice")}
               unit="€ EUR"
-              hint={piecesCount > 1 ? t("setPriceHint", { count: piecesCount }) : t("clientPriceHint")}
+              hint={
+                piecesCount > 1
+                  ? t("setPriceHint", { count: piecesCount })
+                  : priceLinked && factoryEur != null
+                    ? t("clientPriceLinked", { rate: String(fxRmbPerEur) })
+                    : t("clientPriceHint")
+              }
               type="number"
               min="0"
               step="0.0001"
               value={clientPrice}
-              onChange={(event) => setClientPrice(event.target.value)}
+              onChange={(event) => {
+                setClientPrice(event.target.value);
+                setPriceLinked(false);
+              }}
             />
             <div className="flex flex-col gap-1">
               <Input
@@ -150,30 +245,6 @@ export function SourcingWorkForm({
               })()}
             </div>
             <Input
-              name="packaging_weight_g"
-              label={t("packagingOverride")}
-              unit={t("gramsUnit")}
-              type="number"
-              min="0"
-              step="1"
-              value={packagingOverride}
-              onChange={(event) => setPackagingOverride(event.target.value)}
-              placeholder={t("packagingAuto")}
-              hint={t("packagingOverrideHint")}
-            />
-            <Input
-              name="pack_pieces"
-              label={t("packPieces")}
-              unit={t("piecesUnit")}
-              type="number"
-              min="1"
-              max={String(PACK_PIECES_MAX)}
-              step="1"
-              value={pieces}
-              onChange={(event) => setPieces(event.target.value)}
-              hint={piecesCount > 1 ? t("packPiecesSetHint", { count: piecesCount }) : t("packPiecesHint")}
-            />
-            <Input
               name="sku"
               label={t("sku")}
               hint={t("skuHint")}
@@ -184,7 +255,8 @@ export function SourcingWorkForm({
               <span className="text-[var(--muted)]">{t("shippingChannel")}</span>
               <select
                 name="shipping_channel"
-                defaultValue={gridChannel(product.shipping_channel ?? suggested ?? "")}
+                value={channel}
+                onChange={(event) => setChannel(event.target.value)}
                 className="rounded-md border border-[var(--line)] bg-white px-3 py-2"
               >
                 <option value="">{t("select")}</option>
@@ -250,6 +322,41 @@ export function SourcingWorkForm({
                 ))}
               </select>
             </label>
+            <details
+              open={advancedOpen}
+              className="rounded-md border border-[var(--line)] p-3 sm:col-span-2 lg:col-span-3"
+            >
+              <summary className="cursor-pointer text-sm font-semibold">
+                {t("advancedTitle")}
+                <span className="ml-2 text-xs font-normal text-[var(--muted)]">{t("advancedHint")}</span>
+              </summary>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <Input
+              name="packaging_weight_g"
+              label={t("packagingOverride")}
+              unit={t("gramsUnit")}
+              type="number"
+              min="0"
+              step="1"
+              value={packagingOverride}
+              onChange={(event) => setPackagingOverride(event.target.value)}
+              placeholder={t("packagingAuto")}
+              hint={t("packagingOverrideHint")}
+            />
+            <Input
+              name="pack_pieces"
+              label={t("packPieces")}
+              unit={t("piecesUnit")}
+              type="number"
+              min="1"
+              max={String(PACK_PIECES_MAX)}
+              step="1"
+              value={pieces}
+              onChange={(event) => setPieces(event.target.value)}
+              hint={piecesCount > 1 ? t("packPiecesSetHint", { count: piecesCount }) : t("packPiecesHint")}
+            />
+              </div>
+              <div className="mt-4 grid gap-4">
             <div className="flex flex-col gap-2 rounded-md border border-dashed border-[var(--line)] p-3 sm:col-span-2 lg:col-span-3">
               <p className="text-sm font-semibold">{t("boxTitle")}</p>
               <p className="text-xs text-[var(--muted)]">{t("boxIntro")}</p>
@@ -265,6 +372,11 @@ export function SourcingWorkForm({
                     value={boxRmb}
                     onChange={(event) => setBoxRmb(event.target.value)}
                   />
+                  {boxLooksLikeFactory ? (
+                    <span className="text-xs font-semibold text-red-700" role="alert">
+                      {t("boxEqualsFactory")}
+                    </span>
+                  ) : null}
                   {boxEur != null ? (
                     <span className="text-xs text-[var(--muted)]">
                       {t("boxBilled", { eur: boxEur.toFixed(2), rate: String(fxRmbPerEur) })}
@@ -278,29 +390,46 @@ export function SourcingWorkForm({
                   type="number"
                   min="0"
                   step="1"
-                  defaultValue={storedBox?.weightG ? String(storedBox.weightG) : ""}
+                  value={boxWeight}
+                  onChange={(event) => setBoxWeight(event.target.value)}
                   hint={t("boxWeightHint")}
                 />
               </div>
             </div>
+              </div>
+            </details>
             <div className="flex flex-col gap-2 rounded-md border border-dashed border-[var(--line)] p-3 sm:col-span-2 lg:col-span-3">
-              <p className="text-sm font-semibold">{t("customsTitle")}</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold">{t("customsTitle")}</p>
+                {customsPreset ? (
+                  <button
+                    type="button"
+                    onClick={applyCustomsPreset}
+                    className="cursor-pointer rounded-md border border-[var(--line)] bg-white px-3 py-1 text-xs font-semibold hover:bg-[var(--card-soft)]"
+                  >
+                    {t("customsPrefill", { name: customsPreset.declaredNameZh })}
+                  </button>
+                ) : null}
+              </div>
               <p className="text-xs text-[var(--muted)]">
                 {t("customsIntro", { value: ECCANG_DECLARED_VALUE_USD.toFixed(2) })}
+                {customsPreset && customsEmpty ? ` ${t("customsPrefillHint")}` : ""}
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <Input
                   name="declared_name_zh"
                   label={t("declaredNameZh")}
                   maxLength={255}
-                  defaultValue={customs.declaredNameZh ?? ""}
+                  value={declaredZh}
+                  onChange={(event) => setDeclaredZh(event.target.value)}
                   placeholder="耳朵护理液"
                 />
                 <Input
                   name="declared_name_en"
                   label={t("declaredNameEn")}
                   maxLength={50}
-                  defaultValue={customs.declaredNameEn ?? ""}
+                  value={declaredEn}
+                  onChange={(event) => setDeclaredEn(event.target.value)}
                   placeholder="Ear care drops"
                   hint={t("declaredNameEnHint")}
                 />
@@ -309,7 +438,8 @@ export function SourcingWorkForm({
                   label={t("hsCode")}
                   maxLength={32}
                   inputMode="numeric"
-                  defaultValue={customs.hsCode ?? ""}
+                  value={hsCode}
+                  onChange={(event) => setHsCode(event.target.value)}
                   placeholder="330499"
                 />
                 <Input
@@ -319,7 +449,8 @@ export function SourcingWorkForm({
                   type="number"
                   min="0"
                   step="0.1"
-                  defaultValue={customs.lengthCm ?? ""}
+                  value={lengthCm}
+                  onChange={(event) => setLengthCm(event.target.value)}
                 />
                 <Input
                   name="width_cm"
@@ -328,7 +459,8 @@ export function SourcingWorkForm({
                   type="number"
                   min="0"
                   step="0.1"
-                  defaultValue={customs.widthCm ?? ""}
+                  value={widthCm}
+                  onChange={(event) => setWidthCm(event.target.value)}
                 />
                 <Input
                   name="height_cm"
@@ -337,7 +469,8 @@ export function SourcingWorkForm({
                   type="number"
                   min="0"
                   step="0.1"
-                  defaultValue={customs.heightCm ?? ""}
+                  value={heightCm}
+                  onChange={(event) => setHeightCm(event.target.value)}
                   hint={t("dimensionsHint")}
                 />
               </div>
@@ -368,43 +501,6 @@ export function SourcingWorkForm({
             {t("internalIntro")}
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <Input
-                name="factory_purchase_price"
-                label={t("factoryPrice")}
-                unit="¥ RMB"
-                type="number"
-                min="0"
-                step="0.0001"
-                value={factoryRmb}
-                onChange={(event) => setFactoryRmb(event.target.value)}
-              />
-              {piecesCount > 1 ? (
-                <p className="text-xs text-amber-900">
-                  {t("setFactoryHint", { count: piecesCount })}
-                  {factoryRmb.trim() && Number(factoryRmb) > 0
-                    ? ` ${t("perPiece", { value: (Number(factoryRmb) / piecesCount).toFixed(2) })}`
-                    : ""}
-                </p>
-              ) : null}
-              {factoryEur != null ? (
-                <p className="text-xs text-amber-900">
-                  {t("fxConversion", { eur: factoryEur.toFixed(2), rate: String(fxRmbPerEur) })}
-                  {String(factoryEur) !== clientPrice ? (
-                    <>
-                      {" · "}
-                      <button
-                        type="button"
-                        onClick={() => setClientPrice(String(factoryEur))}
-                        className="cursor-pointer font-semibold underline"
-                      >
-                        {t("useAsClientPrice")}
-                      </button>
-                    </>
-                  ) : null}
-                </p>
-              ) : null}
-            </div>
             <Input
               name="sourcing_location"
               label={t("sourcingLocation")}
@@ -482,6 +578,19 @@ export function SourcingWorkForm({
         {flagState.error ? <p className="mt-2 text-sm text-red-700">{flagState.error}</p> : null}
         {flagState.ok ? <p className="mt-2 text-sm text-red-800">{t("productFlagged")}</p> : null}
       </form>
+    </div>
+    <LiveCogsPanel
+      input={{
+        productId: product.id,
+        clientPrice,
+        weightG: weight,
+        channel,
+        boxPriceRmb: boxRmb,
+        boxWeightG: boxWeight,
+        packagingWeightG: packagingOverride,
+        packPieces: pieces,
+      }}
+    />
     </div>
   );
 }

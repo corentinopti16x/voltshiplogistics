@@ -2121,7 +2121,14 @@
       "lengthCm": "Longueur emballée",
       "widthCm": "Largeur emballée",
       "heightCm": "Hauteur emballée",
-      "dimensionsHint": "Les 3 dimensions comptent aussi pour le poids volumétrique du transport."
+      "dimensionsHint": "Les 3 dimensions comptent aussi pour le poids volumétrique du transport.",
+      "factoryPriceFirst": "À remplir en premier : le prix produit client (€) se calcule tout seul.",
+      "clientPriceLinked": "Calculé depuis le prix usine (¥ ÷ {rate}). Tape une autre valeur pour le fixer à la main.",
+      "boxEqualsFactory": "⚠ Même valeur que le prix usine : c'est sûrement une erreur. La boîte est facturée en plus du produit.",
+      "advancedTitle": "Options avancées",
+      "advancedHint": "boîte, emballage spécifique, vente en set — rarement utilisé",
+      "customsPrefill": "Préremplir ({name})",
+      "customsPrefillHint": "Clique sur « Préremplir » pour le nom déclaré, le code HS et les dimensions habituels, puis vérifie."
     },
     "announced": {
       "title": "Prix annoncés au client",
@@ -2217,6 +2224,22 @@
       "queue": "Demandes clients",
       "todo": "À compléter",
       "skus": "SKU à corriger"
+    },
+    "live": {
+      "title": "COGS en direct",
+      "computing": "Calcul…",
+      "unsaved": "non enregistré",
+      "error": "Calcul impossible pour l'instant.",
+      "missingData": "Renseigne le prix, le poids et le canal pour voir le COGS.",
+      "missingGrid": "Aucune grille de tarifs active.",
+      "oneUnit": "Commande de 1 · {market}",
+      "product": "Produit",
+      "box": "Boîte",
+      "shipping": "Transport ({weight} g)",
+      "handling": "Préparation + commission",
+      "noLine": "Aucune ligne ne couvre ce poids sur ce marché.",
+      "market": "Marché",
+      "hint": "Mis à jour à chaque saisie, même grille et mêmes règles que la matrice. Pense à enregistrer."
     }
   },
   "support": {
