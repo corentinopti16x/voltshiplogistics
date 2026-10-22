@@ -2103,7 +2103,8 @@
       "destinationMarkets": "Marchés de destination",
       "notes": "Notes",
       "reference": "Référence",
-      "openSourceLink": "Ouvrir le lien source"
+      "openSourceLink": "Ouvrir le lien source",
+      "sales90": "{count} ventes sur 90 j"
     },
     "shell": {
       "queueLink": "File de sourcing",
@@ -2251,7 +2252,8 @@
         "price": "Prix produit · poids",
         "cogs": "COGS ×1 · transporteur par marché",
         "sales90": "Ventes 90 j",
-        "quick": "Saisie rapide"
+        "quick": "Saisie rapide",
+        "sales": "Ventes 7 j · 90 j"
       },
       "set": "Set de {count}",
       "battery": "Batterie intégrée",
@@ -2278,7 +2280,8 @@
       "detectUpsells": "Détecter les upsells (90 j)",
       "quickOn": "✎ Saisie rapide",
       "quickOff": "Terminer la saisie",
-      "boxEqualsFactory": "⚠ boîte = prix usine"
+      "boxEqualsFactory": "⚠ boîte = prix usine",
+      "sales90Short": "{count} sur 90 j"
     },
     "upsells": {
       "title": "Upsells",
@@ -2332,6 +2335,28 @@
       "save": "Enregistrer",
       "saving": "…",
       "saved": "✓ enregistré"
+    },
+    "sales7": {
+      "last7": "{count} ventes / 7 j",
+      "new": "nouveau",
+      "none": "0 vente / 7 j",
+      "hint": "{previous} les 7 jours d'avant",
+      "noneHint": "Rien vendu sur les 14 derniers jours"
+    },
+    "buy": {
+      "title": "Combien en acheter ?",
+      "pieces": "{count} pièces",
+      "nothing": "Rien à acheter pour l'instant",
+      "urgent": "Urgent",
+      "backlog": "Commandes en attente",
+      "perDay": "Ventes / jour (14 j)",
+      "stock": "Stock",
+      "incoming": "En route",
+      "leadTime": "Délai de réassort",
+      "cover": "Couverture",
+      "days": "{days} j",
+      "empty": "Aucune vente ni commande en attente sur 60 jours pour ce produit.",
+      "howto": "Même calcul que la page Achats : commandes pas encore expédiées + ventes par jour × (délai + couverture) − stock − en route. Stock et en route viennent d'ECCANG."
     }
   },
   "support": {

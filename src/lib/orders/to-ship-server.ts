@@ -274,3 +274,13 @@ async function loadCatalog(clientIds: string[]) {
   return catalog;
 }
 
+
+/**
+ * Buying plan of one product (sourcing sheet): the lines of `loadAchats` for its client
+ * whose SKU belongs to the product, over the last 60 days of orders.
+ */
+export async function loadProductBuyLines(clientId: string, productId: string, skuKeys: ReadonlySet<string>) {
+  const since = isoDay(new Date(Date.now() - 60 * 86_400_000));
+  const achats = await loadAchats({ since, clientId });
+  return achats.buy.filter((line) => line.productId === productId || skuKeys.has(line.sku.trim().toLowerCase()));
+}

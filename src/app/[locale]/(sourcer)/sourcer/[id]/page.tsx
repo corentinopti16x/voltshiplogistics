@@ -20,6 +20,13 @@ import { UpsellsPanel } from "@/components/products/upsells-panel";
 import { UpsellComposer } from "@/components/products/upsell-composer";
 import { clientProducts, loadUpsells, stockBySku, suggestUpsells } from "@/lib/products/upsells-server";
 import { composerItem, upsellParentsOf } from "@/lib/products/upsells";
+import { unitsSold90d } from "@/lib/products/sales90";
+import { loadClientSalesVariants, loadSevenDayTrends } from "@/lib/products/sales7-server";
+import { SalesTrendBadge } from "@/components/sourcer/sales-trend-badge";
+import { BuyAdvice } from "@/components/sourcer/buy-advice";
+import { loadProductBuyLines } from "@/lib/orders/to-ship-server";
+import { DEFAULT_BUY_OPTIONS } from "@/lib/orders/to-ship";
+import { productSkuKeys } from "@/lib/products/sales90";
 
 export default async function SourcerProductPage({
   params,
@@ -75,6 +82,14 @@ export default async function SourcerProductPage({
     clientProducts(product.client_id).catch(() => []),
     product.sku ? stockBySku(product.client_id, [product.sku]).catch(() => new Map<string, number>()) : new Map<string, number>(),
   ]);
+  // What it sells: last 7 days (vs the 7 before) and 90 days, so the sourcer knows the stakes.
+  const salesVariants = await loadClientSalesVariants(product.client_id).catch(() => []);
+  const trend = (await loadSevenDayTrends([product], salesVariants).catch(() => new Map())).get(product.id);
+  const sales90 = unitsSold90d([product], salesVariants).get(product.id) ?? 0;
+  // How many to buy: same plan as admin « Achats & expéditions », this product's SKUs only
+  // (orders of the last 60 days still to send + sales × (lead + cover) − stock − incoming).
+  const skuKeys = productSkuKeys([product], salesVariants).get(product.id) ?? new Set<string>();
+  const buyLines = await loadProductBuyLines(product.client_id, product.id, skuKeys).catch(() => []);
 
   return (
     <SourcerShell role={ctx.role}>
@@ -95,6 +110,10 @@ export default async function SourcerProductPage({
             {product.clients.name} · {product.sku ?? t("noSku")}
           </p>
           <h1 className="font-display mt-1 text-3xl">{product.title}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <SalesTrendBadge trend={trend} locale={locale} size="lg" />
+            <span className="text-xs text-[var(--muted)]">{t("sales90", { count: sales90.toLocaleString(locale) })}</span>
+          </div>
         </div>
         <span className="rounded-full bg-[var(--card)] px-3 py-1 text-xs ring-1 ring-[var(--line)]">
           {tQueue(`statuses.${product.sourcing_status ?? "brief_received"}`)}
@@ -128,6 +147,10 @@ export default async function SourcerProductPage({
           ) : null}
         </dl>
       </section>
+
+      <div className="mt-6">
+        <BuyAdvice lines={buyLines} locale={locale} coverDays={DEFAULT_BUY_OPTIONS.coverDays} />
+      </div>
 
       <div className="mt-6">
         <SourcingWorkForm
