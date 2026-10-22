@@ -33,7 +33,49 @@ const STOPWORDS = new Set([
   "pcs", "piece", "pieces", "edition", "version", "offer", "offert", "offerte", "offerts", "cadeau", "gratuit",
   "gratuite", "nouveau", "nouvelle", "pour", "avec", "des", "les", "aux", "une", "sur", "par", "dans", "and",
   "mit", "und", "der", "die", "das", "für", "von", "con", "per", "del", "della", "los", "las", "para",
+  "gratis", "gratuito", "gratuita", "kostenlos", "omaggio",
 ]);
+
+/**
+ * Same item, other language: the same SKU is often typed on a page translated for another
+ * market of the store ("AI Translator" / "Traductor de Voz con IA", "2 FREE carrying cases" /
+ * "2 estuches GRATIS"). Words of the common e-commerce vocabulary are brought back to one
+ * concept (FR / EN / ES / DE / IT / PT), so translated titles share an identifying word.
+ * Matched on the start of the word (plurals, genders, declensions).
+ */
+const CONCEPTS: Array<[string, string[]]> = [
+  ["translator", ["translat", "traduct", "traduc", "tradut", "ubersetz", "uebersetz", "dolmetsch"]],
+  ["voice", ["voice", "voix", "voz", "stimme", "voce"]],
+  ["case", ["case", "etui", "estuche", "funda", "hulle", "huelle", "custodia", "pochette", "astuccio", "capa"]],
+  ["bracelet", ["bracelet", "pulsera", "armband", "armreif", "bracciale", "pulseira", "gourmette"]],
+  ["necklace", ["necklace", "collier", "collar", "halskette", "kette", "collana", "colar", "pendant", "pendentif", "colgante", "anhanger"]],
+  ["ring", ["ring", "bague", "anillo", "anello", "anel"]],
+  ["earring", ["earring", "boucle", "pendiente", "ohrring", "orecchin", "brinco"]],
+  ["mother", ["mother", "mom", "mum", "maman", "mama", "madre", "mutter", "mae"]],
+  ["couple", ["couple", "pareja", "paar", "coppia", "casal"]],
+  ["heart", ["heart", "coeur", "corazon", "herz", "cuore", "coracao"]],
+  ["name", ["name", "prenom", "nombre", "vorname", "nome"]],
+  ["magnet", ["magnet", "aimant", "iman", "magnete", "ima"]],
+  ["shaver", ["shaver", "rasoir", "afeitad", "rasierer", "rasoio", "barbeador"]],
+  ["drops", ["drops", "goutte", "gota", "tropfen", "gocce", "gotas"]],
+  ["perfume", ["perfume", "parfum", "profum", "duft"]],
+  ["pheromone", ["pheromon", "feromon"]],
+  ["magnesium", ["magnesium", "magnesio"]],
+  ["collagen", ["collagen", "collagene", "colageno", "kollagen", "collagene"]],
+  ["refill", ["refill", "recharge", "ricaric", "recarga", "nachfull"]],
+  ["box", ["box", "boite", "caja", "schachtel", "scatola", "caixa", "coffret", "geschenkbox"]],
+  ["wallet", ["wallet", "portefeuille", "cartera", "geldborse", "portafoglio", "carteira"]],
+];
+
+function concept(token: string) {
+  for (const [name, starts] of CONCEPTS) {
+    // Short roots ("ima", "mae", "ring", "box") must match the whole word, longer ones its start.
+    if (starts.some((start) => (start.length <= 4 ? token === start || token === `${start}s` : token.startsWith(start)))) {
+      return name;
+    }
+  }
+  return token;
+}
 
 function words(text: string) {
   return text
@@ -41,7 +83,8 @@ function words(text: string) {
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .split(/[^a-z0-9一-鿿]+/)
-    .filter((token) => token.length >= 3 && !/^\d+$/.test(token) && !STOPWORDS.has(token));
+    .filter((token) => token.length >= 3 && !/^\d+$/.test(token) && !STOPWORDS.has(token))
+    .map(concept);
 }
 
 export function normSku(sku: string | null | undefined) {
