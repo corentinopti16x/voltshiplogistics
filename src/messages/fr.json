@@ -2171,7 +2171,8 @@
         "client": "Client · boutiques",
         "price": "Prix produit · poids",
         "cogs": "COGS ×1 · transporteur par marché",
-        "sales90": "Ventes 90 j"
+        "sales90": "Ventes 90 j",
+        "quick": "Saisie rapide"
       },
       "set": "Set de {count}",
       "battery": "Batterie intégrée",
@@ -2195,7 +2196,10 @@
       "upsellOf": "Upsell de {products}",
       "upsellStock": "stock {count}",
       "upsellStockUnknown": "stock inconnu",
-      "detectUpsells": "Détecter les upsells (90 j)"
+      "detectUpsells": "Détecter les upsells (90 j)",
+      "quickOn": "✎ Saisie rapide",
+      "quickOff": "Terminer la saisie",
+      "boxEqualsFactory": "⚠ boîte = prix usine"
     },
     "upsells": {
       "title": "Upsells",
@@ -2240,6 +2244,15 @@
       "noLine": "Aucune ligne ne couvre ce poids sur ce marché.",
       "market": "Marché",
       "hint": "Mis à jour à chaque saisie, même grille et mêmes règles que la matrice. Pense à enregistrer."
+    },
+    "quick": {
+      "factory": "Prix usine ¥",
+      "weight": "Poids g",
+      "channel": "Canal",
+      "status": "Statut",
+      "save": "Enregistrer",
+      "saving": "…",
+      "saved": "✓ enregistré"
     }
   },
   "support": {

@@ -14,6 +14,8 @@ import { formatAmount } from "@/lib/format";
 import { parseUpsellIds } from "@/lib/products/upsells";
 import { stockBySku, upsellOwners } from "@/lib/products/upsells-server";
 import { refreshUpsellsAction } from "@/app/actions/upsells";
+import { readPricingSettings } from "@/lib/pricing/settings";
+import { QuickEditRow } from "@/components/sourcer/quick-edit-row";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +33,7 @@ export default async function CatalogPage({
   searchParams,
 }: {
   params: Promise<{ locale: "en" | "fr" }>;
-  searchParams: Promise<{ q?: string; client?: string; data?: string; sort?: string; archived?: string }>;
+  searchParams: Promise<{ q?: string; client?: string; data?: string; sort?: string; archived?: string; edit?: string }>;
 }) {
   const { locale } = await params;
   const ctx = await getAuthContext();
@@ -153,6 +155,29 @@ export default async function CatalogPage({
     }
   });
   const quotes = await calculateCatalogQuotes(rows);
+  // « Saisie rapide »: factory prices (¥) of the listed products, edited inline.
+  const editMode = filters.edit === "1";
+  const settings = await readPricingSettings(admin);
+  const factoryById = new Map<string, number | null>();
+  const rowIds = rows.map((row) => row.id);
+  for (let from = 0; from < rowIds.length; from += 300) {
+    const { data: work } = await admin
+      .from("sourcing_work")
+      .select("product_id, factory_purchase_price")
+      .in("product_id", rowIds.slice(from, from + 300));
+    for (const item of work ?? []) {
+      factoryById.set(item.product_id as string, (item.factory_purchase_price as number | null) ?? null);
+    }
+  }
+  const editHref = (on: boolean) => {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+      if (key !== "edit" && typeof value === "string" && value) query.set(key, value);
+    }
+    if (on) query.set("edit", "1");
+    const text = query.toString();
+    return `/sourcer/products${text ? `?${text}` : ""}`;
+  };
   const readyCount = rows.filter(isReady).length;
 
   return (
@@ -163,12 +188,23 @@ export default async function CatalogPage({
           <h1 className="font-display mt-2 text-3xl">{t("title")}</h1>
           <p className="mt-2 max-w-3xl text-sm text-[var(--muted)]">{t("intro")}</p>
         </div>
-        <span className="rounded-full bg-[var(--card)] px-3 py-1 text-sm ring-1 ring-[var(--line)]">
-          {t("count", { count: rows.length, ready: readyCount })}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-[var(--card)] px-3 py-1 text-sm ring-1 ring-[var(--line)]">
+            {t("count", { count: rows.length, ready: readyCount })}
+          </span>
+          <Link
+            href={editHref(!editMode)}
+            className={`rounded-full px-3 py-1 text-sm font-medium ${
+              editMode ? "bg-[var(--navy)] text-white" : "bg-[var(--accent)] text-white"
+            }`}
+          >
+            {editMode ? t("quickOff") : t("quickOn")}
+          </Link>
+        </div>
       </div>
 
       <form method="get" className="mt-6 grid gap-3 sm:grid-cols-5">
+        {editMode ? <input type="hidden" name="edit" value="1" /> : null}
         <input
           name="q"
           defaultValue={filters.q}
@@ -229,7 +265,7 @@ export default async function CatalogPage({
         </p>
       ) : (
         <div className="mt-6 overflow-x-auto rounded-2xl border border-[var(--line)] bg-[var(--card)]">
-          <table className="w-full min-w-[980px] text-left text-sm">
+          <table className={`w-full text-left text-sm ${editMode ? "min-w-[1480px]" : "min-w-[980px]"}`}>
             <thead className="border-b border-[var(--line)] text-xs text-[var(--muted)] uppercase">
               <tr>
                 <th className="px-4 py-3">{t("columns.photo")}</th>
@@ -238,6 +274,7 @@ export default async function CatalogPage({
                 <th className="px-4 py-3 text-right">{t("columns.price")}</th>
                 <th className="px-4 py-3">{t("columns.cogs")}</th>
                 <th className="px-4 py-3 text-right">{t("columns.sales90")}</th>
+                {editMode ? <th className="px-4 py-3">{t("columns.quick")}</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -246,7 +283,12 @@ export default async function CatalogPage({
                 const pieces = packPieces(row.quote_json);
                 const shopNames = [...(shopsOf.get(row.id) ?? [])].sort();
                 return (
-                  <tr key={row.id} className="border-b border-[var(--line)] align-top">
+                  <tr
+                    key={row.id}
+                    className={`border-b border-[var(--line)] align-top ${
+                      isReady(row) ? "" : "bg-red-50/60 shadow-[inset_3px_0_0_#dc2626]"
+                    }`}
+                  >
                     <td className="px-4 py-3">
                       <ProductPhoto src={row.photo_url} alt={row.title} className="h-12 w-12 rounded-md" />
                     </td>
@@ -271,6 +313,15 @@ export default async function CatalogPage({
                             })}
                           </span>
                         ) : null}
+                        {(() => {
+                          const box = productBox(row.quote_json);
+                          const factory = factoryById.get(row.id);
+                          return box && factory != null && factory > 0 && box.priceRmb === Number(factory) ? (
+                            <span className="rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-semibold text-red-900">
+                              {t("boxEqualsFactory")}
+                            </span>
+                          ) : null;
+                        })()}
                         {hasInternalBattery(row.quote_json) ? (
                           <span className="rounded bg-[var(--card-soft)] px-1.5 py-0.5 text-[11px] ring-1 ring-[var(--line)]">
                             {t("battery")}
@@ -373,6 +424,19 @@ export default async function CatalogPage({
                     <td className="tabular px-4 py-3 text-right font-medium">
                       {(sales.get(row.id) ?? 0).toLocaleString(locale)}
                     </td>
+                    {editMode ? (
+                      <td className="px-4 py-3">
+                        <QuickEditRow
+                          productId={row.id}
+                          factoryRmb={factoryById.get(row.id) ?? null}
+                          clientPrice={row.client_price != null ? Number(row.client_price) : null}
+                          weightG={row.weight_g}
+                          channel={row.shipping_channel}
+                          status={row.sourcing_status}
+                          fxRmbPerEur={settings.fx_rmb_per_eur}
+                        />
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })}

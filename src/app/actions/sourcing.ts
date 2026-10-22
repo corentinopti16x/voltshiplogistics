@@ -446,3 +446,69 @@ export async function setProductCarrierStaffAction(
   revalidatePath("/[locale]/sourcer/products", "page");
   return { ok: true };
 }
+
+/**
+ * « Saisie rapide » (catalog): saves the 4 fields that make a product countable in the
+ * COGS (factory price ¥, weight, channel, status) from one table row. The client price (€)
+ * follows the factory price (¥ ÷ rate) unless a value is typed. Nothing else is touched.
+ */
+export async function quickSaveSourcingAction(
+  _prev: SourcingActionResult | undefined,
+  formData: FormData,
+): Promise<SourcingActionResult> {
+  const { ctx, error } = await requireSourcer();
+  if (!ctx) return { ok: false, error: error ?? "Sourcer access required." };
+  const productId = String(formData.get("product_id") ?? "");
+  const { admin, product } = await loadProduct(productId);
+  if (!product) return { ok: false, error: "Product not found." };
+
+  const factory = nullableNumber(formData, "factory_purchase_price");
+  const weight = nullableNumber(formData, "weight_g");
+  const typedPrice = nullableNumber(formData, "client_price");
+  const channel = nullableText(formData, "shipping_channel");
+  const status = (nullableText(formData, "sourcing_status") ?? product.sourcing_status ?? "brief_received") as SourcingStatus;
+  if ([factory, weight, typedPrice].some((value) => value != null && (!Number.isFinite(value) || value < 0))) {
+    return { ok: false, error: "Numeric values must be positive." };
+  }
+  if (channel && !channels.includes(channel as ShippingChannel)) return { ok: false, error: "Invalid shipping channel." };
+  if (!statuses.includes(status)) return { ok: false, error: "Invalid sourcing status." };
+
+  const fx = Number(formData.get("fx_rmb_per_eur")) || 7.5;
+  const clientPrice = typedPrice ?? (factory != null && factory > 0 ? Math.round((factory / fx) * 100) / 100 : product.client_price);
+  try {
+    if (getAirtableConfig().configured && !product.airtable_record_id.startsWith("pending:")) {
+      await patchAirtableProduct(product.airtable_record_id, {
+        sourcingStatus: status,
+        weightG: weight,
+        shippingChannel: channel,
+        clientPrice,
+        factoryPurchasePrice: factory,
+      });
+    }
+    const { error: productError } = await admin
+      .from("products_cache")
+      .update({
+        client_price: clientPrice,
+        weight_g: weight,
+        shipping_channel: channel,
+        sourcing_status: status,
+        last_synced_at: new Date().toISOString(),
+      })
+      .eq("id", product.id)
+      .eq("client_id", product.client_id);
+    if (productError) throw productError;
+    const { error: workError } = await admin.from("sourcing_work").upsert({
+      product_id: product.id,
+      client_id: product.client_id,
+      factory_purchase_price: factory,
+      updated_by: ctx.userId,
+      updated_at: new Date().toISOString(),
+    });
+    if (workError) throw workError;
+  } catch (writeError) {
+    return { ok: false, error: writeError instanceof Error ? writeError.message : "Could not save." };
+  }
+  revalidateSourcing(productId);
+  revalidatePath("/[locale]/sourcer/products", "page");
+  return { ok: true };
+}

@@ -1279,7 +1279,8 @@
         "client": "客户 · 店铺",
         "price": "产品价格 · 重量",
         "cogs": "COGS ×1 · 各市场渠道",
-        "sales90": "90 天销量"
+        "sales90": "90 天销量",
+        "quick": "快速录入"
       },
       "set": "{count} 件套",
       "battery": "内置电池",
@@ -1303,7 +1304,10 @@
       "upsellOf": "{products} 的加购",
       "upsellStock": "库存 {count}",
       "upsellStockUnknown": "库存未知",
-      "detectUpsells": "识别加购产品（90 天）"
+      "detectUpsells": "识别加购产品（90 天）",
+      "quickOn": "✎ 快速录入",
+      "quickOff": "完成录入",
+      "boxEqualsFactory": "⚠ 盒子价 = 出厂价"
     },
     "upsells": {
       "title": "加购产品（Upsell）",
@@ -1348,6 +1352,15 @@
       "noLine": "该市场没有覆盖这个重量的渠道。",
       "market": "市场",
       "hint": "输入时自动更新，和下面的成本表用同一个运费表和规则。记得保存。"
+    },
+    "quick": {
+      "factory": "出厂价 ¥",
+      "weight": "重量 g",
+      "channel": "渠道",
+      "status": "状态",
+      "save": "保存",
+      "saving": "…",
+      "saved": "✓ 已保存"
     }
   },
   "app": {
