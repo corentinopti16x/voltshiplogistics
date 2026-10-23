@@ -42,6 +42,7 @@ import { packPieces } from "@/lib/products/extras";
 import { createNotification } from "@/lib/notifications/server";
 import { decryptShopifyToken } from "@/lib/shopify/crypto";
 import { createFulfillmentForOrder } from "@/lib/shopify/admin-api";
+import { checkDuplicateOrders, fulfilShippedExternalOrders } from "@/lib/eccang/duplicates-server";
 import type { ProductRow } from "@/lib/products/types";
 
 export const ECCANG_SHIPPING_METHODS_KEY = "eccang_shipping_methods";
@@ -790,6 +791,9 @@ export async function syncClient(clientId: string) {
     retried: 0,
     /** Parcels on a dearer line than planned (and the extra carrier cost, RMB) in this run. */
     lines: { checked: 0, moreExpensive: 0, extraRmb: 0 },
+    /** Same Shopify order twice in ECCANG (anti-doublon) and Shopify fulfillments sent. */
+    duplicates: { groups: 0, toCancel: 0, shippedTwice: 0, cancelled: 0 },
+    shopifyFulfilled: 0,
     errors: [] as string[],
   };
   try {
@@ -803,6 +807,11 @@ export async function syncClient(clientId: string) {
       ["inventory", async () => void (summary.inventory = (await pullInventory(clientId, cfg)).skus)],
       ["orders", async () => void (summary.orders = (await pullPendingOrders(clientId, cfg)).polled)],
       ["external orders", async () => void (summary.externalOrders = (await pullAllOrders(clientId, cfg)).imported)],
+      ["duplicates", async () => void (summary.duplicates = await checkDuplicateOrders(clientId, cfg))],
+      [
+        "shopify fulfilment",
+        async () => void (summary.shopifyFulfilled = (await fulfilShippedExternalOrders(clientId)).fulfilled),
+      ],
       ["asn", async () => void (summary.asns = (await pullAsn(clientId, cfg)).asns)],
       [
         "line check",
