@@ -1771,7 +1771,11 @@
       "addRow": "+ Ligne",
       "saveMap": "Enregistrer la correspondance",
       "callbackTitle": "URL de callback à déclarer dans l’OMS ECCANG (订阅回调)",
-      "callbackHelp": "Types à souscrire : <code>order</code>, <code>receiving</code>, <code>stock</code>. ECCANG vérifie l’URL avec <code>?random=…</code> (renvoyé tel quel). Sans callback, le cron toutes les 15 min fait le même travail."
+      "callbackHelp": "Types à souscrire : <code>order</code>, <code>receiving</code>, <code>stock</code>. ECCANG vérifie l’URL avec <code>?random=…</code> (renvoyé tel quel). Sans callback, le cron toutes les 15 min fait le même travail.",
+      "cancelTestLabel": "Tester l'annulation API sur UNE commande ECCANG",
+      "cancelTestConfirm": "Je confirme : cette commande sera annulée dans ECCANG",
+      "cancelTest": "Tester l'annulation",
+      "cancelTesting": "Annulation…"
     },
     "financeChart": {
       "weekShort": "S{week}",

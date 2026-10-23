@@ -225,7 +225,11 @@
       "addRow": "+ 添加行",
       "saveMap": "保存对应关系",
       "callbackTitle": "需在 ECCANG OMS 中登记的回调 URL（订阅回调）",
-      "callbackHelp": "需订阅的类型：<code>order</code>、<code>receiving</code>、<code>stock</code>。ECCANG 会通过 <code>?random=…</code> 校验 URL（原样返回）。未配置回调时，每 15 分钟运行的定时任务会完成相同工作。"
+      "callbackHelp": "需订阅的类型：<code>order</code>、<code>receiving</code>、<code>stock</code>。ECCANG 会通过 <code>?random=…</code> 校验 URL（原样返回）。未配置回调时，每 15 分钟运行的定时任务会完成相同工作。",
+      "cancelTestLabel": "用一个易仓订单测试取消接口",
+      "cancelTestConfirm": "我确认：该订单将在易仓中被取消",
+      "cancelTest": "测试取消",
+      "cancelTesting": "取消中…"
     },
     "financeChart": {
       "weekShort": "第{week}周",
