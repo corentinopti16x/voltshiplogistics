@@ -835,27 +835,32 @@ export function gridChannel<T extends string | null | undefined>(channel: T): T 
  * - a sensitive line (Tongyou 特敏感, Huahan PK0573) takes battery, magnetic, cosmetics,
  *   supplements and liquids together;
  * - a battery line takes battery + weak magnetic + standard, not (liquid) cosmetics;
- * - a cosmetics line takes cosmetics; a standard line takes standard only.
+ * - a cosmetics line takes cosmetics, and a kit battery device + cosmetic refill (decided by
+ *   Voltship 23/10/2026: battery + oil = cosmetics; Tongyou TK特货 / YunExpress MUZXR take it);
+ * - a standard line takes standard only.
  */
 const PARCEL_CHANNEL_ORDER: ShippingChannel[] = ["sensitive_other", "electronics_battery", "cosmetics", "magnetic", "standard"];
 
+/** True when cosmetics share the parcel with a battery or magnetic item (a kit). */
+function isCosmeticsKit(present: Set<string | null | undefined>) {
+  return present.has("cosmetics") && (present.has("electronics_battery") || present.has("magnetic"));
+}
+
 /**
  * Grid channel of a parcel holding several products. Sensitive > battery > cosmetics >
- * magnetic > standard, except that cosmetics mixed with a battery or magnetic item need a
- * line taking both: the sensitive line.
+ * magnetic > standard, except that cosmetics mixed with a battery or magnetic item (a kit:
+ * device + refill) ship on the cosmetics line.
  */
 export function parcelChannel(channels: Array<ShippingChannel | string | null | undefined>): ShippingChannel | null {
   const present = new Set(channels.map((channel) => gridChannel(channel)).filter(Boolean));
-  if (present.has("cosmetics") && (present.has("electronics_battery") || present.has("magnetic"))) {
-    return "sensitive_other";
-  }
+  if (!present.has("sensitive_other") && isCosmeticsKit(present)) return "cosmetics";
   return PARCEL_CHANNEL_ORDER.find((channel) => present.has(channel)) ?? null;
 }
 
 /**
  * Product that leads a parcel holding several products: the one on the parcel's line
- * (see parcelChannel), else — when the line comes from a mix (battery + cosmetics →
- * sensitive) — the item on the most constraining line of its own, whatever the order of the
+ * (see parcelChannel), except in a kit (battery + cosmetics → cosmetics line), where the
+ * device leads: the item on the most constraining line of its own, whatever the order of the
  * lines. The whole parcel is priced on that line; the lead's market and carrier choice apply.
  * Products without a channel count as standard. Null when the list is empty.
  */
@@ -869,9 +874,10 @@ export function parcelLead<T extends { shipping_channel?: string | null }>(
     const index = PARCEL_CHANNEL_ORDER.indexOf(own(product) as ShippingChannel);
     return index < 0 ? PARCEL_CHANNEL_ORDER.length : index;
   };
-  const lead =
-    products.find((product) => own(product) === channel) ??
+  const mostConstraining = () =>
     products.reduce((best, product) => (rank(product) < rank(best) ? product : best), products[0]);
+  const kit = channel === "cosmetics" && isCosmeticsKit(new Set(products.map(own)));
+  const lead = kit ? mostConstraining() : (products.find((product) => own(product) === channel) ?? mostConstraining());
   return { lead, channel };
 }
 
