@@ -14,6 +14,7 @@ import {
   type EccangWarehouse,
 } from "@/lib/eccang/client";
 import { parseShippingMethodMap } from "@/lib/eccang/mapping";
+import { cancelEccangOrder, eccangCancelService } from "@/lib/eccang/duplicates-server";
 import {
   getShippingMethodMap,
   pushValidatedProducts,
@@ -137,6 +138,42 @@ export async function testEccangConnectionAction(
       shippingMethods,
       summary: `${warehouses.length} warehouse(s), ${shippingMethods.length} shipping method(s).`,
     };
+  } catch (apiError) {
+    return { ok: false, error: apiError instanceof Error ? apiError.message : "ECCANG call failed." };
+  }
+}
+
+/**
+ * « Tester l'annulation » : calls cancelOrder on ONE order code typed by the admin (to try
+ * the API on an order already cancelled in the OMS, or on a duplicate), before turning on
+ * ECCANG_AUTO_CANCEL_DUPLICATES. Requires the explicit confirmation box.
+ */
+export async function testEccangCancelAction(
+  _prev: EccangActionResult | undefined,
+  formData: FormData,
+): Promise<EccangActionResult> {
+  const { ctx, error } = await requireAdmin();
+  if (!ctx) return { ok: false, error };
+  const clientId = String(formData.get("client_id") ?? "").trim();
+  const orderCode = String(formData.get("order_code") ?? "").trim().toUpperCase();
+  if (!clientId) return { ok: false, error: "Missing client." };
+  if (!/^[A-Z0-9][A-Z0-9-]{5,40}$/.test(orderCode)) return { ok: false, error: "Numéro de commande ECCANG invalide." };
+  if (formData.get("confirm") !== "on") return { ok: false, error: "Coche la confirmation : la commande sera annulée dans ECCANG." };
+  if (!isEccangConfigured()) return { ok: false, error: "ECCANG_API_HOST is not set on the server." };
+  try {
+    const config = await getCredentialsForClient(clientId);
+    if (!config.credentials) return { ok: false, error: "Save the appKey and appToken first." };
+    const outcome = await cancelEccangOrder(config.credentials, orderCode, "Test annulation API (Voltship)");
+    await writeAudit({
+      actorUserId: ctx.userId,
+      clientId,
+      action: "eccang.order.cancel_test",
+      entity: "eccang_order",
+      diff: { orderCode, service: eccangCancelService(), ...outcome },
+    }).catch(() => null);
+    const label = { cancelled: "annulée", pending: "interception en cours", failed: "échec" }[outcome.status];
+    const summary = `${eccangCancelService()} ${orderCode} → ${label} (cancel_status ${outcome.cancelStatus ?? "—"}) · ${outcome.message}`;
+    return outcome.status === "failed" ? { ok: false, error: summary } : { ok: true, clientId, summary };
   } catch (apiError) {
     return { ok: false, error: apiError instanceof Error ? apiError.message : "ECCANG call failed." };
   }

@@ -79,3 +79,34 @@ export function shopifyCarrierFor(trackingNo: string, carrierCode: string | null
   const code = (carrierCode ?? "").trim();
   return code && !/^other$/i.test(code) ? code : null;
 }
+
+export type CancelOutcome = {
+  /** cancelled: interception réussie · pending: interception en cours · failed: refusée. */
+  status: "cancelled" | "pending" | "failed";
+  cancelStatus: number | null;
+  message: string;
+};
+
+/**
+ * Reads a cancelOrder response (API doc « 订单模块 > 取消订单 »): ask + cancel_status
+ * 0 none · 1 interception in progress · 2 intercepted · 3 interception failed ·
+ * 4 intercepted, fees not refunded.
+ */
+export function interpretCancelResponse(response: {
+  ask?: string;
+  message?: string;
+  cancel_status?: number | string | null;
+  data?: unknown;
+  Error?: { errCode?: string | null; errMessage?: string | null } | null;
+}): CancelOutcome {
+  const data = (response.data && typeof response.data === "object" ? response.data : {}) as { cancel_status?: unknown };
+  const raw = response.cancel_status ?? data.cancel_status;
+  const cancelStatus = raw == null || raw === "" || Number.isNaN(Number(raw)) ? null : Number(raw);
+  const message = (response.Error?.errMessage || response.message || "").trim();
+  const ok = String(response.ask ?? "").toLowerCase() === "success";
+  if (!ok || cancelStatus === 3) {
+    return { status: "failed", cancelStatus, message: message || "Annulation refusée par ECCANG." };
+  }
+  if (cancelStatus === 1) return { status: "pending", cancelStatus, message: message || "Interception en cours." };
+  return { status: "cancelled", cancelStatus, message: message || "Annulée." };
+}

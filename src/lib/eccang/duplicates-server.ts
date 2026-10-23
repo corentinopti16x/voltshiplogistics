@@ -1,8 +1,15 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { callEccang, requireEccangClient, type ClientEccangConfig } from "@/lib/eccang/client";
-import { findDuplicateGroups, isShopifyOrderId, shopifyCarrierFor, type DuplicateCandidate } from "@/lib/eccang/duplicates";
+import { callEccang, requireEccangClient, type ClientEccangConfig, type EccangCredentials } from "@/lib/eccang/client";
+import {
+  findDuplicateGroups,
+  interpretCancelResponse,
+  isShopifyOrderId,
+  shopifyCarrierFor,
+  type CancelOutcome,
+  type DuplicateCandidate,
+} from "@/lib/eccang/duplicates";
 import { createNotification } from "@/lib/notifications/server";
 import { pushTrackingRows } from "@/lib/shopify/tracking-import-server";
 import type { TrackingRow } from "@/lib/shopify/tracking-import";
@@ -17,6 +24,29 @@ const FULFIL_BATCH = 60;
  */
 function autoCancelEnabled() {
   return process.env.ECCANG_AUTO_CANCEL_DUPLICATES === "1";
+}
+
+export function eccangCancelService() {
+  return process.env.ECCANG_CANCEL_SERVICE?.trim() || "cancelOrder";
+}
+
+/** cancelOrder {order_code, reason} → cancelled / pending (interception en cours) / failed. */
+export async function cancelEccangOrder(
+  credentials: EccangCredentials,
+  orderCode: string,
+  reason: string,
+): Promise<CancelOutcome> {
+  try {
+    const response = await callEccang(
+      credentials,
+      eccangCancelService(),
+      { order_code: orderCode, reason: reason.slice(0, 200) },
+      { allowFailure: true },
+    );
+    return interpretCancelResponse(response as Parameters<typeof interpretCancelResponse>[0]);
+  } catch (error) {
+    return { status: "failed", cancelStatus: null, message: error instanceof Error ? error.message : "ECCANG call failed." };
+  }
 }
 
 async function orderNumbers(clientId: string, ids: string[]) {
@@ -59,18 +89,17 @@ export async function checkDuplicateOrders(clientId: string, config: ClientEccan
   for (const group of groups) {
     const label = numbers.has(group.shopifyOrderId) ? `#${numbers.get(group.shopifyOrderId)}` : group.shopifyOrderId;
     const cancelled: string[] = [];
+    const intercepting: string[] = [];
     if (credentials) {
       for (const row of group.toCancel) {
         if (!row.eccang_order_code) continue;
-        const response = await callEccang(
+        const outcome = await cancelEccangOrder(
           credentials,
-          process.env.ECCANG_CANCEL_SERVICE || "cancelOrder",
-          { order_code: row.eccang_order_code, reason: `Doublon de ${label} (gardé : ${group.keep.eccang_order_code})` },
-          { allowFailure: true },
-        ).catch(() => null);
-        if (response && String((response as { ask?: string }).ask ?? "").toLowerCase() === "success") {
-          cancelled.push(row.eccang_order_code);
-        }
+          row.eccang_order_code,
+          `Doublon de ${label} (gardé : ${group.keep.eccang_order_code})`,
+        );
+        if (outcome.status === "cancelled") cancelled.push(row.eccang_order_code);
+        else if (outcome.status === "pending") intercepting.push(row.eccang_order_code);
       }
     }
     result.toCancel += group.toCancel.length;
@@ -80,9 +109,11 @@ export async function checkDuplicateOrders(clientId: string, config: ClientEccan
     const parts = [
       `Doublon ECCANG ${label} : gardé ${group.keep.eccang_order_code ?? "?"}.`,
       group.toCancel.length
-        ? cancelled.length === group.toCancel.length
-          ? `Annulé : ${codes(group.toCancel)}.`
-          : `À annuler dans le OMS avant préparation : ${codes(group.toCancel)}.`
+        ? cancelled.length + intercepting.length === group.toCancel.length
+          ? [cancelled.length ? `Annulé : ${cancelled.join(", ")}.` : "", intercepting.length ? `Interception en cours : ${intercepting.join(", ")}.` : ""]
+              .filter(Boolean)
+              .join(" ")
+          : `À annuler dans le OMS avant préparation : ${codes(group.toCancel.filter((row) => !cancelled.includes(row.eccang_order_code ?? "") && !intercepting.includes(row.eccang_order_code ?? "")))}.`
         : "",
       group.shippedTwice.length
         ? `DÉJÀ EXPÉDIÉ DEUX FOIS : ${group.shippedTwice.map((row) => `${row.eccang_order_code} (${row.tracking_no ?? "sans suivi"})`).join(", ")} — à intercepter chez le transporteur.`
@@ -99,6 +130,7 @@ export async function checkDuplicateOrders(clientId: string, config: ClientEccan
         toCancel: group.toCancel.map((row) => row.eccang_order_code),
         shippedTwice: group.shippedTwice.map((row) => ({ code: row.eccang_order_code, tracking: row.tracking_no })),
         cancelled,
+        intercepting,
       },
       channels: ["in_app"],
     }).catch(() => null);

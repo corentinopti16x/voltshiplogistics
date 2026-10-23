@@ -7,6 +7,7 @@ import {
   saveEccangSettingsAction,
   saveEccangShippingMapAction,
   syncEccangNowAction,
+  testEccangCancelAction,
   testEccangConnectionAction,
   type EccangActionResult,
 } from "@/app/actions/eccang";
@@ -51,6 +52,7 @@ export function EccangCard(props: EccangCardProps) {
   const [sync, runSync, syncing] = useActionState(syncEccangNowAction, initial);
   const [push, runPush, pushing] = useActionState(pushEccangProductsAction, initial);
   const [mapState, saveMap, savingMap] = useActionState(saveEccangShippingMapAction, initial);
+  const [cancelTest, runCancelTest, cancelling] = useActionState(testEccangCancelAction, initial);
   const [rows, setRows] = useState<Array<{ key: string; code: string }>>(() => {
     const entries = Object.entries(props.shippingMap).map(([key, code]) => ({ key, code }));
     return entries.length ? entries : [{ key: "", code: "" }];
@@ -160,6 +162,29 @@ export function EccangCard(props: EccangCardProps) {
         <Feedback state={sync} />
         <Feedback state={push} />
       </div>
+
+      {/* One-order cancelOrder test before ECCANG_AUTO_CANCEL_DUPLICATES=1 */}
+      <form action={runCancelTest} className="mt-4 flex flex-wrap items-end gap-3 border-t border-[var(--line)] pt-4">
+        <input type="hidden" name="client_id" value={props.clientId} />
+        <label className="flex flex-col gap-1 text-xs text-[var(--muted)]">
+          {t("cancelTestLabel")}
+          <input
+            name="order_code"
+            placeholder="C000121-261023-0324"
+            className="w-56 rounded-lg border border-[var(--line)] bg-[var(--bg)] px-2 py-1.5 text-sm text-[var(--ink)]"
+          />
+        </label>
+        <label className="flex items-center gap-2 text-xs">
+          <input type="checkbox" name="confirm" />
+          {t("cancelTestConfirm")}
+        </label>
+        <button type="submit" disabled={cancelling || !canCall} className={secondaryClass}>
+          {cancelling ? t("cancelTesting") : t("cancelTest")}
+        </button>
+        <div className="w-full">
+          <Feedback state={cancelTest} />
+        </div>
+      </form>
 
       {warehouses.length > 0 ? (
         <div className="mt-3 rounded-md bg-[var(--bg)] p-3 text-xs">

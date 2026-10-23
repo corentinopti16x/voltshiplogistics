@@ -59,3 +59,34 @@ describe("anti-doublon ECCANG", () => {
     expect(shopifyCarrierFor("LX123", "Tongyou")).toBe("Tongyou");
   });
 });
+
+describe("cancelOrder (doc « 订单模块 > 取消订单 »)", () => {
+  it("reads cancel_status", async () => {
+    const { interpretCancelResponse } = await import("./duplicates");
+    expect(interpretCancelResponse({ ask: "Success", cancel_status: 2 }).status).toBe("cancelled");
+    expect(interpretCancelResponse({ ask: "Success", cancel_status: "4" }).status).toBe("cancelled");
+    expect(interpretCancelResponse({ ask: "Success", cancel_status: 1 }).status).toBe("pending");
+    expect(interpretCancelResponse({ ask: "Success", cancel_status: 3 }).status).toBe("failed");
+    expect(interpretCancelResponse({ ask: "Success", data: { cancel_status: 2 } }).status).toBe("cancelled");
+    const refused = interpretCancelResponse({ ask: "Failure", Error: { errCode: "10001", errMessage: "订单不存在" } });
+    expect(refused).toEqual({ status: "failed", cancelStatus: null, message: "订单不存在" });
+  });
+
+  it("parses a real SOAP envelope and sends order_code + reason", async () => {
+    const { parseResponse, buildEnvelope } = await import("./protocol");
+    const { interpretCancelResponse } = await import("./duplicates");
+    const xml =
+      '<?xml version="1.0" encoding="UTF-8"?><SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">' +
+      '<SOAP-ENV:Body><ns1:callServiceResponse><response>{"ask":"Success","message":"Success","order_code":"C000121-261023-0324","cancel_status":1}</response>' +
+      "</ns1:callServiceResponse></SOAP-ENV:Body></SOAP-ENV:Envelope>";
+    const outcome = interpretCancelResponse(parseResponse(xml) as Parameters<typeof interpretCancelResponse>[0]);
+    expect(outcome.status).toBe("pending");
+    const envelope = buildEnvelope({
+      credentials: { appKey: "k", appToken: "t" },
+      service: "cancelOrder",
+      params: { order_code: "C000121-261023-0324", reason: "Doublon" },
+    });
+    expect(envelope).toContain("<service>cancelOrder</service>");
+    expect(envelope).toContain("&quot;order_code&quot;:&quot;C000121-261023-0324&quot;");
+  });
+});
