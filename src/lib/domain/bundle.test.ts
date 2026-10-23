@@ -78,10 +78,14 @@ describe("parcelChannel", () => {
     expect(parcelChannel([null, undefined])).toBeNull();
   });
 
-  it("moves cosmetics mixed with a battery or magnetic item to the sensitive line", () => {
-    expect(parcelChannel(["electronics_battery", "cosmetics"])).toBe("sensitive_other");
-    expect(parcelChannel(["liquid_perfume", "electronics_battery", "standard"])).toBe("sensitive_other");
-    expect(parcelChannel(["magnetic", "cosmetics"])).toBe("sensitive_other");
+  it("ships a kit (battery or magnetic device + cosmetic refill) on the cosmetics line", () => {
+    expect(parcelChannel(["electronics_battery", "cosmetics"])).toBe("cosmetics");
+    expect(parcelChannel(["liquid_perfume", "electronics_battery", "standard"])).toBe("cosmetics");
+    expect(parcelChannel(["magnetic", "cosmetics"])).toBe("cosmetics");
+  });
+
+  it("keeps a kit with a sensitive item on the sensitive line", () => {
+    expect(parcelChannel(["electronics_battery", "cosmetics", "sensitive_other"])).toBe("sensitive_other");
   });
 });
 
@@ -94,9 +98,10 @@ describe("parcelLead", () => {
     expect(parcelLead([translatorItem, caseItem])).toEqual({ lead: translatorItem, channel: "electronics_battery" });
   });
 
-  it("puts a battery + cosmetics parcel on the sensitive line, led by the battery item", () => {
-    const cream = { id: "cream", shipping_channel: "cosmetics" };
-    expect(parcelLead([cream, translatorItem])).toEqual({ lead: translatorItem, channel: "sensitive_other" });
+  it("puts a battery + cosmetics kit on the cosmetics line, led by the battery item", () => {
+    const refill = { id: "refill", shipping_channel: "cosmetics" };
+    expect(parcelLead([refill, translatorItem])).toEqual({ lead: translatorItem, channel: "cosmetics" });
+    expect(parcelLead([translatorItem, refill])).toEqual({ lead: translatorItem, channel: "cosmetics" });
   });
 
   it("lets a sensitive item lead over a battery item", () => {
