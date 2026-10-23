@@ -148,7 +148,12 @@ export function UpsellComposer({
               <dd className="tabular text-right">{formatAmount(breakdown.handling + breakdown.commission, locale)}</dd>
             </dl>
             <div className="mt-2 flex items-baseline justify-between border-t border-[var(--line-soft)] pt-2">
-              <span className="text-[14px] font-bold">{t("total")}</span>
+              <span className="text-[14px] font-bold">
+                {t("total")}
+                {breakdown.announced ? (
+                  <span className="ml-2 text-[11px] font-medium text-[var(--muted)]">{t("announced")}</span>
+                ) : null}
+              </span>
               <span className="font-display tabular text-[22px] font-extrabold">
                 {pending ? "…" : formatAmount(breakdown.cogs, locale)}
               </span>

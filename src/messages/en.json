@@ -742,7 +742,8 @@
       "empty": "Add at least one unit to see the COGS.",
       "notReady": "Price, weight or category missing: cannot be priced in the parcel yet.",
       "parentsTitle": "Sold with",
-      "parentsLead": "This product is sold as an upsell of these products. The full parcel COGS (product + upsells) is on their page, in “Frequently bought together”."
+      "parentsLead": "This product is sold as an upsell of these products. The full parcel COGS (product + upsells) is on their page, in “Frequently bought together”.",
+      "announced": "Announced price"
     }
   },
   "economics": {
@@ -2217,6 +2218,13 @@
       "otherMarket": "Other market",
       "until": "Valid until",
       "expired": "Expired: palier rule applies"
+    },
+    "announcedKits": {
+      "title": "Prices announced — kits",
+      "lead": "Total per parcel (this product ×1 + N units of the companion product, shipping and handling included, €) promised to the client. Filled = the app bills exactly this price for that kit and market; empty = computed parcel COGS. Validity date: the market's announced-price date.",
+      "kitOf": "this product + {companion}",
+      "save": "Save",
+      "badge": "Announced price"
     },
     "carrier": {
       "title": "Carrier per market",
