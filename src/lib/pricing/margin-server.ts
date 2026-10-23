@@ -14,6 +14,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   COGS_MATRIX_QUANTITIES,
   announcedPriceFor,
+  matchAnnouncedKit,
   applyAnnouncedPrice,
   calculateCogs,
   hasInternalBattery,
@@ -571,9 +572,10 @@ function marginForOrder(
     : null;
   // One product in the parcel and a price promised for this quantity: the client pays it.
   const single = new Set(priced.map((line) => line.product.id)).size === 1 && lead.id === priced[0].product.id;
+  // Several products: a locked kit price (main ×1 + N of one companion) when one matches.
   const announced = single
     ? announcedPriceFor(activeAnnouncedPrices(lead.quote_json), destination, units)
-    : null;
+    : matchAnnouncedKit(priced, destination);
   const client =
     computedClient && announced != null
       ? {

@@ -15,6 +15,8 @@ import {
   COGS_MATRIX_QUANTITIES,
   announcedPriceFor,
   applyAnnouncedPrice,
+  applyAnnouncedBundlePrice,
+  matchAnnouncedKit,
   calculateCogs,
   hasInternalBattery,
   listRateOptions,
@@ -508,5 +510,8 @@ export async function calculateComposedCogs(
     packagingLadder: settings.packaging_ladder,
     ...profile,
   });
-  return { breakdown, missingReason: breakdown ? null : "rate", destination };
+  // Main ×1 + one companion with a locked kit price on this market: the client pays it.
+  const kitPrice = breakdown ? matchAnnouncedKit(picked, destination) : null;
+  const priced = breakdown && kitPrice != null ? applyAnnouncedBundlePrice(breakdown, kitPrice) : breakdown;
+  return { breakdown: priced, missingReason: priced ? null : "rate", destination };
 }

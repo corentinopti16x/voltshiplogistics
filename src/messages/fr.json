@@ -742,7 +742,8 @@
       "empty": "Mets au moins une unité pour voir le COGS.",
       "notReady": "Prix, poids ou catégorie manquant : pas encore comptable dans le colis.",
       "parentsTitle": "Vendu avec",
-      "parentsLead": "Ce produit part en upsell de ces produits. Le COGS du colis complet (produit + upsells) est sur leur fiche, bloc « Souvent achetés ensemble »."
+      "parentsLead": "Ce produit part en upsell de ces produits. Le COGS du colis complet (produit + upsells) est sur leur fiche, bloc « Souvent achetés ensemble ».",
+      "announced": "Prix annoncé"
     }
   },
   "economics": {
@@ -2217,6 +2218,13 @@
       "otherMarket": "Autre pays",
       "until": "Valable jusqu'au",
       "expired": "Expiré : règle du palier appliquée"
+    },
+    "announcedKits": {
+      "title": "Prix annoncés — kits",
+      "lead": "Total par colis (ce produit ×1 + N unités du produit associé, transport et handling compris, en €) promis au client. Case remplie = l'app facture exactement ce prix pour ce kit et ce pays ; case vide = COGS calculé du colis. Date de validité : celle des prix annoncés du pays.",
+      "kitOf": "ce produit + {companion}",
+      "save": "Enregistrer",
+      "badge": "Prix annoncé"
     },
     "carrier": {
       "title": "Transporteur par marché",

@@ -764,6 +764,83 @@ export function activeAnnouncedPrices(quoteJson: Record<string, unknown> | null 
   return prices;
 }
 
+/**
+ * Kit prices promised to a client: the main product ×1 + N units of ONE companion product
+ * (e.g. a sprayer + 3 refills), by market, companion product id, then companion quantity:
+ * { "IT": { "<refill id>": { "1": 10.48, "3": 11.92 } } }. Total parcel price in EUR
+ * (products + transport + handling). Stored in the MAIN product's quote_json.announced_kits;
+ * the guarantee date is the market's `announced_until`, shared with the single prices.
+ */
+export type AnnouncedKits = Record<string, Record<string, Record<string, number>>>;
+
+/** Companion quantities offered in the kit form (×1 … ×6). */
+export const KIT_QUANTITIES = [1, 2, 3, 4, 5, 6] as const;
+
+export function parseAnnouncedKits(raw: unknown): AnnouncedKits {
+  const out: AnnouncedKits = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [market, byCompanion] of Object.entries(raw as Record<string, unknown>)) {
+    if (!/^[A-Z]{2}$/.test(market) || !byCompanion || typeof byCompanion !== "object") continue;
+    for (const [companionId, byQty] of Object.entries(byCompanion as Record<string, unknown>)) {
+      if (!companionId || !byQty || typeof byQty !== "object") continue;
+      for (const [qty, value] of Object.entries(byQty as Record<string, unknown>)) {
+        const price = Number(value);
+        if (!/^[1-9]$/.test(qty) || !Number.isFinite(price) || price <= 0) continue;
+        ((out[market] ??= {})[companionId] ??= {})[qty] = money(price);
+      }
+    }
+  }
+  return out;
+}
+
+/** Kit prices still guaranteed today (markets whose `announced_until` is past are dropped). */
+export function activeAnnouncedKits(quoteJson: Record<string, unknown> | null | undefined, today: string = todayIso()) {
+  const kits = parseAnnouncedKits(quoteJson?.announced_kits);
+  const until = parseAnnouncedUntil(quoteJson?.announced_until);
+  for (const market of Object.keys(kits)) if (announcedExpired(until, market, today)) delete kits[market];
+  return kits;
+}
+
+/**
+ * Locked kit price of a parcel, or null: the parcel must hold exactly the main product ×1
+ * and one other product (any quantity with a price) — nothing else.
+ */
+export function announcedKitPriceFor(
+  kits: AnnouncedKits,
+  destination: string,
+  mainId: string,
+  lines: Array<{ productId: string; quantity: number }>,
+) {
+  const byProduct = new Map<string, number>();
+  for (const line of lines) {
+    if (line.quantity > 0) byProduct.set(line.productId, (byProduct.get(line.productId) ?? 0) + line.quantity);
+  }
+  if (byProduct.size !== 2 || byProduct.get(mainId) !== 1) return null;
+  const [companionId, quantity] = [...byProduct.entries()].find(([id]) => id !== mainId)!;
+  const value = kits[destination.toUpperCase()]?.[companionId]?.[String(quantity)];
+  return value != null && value > 0 ? value : null;
+}
+
+/**
+ * The first locked kit price matching the parcel, trying each product of the parcel as the
+ * kit's main product (the price lives on the main product's sheet).
+ */
+export function matchAnnouncedKit<P extends { id: string; quote_json?: Record<string, unknown> | null }>(
+  lines: Array<{ product: P; quantity: number }>,
+  destination: string,
+  today: string = todayIso(),
+) {
+  const flat = lines.map((line) => ({ productId: line.product.id, quantity: line.quantity }));
+  const seen = new Set<string>();
+  for (const line of lines) {
+    if (seen.has(line.product.id)) continue;
+    seen.add(line.product.id);
+    const price = announcedKitPriceFor(activeAnnouncedKits(line.product.quote_json, today), destination, line.product.id, flat);
+    if (price != null) return price;
+  }
+  return null;
+}
+
 export type AnnouncedAlertStatus = "expired" | "loss" | "low_margin" | "expiring" | "no_data" | "ok";
 
 /** Days before the guarantee date from which an announced price is flagged « expire bientôt ». */
@@ -913,7 +990,19 @@ export type BundleBreakdown = {
   shipping: number;
   handling: number;
   cogs: number;
+  /** True when a locked kit price replaced the computed total (transport absorbs the gap). */
+  announced?: boolean;
 };
+
+/** A locked kit price on a parcel: products, commission, boxes and handling stay, transport absorbs the difference. */
+export function applyAnnouncedBundlePrice(breakdown: BundleBreakdown, price: number): BundleBreakdown {
+  return {
+    ...breakdown,
+    shipping: money(price - breakdown.product - breakdown.commission - breakdown.box - breakdown.handling),
+    cogs: money(price),
+    announced: true,
+  };
+}
 
 /**
  * COGS of ONE parcel holding several products (the main product and the upsells the client

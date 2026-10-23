@@ -9,6 +9,7 @@ import { ProductPhoto } from "@/components/client/product-photo";
 import { SourcerShell } from "@/components/sourcer/sourcer-shell";
 import { SourcingWorkForm } from "@/components/sourcer/sourcing-work-form";
 import { AnnouncedPricesForm } from "@/components/sourcer/announced-prices-form";
+import { AnnouncedKitPricesForm } from "@/components/sourcer/announced-kit-prices-form";
 import { calculateProductCogsMatrix, getProductMarkets } from "@/lib/pricing/server";
 import { matrixViews } from "@/lib/pricing/matrix-view";
 import { gridVersionDate } from "@/lib/domain/pricing";
@@ -215,6 +216,16 @@ export default async function SourcerProductPage({
       <div className="mt-6">
         <AnnouncedPricesForm productId={product.id} quoteJson={product.quote_json} markets={getProductMarkets(product)} />
       </div>
+      {upsells.length > 0 ? (
+        <div className="mt-6">
+          <AnnouncedKitPricesForm
+            productId={product.id}
+            quoteJson={product.quote_json}
+            markets={getProductMarkets(product)}
+            companions={upsells.map((item) => ({ id: item.product.id, title: item.product.title }))}
+          />
+        </div>
+      ) : null}
     </SourcerShell>
   );
 }
