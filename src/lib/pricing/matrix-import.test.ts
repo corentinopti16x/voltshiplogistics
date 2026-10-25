@@ -84,6 +84,10 @@ describe("matrix helpers", () => {
   it("maps sheet names to destination + channel", () => {
     expect(mapSheetName("FRANCE-STANDARD")).toEqual({ destination: "FR", channel: "standard", note: null });
     expect(mapSheetName("USA-ELECTRONICS")).toMatchObject({ destination: "US", channel: "electronics_battery" });
+    expect(mapSheetName("SWITZERLAND-FOOD")).toMatchObject({ destination: "CH", channel: "sensitive_other" });
+    expect(mapSheetName("LUXEMBOURG-FOOD")).toMatchObject({ destination: "LU", channel: "sensitive_other" });
+    expect(mapSheetName("AUSTRIA-STANDARD")).toMatchObject({ destination: "AT", channel: "standard" });
+    expect(mapSheetName("CANADA-ELECTRONICS")).toMatchObject({ destination: "CA", channel: "electronics_battery" });
     expect(mapSheetName("BELGIUM-COSMETICS")).toMatchObject({ destination: "BE", channel: "cosmetics" });
     expect(mapSheetName("ITALY-FOOD")).toMatchObject({ destination: "IT", channel: "sensitive_other" });
     expect(mapSheetName("Allemagne - Perfume")).toMatchObject({ destination: "DE", channel: "liquid_perfume" });

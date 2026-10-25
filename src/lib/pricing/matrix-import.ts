@@ -50,6 +50,19 @@ const DESTINATIONS: Record<string, string> = {
   GB: "GB",
   NETHERLANDS: "NL",
   NL: "NL",
+  SWITZERLAND: "CH",
+  SUISSE: "CH",
+  CH: "CH",
+  LUXEMBOURG: "LU",
+  LU: "LU",
+  AUSTRIA: "AT",
+  AUTRICHE: "AT",
+  AT: "AT",
+  CANADA: "CA",
+  CA: "CA",
+  POLAND: "PL",
+  POLOGNE: "PL",
+  PL: "PL",
 };
 
 const CATEGORIES: Record<string, { channel: ShippingChannel; note?: string }> = {
