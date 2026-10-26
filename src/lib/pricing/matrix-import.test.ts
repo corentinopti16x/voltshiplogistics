@@ -308,7 +308,7 @@ describe("multi-carrier merge", () => {
       record("Other", "FR", 6),
     ];
     const imported = [record("Tongyou", "FR", 4), record("YunExpress", "FR", 4.5)];
-    const merged = mergeGridCells(active, imported, ["Tongyou", "YunExpress"]);
+    const merged = mergeGridCells(active, imported, ["Tongyou", "YunExpress"], "carrier");
     expect(merged.map((c) => [c.carrier, c.destination, c.price])).toEqual([
       ["Tongyou", "FR", 4],
       ["YunExpress", "FR", 4.5],
@@ -316,7 +316,7 @@ describe("multi-carrier merge", () => {
       ["Other", "FR", 6],
     ]);
     // Single carrier string still works for the assistant path.
-    expect(mergeGridCells(active, imported, "Tongyou").map((c) => [c.carrier, c.destination, c.price])).toEqual([
+    expect(mergeGridCells(active, imported, "Tongyou", "carrier").map((c) => [c.carrier, c.destination, c.price])).toEqual([
       ["Tongyou", "FR", 4],
       ["YunExpress", "FR", 4.5], // imported wins over the active duplicate
       ["YunExpress", "DE", 8.5],
@@ -345,5 +345,25 @@ describe("carrier detection with notes naming another carrier", () => {
     const { lines } = parseVoltshipMatrix(buffer);
     expect(lines.map((line) => line.carrier)).toEqual(["Tongyou", "YunExpress"]);
     expect(lines[1].line_name).toBe("YunExpress 商派特惠普货 YTSPTHPH");
+  });
+});
+
+describe("line-by-line replacement", () => {
+  const cell = (carrier: string, lineName: string | null, price: number): GridCellRecord => ({
+    carrier, lineName, destination: "US", channel: "electronics" as GridCellRecord["channel"],
+    weightMinG: 1, weightMaxG: 450, price, deliveryRange: null, taxIncluded: true, notes: null,
+    carrierCostRmb: price, iossRequired: false,
+  } as GridCellRecord);
+
+  it("replaces only the imported line and keeps the carrier's other lines", () => {
+    const active = [cell("YunExpress", "特惠带电 THZXR", 33), cell("YunExpress", "商派特惠带电 YTSPTHDD", 30.8), cell("Tongyou", "带电", 33.7)];
+    const merged = mergeGridCells(active, [cell("YunExpress", "特惠带电 THZXR", 30)], ["YunExpress"]);
+    expect(merged.map((c) => `${c.lineName}=${c.price}`).sort()).toEqual(["商派特惠带电 YTSPTHDD=30.8", "带电=33.7", "特惠带电 THZXR=30"].sort());
+  });
+
+  it("adds a new line without touching existing ones", () => {
+    const active = [cell("YunExpress", "特惠带电 THZXR", 33)];
+    const merged = mergeGridCells(active, [cell("YunExpress", "特惠普货 THPHR", 25)], ["YunExpress"]);
+    expect(merged).toHaveLength(2);
   });
 });

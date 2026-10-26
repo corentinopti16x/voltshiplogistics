@@ -8,6 +8,8 @@ import {
   expandToCells,
   hasLowConfidence,
   importedCarriers,
+  importedLineSets,
+  isReplacedByImport,
   normalizeParsedPriceList,
   summarizeImport,
   type ComparisonRow,
@@ -158,7 +160,8 @@ export function readOverrides(summary: Record<string, unknown> | null): ImportOv
     source.settings && typeof source.settings === "object"
       ? (source.settings as Partial<PricingSettings>)
       : undefined;
-  return { lines, ...(settings ? { settings } : {}) };
+  const replaceMode = source.replaceMode === "carrier" ? "carrier" : source.replaceMode === "line" ? "line" : undefined;
+  return { lines, ...(settings ? { settings } : {}), ...(replaceMode ? { replaceMode } : {}) };
 }
 
 /** Parsed list as stored (normalised model output under `summary_json.parsed`). */
@@ -181,8 +184,8 @@ export async function buildRateImportReview(
   const cells = expandToCells(parsed, settings, overrides);
   const activeCells = await loadActiveRateCells(activeGridVersion);
   const carriers = importedCarriers(parsed);
-  const replaced = new Set(carriers);
-  const comparison = compareWithActive(cells, activeCells, undefined, carriers);
+  const replaceMode = overrides.replaceMode ?? "line";
+  const comparison = compareWithActive(cells, activeCells, undefined, carriers, replaceMode);
   const summary = summarizeImport(parsed, cells, overrides);
   const files = Array.isArray(row.summary_json?.source_files)
     ? (row.summary_json?.source_files as { name: string; mime: string }[])
@@ -205,7 +208,10 @@ export async function buildRateImportReview(
     comparison,
     summary,
     lowConfidence: hasLowConfidence(parsed, overrides),
-    carriedForwardCells: activeCells.filter((cell) => !replaced.has(cell.carrier)).length,
+    carriedForwardCells: (() => {
+      const sets = importedLineSets(cells);
+      return activeCells.filter((cell) => !isReplacedByImport(cell, sets.lines, sets.nameless, replaceMode, new Set(carriers))).length;
+    })(),
     sourceFiles: files,
     model: typeof row.summary_json?.model === "string" ? row.summary_json.model : null,
   };

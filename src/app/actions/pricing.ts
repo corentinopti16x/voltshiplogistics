@@ -660,7 +660,12 @@ function sanitizeOverrides(raw: unknown): ImportOverrides {
       if (Number.isFinite(value)) cleanSettings[key] = value;
     }
   }
-  return { lines, ...(Object.keys(cleanSettings).length > 0 ? { settings: cleanSettings } : {}) };
+  const replaceMode = source.replaceMode === "carrier" ? "carrier" : source.replaceMode === "line" ? "line" : undefined;
+  return {
+    lines,
+    ...(Object.keys(cleanSettings).length > 0 ? { settings: cleanSettings } : {}),
+    ...(replaceMode ? { replaceMode } : {}),
+  };
 }
 
 /** Step 2: admin toggles → recompute cells + comparison and persist them on the draft. */
@@ -764,9 +769,15 @@ export async function activateRateImportAction(
     return grams ? { ...cell, gramCostsRmb: grams.gramCostsRmb ?? null, gramPrices: grams.gramPrices ?? null } : cell;
   });
 
-  // Carry forward every other carrier of the active grid; replace the imported carrier.
+  // Line mode (default): replace only the imported carrier lines, keep everything else.
+  // Carrier mode (explicit choice in the review): replace every line of the imported carriers.
   const activeRecords = await loadGridCellRecords(review.activeGridVersion);
-  const merged = mergeGridCells(activeRecords, proposedToRecords(importedCells), review.carriers);
+  const merged = mergeGridCells(
+    activeRecords,
+    proposedToRecords(importedCells),
+    review.carriers,
+    review.overrides.replaceMode ?? "line",
+  );
   const rows = merged.map((cell) => ({
     grid_version: gridVersion,
     carrier: cell.carrier,

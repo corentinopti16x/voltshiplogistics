@@ -187,6 +187,29 @@ export function RateImportReviewPanel({ initial }: { initial: RateImportReview }
               .join(" · ")}
           </p>
         ) : null}
+        <div className="mt-4 rounded-[10px] border border-[var(--line)] px-4 py-3 text-[13px]">
+          <p className="font-semibold text-[var(--ink)]">{t("step2.replaceMode.title")}</p>
+          <label className="mt-2 flex items-start gap-2">
+            <input
+              type="radio"
+              name="replaceMode"
+              checked={(overrides.replaceMode ?? "line") === "line"}
+              onChange={() => recompute({ ...overrides, replaceMode: "line" })}
+              disabled={pending || review.status !== "draft"}
+            />
+            <span>{t("step2.replaceMode.line")}</span>
+          </label>
+          <label className="mt-1 flex items-start gap-2">
+            <input
+              type="radio"
+              name="replaceMode"
+              checked={overrides.replaceMode === "carrier"}
+              onChange={() => recompute({ ...overrides, replaceMode: "carrier" })}
+              disabled={pending || review.status !== "draft"}
+            />
+            <span>{t("step2.replaceMode.carrier")}</span>
+          </label>
+        </div>
         {review.status === "activated" ? (
           <p className="mt-4 rounded-[10px] bg-[var(--green-soft)] px-4 py-3 text-sm text-[var(--green-ink)]">
             {t("step2.statusActivated", { version: review.gridVersion ?? "" })}

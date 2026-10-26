@@ -311,7 +311,7 @@ describe("mergeGridCells (carry-forward)", () => {
       record("Tongyou", 50, 4.3, { lineName: "普货专线" }),
       record("Tongyou", 50, 4.6, { lineName: "特货专线" }), // second line of the same carrier: kept
     ];
-    const merged = mergeGridCells(active, imported, "Tongyou");
+    const merged = mergeGridCells(active, imported, "Tongyou", "carrier");
     expect(merged).toHaveLength(3);
     expect(merged[0]).toMatchObject({ carrier: "Tongyou", price: 4.3, lineName: "普货专线" });
     expect(merged[1]).toMatchObject({ carrier: "Tongyou", price: 4.6, lineName: "特货专线" });
@@ -322,7 +322,7 @@ describe("mergeGridCells (carry-forward)", () => {
     const active: RateCell[] = [
       { gridVersion: "V1", carrier: "Tongyou", destination: "FR", channel: "standard", weightMinG: 0, weightMaxG: 500, price: 1 },
     ];
-    const rows = compareWithActive(expandToCells(fixture).filter((c) => c.destination === "FR"), active, [100], "Tongyou");
+    const rows = compareWithActive(expandToCells(fixture).filter((c) => c.destination === "FR"), active, [100], "Tongyou", "carrier");
     expect(rows[0].old?.price).toBe(1);
     expect(rows[0].new?.price).toBe(4.7); // old Tongyou cell is replaced, not kept
   });

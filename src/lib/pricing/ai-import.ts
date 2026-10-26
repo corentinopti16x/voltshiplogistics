@@ -416,8 +416,12 @@ export type ProposedCell = RateGridCsvRow & {
 };
 
 export type LineOverride = { include?: boolean; tax_included?: boolean };
+/** "line" (default): only the imported carrier lines are replaced. "carrier": every line of the imported carriers is replaced (full refresh). */
+export type ReplaceMode = "line" | "carrier";
+
 export type ImportOverrides = {
   lines?: Record<string, LineOverride>;
+  replaceMode?: ReplaceMode;
   settings?: Partial<PricingSettings>;
 };
 
@@ -462,6 +466,38 @@ export function linesPerCarrier(parsed: ParsedPriceList, overrides?: ImportOverr
     if (isLineIncluded(line, overrides?.lines?.[String(index)])) out[carrier].included += 1;
   });
   return out;
+}
+
+/** A carrier line = carrier + line name ("YunExpress|特惠带电 THZXR"). */
+export function lineKey(cell: { carrier: string; lineName?: string | null }) {
+  return `${cell.carrier}|${(cell.lineName ?? "").trim()}`;
+}
+
+/**
+ * Line-by-line replacement: an active cell is replaced only when the import carries the same
+ * carrier line. Lines absent from the import stay as they are (a partial carrier file no
+ * longer wipes the carrier's other lines). Lines without a name fall back to the carrier.
+ */
+export function isReplacedByImport(
+  cell: { carrier: string; lineName?: string | null },
+  importedLines: Set<string>,
+  namelessCarriers: Set<string>,
+  mode: ReplaceMode = "line",
+  carriers?: Set<string>,
+) {
+  if (mode === "carrier" && carriers) return carriers.has(cell.carrier);
+  if (importedLines.has(lineKey(cell))) return true;
+  return namelessCarriers.has(cell.carrier) && !(cell.lineName ?? "").trim();
+}
+
+export function importedLineSets(imported: { carrier: string; lineName?: string | null }[]) {
+  const lines = new Set<string>();
+  const nameless = new Set<string>();
+  for (const cell of imported) {
+    lines.add(lineKey(cell));
+    if (!(cell.lineName ?? "").trim()) nameless.add(cell.carrier);
+  }
+  return { lines, nameless };
 }
 
 function carrierSet(carriers: string | Iterable<string> | null | undefined): Set<string> {
@@ -631,8 +667,10 @@ export function mergeGridCells(
   activeCells: GridCellRecord[],
   importedCells: GridCellRecord[],
   carriers: string | Iterable<string>,
+  mode: ReplaceMode = "line",
 ): GridCellRecord[] {
-  const replaced = carrierSet(carriers);
+  const carrierNames = carrierSet(carriers);
+  const { lines, nameless } = importedLineSets(importedCells);
   const key = (c: GridCellRecord) =>
     [c.carrier, c.lineName ?? "", c.destination, c.channel, c.weightMinG, c.weightMaxG].join("|");
   const seen = new Set<string>();
@@ -644,7 +682,7 @@ export function mergeGridCells(
     out.push(cell);
   }
   for (const cell of activeCells) {
-    if (replaced.has(cell.carrier)) continue;
+    if (isReplacedByImport(cell, lines, nameless, mode, carrierNames)) continue;
     const k = key(cell);
     if (seen.has(k)) continue;
     seen.add(k);
@@ -685,13 +723,15 @@ export function compareWithActive(
   activeCells: RateCell[],
   weights: readonly number[] = REFERENCE_WEIGHTS_G,
   carriers: string | Iterable<string> | null = [...new Set(proposed.map((cell) => cell.carrier))],
+  mode: ReplaceMode = "line",
 ): ComparisonRow[] {
   // Same rule as mergeGridCells / activation: the imported carriers are replaced, the
   // other carriers of the active grid are carried forward.
-  const replaced = carrierSet(carriers);
+  const carrierNames = carrierSet(carriers);
   const proposedCells = toRateCells(proposed);
+  const { lines, nameless } = importedLineSets(proposedCells);
   const merged = [
-    ...activeCells.filter((cell) => !replaced.has(cell.carrier)),
+    ...activeCells.filter((cell) => !isReplacedByImport(cell, lines, nameless, mode, carrierNames)),
     ...proposedCells,
   ];
   const keys = new Map<string, { destination: string; channel: ShippingChannel }>();
