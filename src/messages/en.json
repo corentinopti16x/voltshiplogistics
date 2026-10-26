@@ -1184,7 +1184,12 @@
         "carriers": "Carriers",
         "perCarrier": "Lines included per carrier:",
         "iossRequired": "IOSS required",
-        "allInclusive": "All-inclusive matrix: every price is the final carrier cost per parcel — no tax or supplement is added and every line competes for the cheapest pick. IOSS mentions are informational."
+        "allInclusive": "All-inclusive matrix: every price is the final carrier cost per parcel — no tax or supplement is added and every line competes for the cheapest pick. IOSS mentions are informational.",
+        "replaceMode": {
+          "title": "What does this import replace?",
+          "line": "Only the lines in the file (the carrier's other lines stay unchanged) — recommended",
+          "carrier": "Every line of the imported carriers (full refresh: lines missing from the file are removed)"
+        }
       }
     },
     "pricingCells": {

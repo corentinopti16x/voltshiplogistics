@@ -1184,7 +1184,12 @@
         "carriers": "Transporteurs",
         "perCarrier": "Lignes incluses par transporteur :",
         "iossRequired": "IOSS requis",
-        "allInclusive": "Matrice « tout compris » : chaque prix est le coût transporteur final par colis — aucune taxe ni supplément n'est ajouté, toutes les lignes sont en lice pour le moins cher. Les mentions IOSS sont informatives."
+        "allInclusive": "Matrice « tout compris » : chaque prix est le coût transporteur final par colis — aucune taxe ni supplément n'est ajouté, toutes les lignes sont en lice pour le moins cher. Les mentions IOSS sont informatives.",
+        "replaceMode": {
+          "title": "Que remplace cet import ?",
+          "line": "Seulement les lignes présentes dans le fichier (les autres lignes du transporteur restent inchangées) — recommandé",
+          "carrier": "Toutes les lignes des transporteurs importés (mise à jour complète : les lignes absentes du fichier disparaissent)"
+        }
       }
     },
     "pricingCells": {
