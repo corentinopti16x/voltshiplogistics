@@ -2053,15 +2053,35 @@
       "noGrid": "Aucune grille tarifaire active : importe et active une grille dans Tarification.",
       "empty": "Aucune ligne pour ce type de produit vers ce pays.",
       "accepts": "Accepte : {list}",
-      "weightRange": "De {min} g à {max} g",
       "ioss": "IOSS exigé",
-      "days": "{range} j",
       "notLinked": "Pas liée",
-      "legend": "Coût transporteur d’un colis en ¥ (RMB), interne à Voltship. En vert, la ligne la moins chère à ce poids. Grille {grid}.",
+      "legend": "Coût transporteur d’un colis en ¥ (RMB), interne à Voltship. En vert, la moins chère des lignes actives à ce poids. Une ligne « à ouvrir » n’est jamais choisie pour un produit. Grille {grid}.",
       "table": {
         "line": "Transporteur et ligne",
-        "delivery": "Délai",
-        "eccang": "Ligne ECCANG"
+        "delivery": "Délai (jours)",
+        "eccang": "Ligne ECCANG",
+        "status": "État"
+      },
+      "editHint": "Clique un délai, une ligne ECCANG, un commentaire ou un état pour le modifier. C’est enregistré tout de suite.",
+      "readOnly": "Lecture seule pour l’instant.",
+      "saving": "Enregistrement…",
+      "saved": "Enregistré à {time}",
+      "missingTable": "Pour configurer les lignes, lance la migration 00025_carrier_line_settings.sql dans Supabase. En attendant, la page est en lecture seule.",
+      "notePlaceholder": "Ajouter un commentaire",
+      "noteLabel": "Commentaire de {line}",
+      "deliveryPlaceholder": "Délai",
+      "deliveryLabel": "Délai de {line}, en jours",
+      "eccangLabel": "Ligne ECCANG de {line}",
+      "statusLabel": "{line} est ouverte chez Voltship",
+      "status": {
+        "active": "Active",
+        "pending": "À ouvrir"
+      },
+      "errors": {
+        "forbidden": "Non enregistré : réservé à l’équipe Voltship.",
+        "missing_table": "Non enregistré : la migration 00025 n’est pas lancée.",
+        "invalid": "Non enregistré : texte trop long (300 caractères au plus).",
+        "failed": "Non enregistré. Réessaie."
       }
     }
   },

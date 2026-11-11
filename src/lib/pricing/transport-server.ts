@@ -3,9 +3,14 @@
  * The page checks the role (Voltship team only); client prices only leave this module for an admin.
  */
 
-import { parseShippingMethodMap, resolveShippingMethod } from "@/lib/eccang/mapping";
+import {
+  parseShippingMethodMap,
+  resolveShippingMethod,
+} from "@/lib/eccang/mapping";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { indexLineSettings } from "../domain/line-settings";
 import { normalizeDestination, type ShippingChannel } from "../domain/pricing";
+import { loadLineSettings } from "./line-settings-server";
 import { getActiveGridVersion, loadRateCellsFor } from "./server";
 import {
   summarizeTransportLines,
@@ -24,6 +29,8 @@ export type TransportOverview = {
   /** Channels that have at least one line in the selected country. */
   channels: ShippingChannel[];
   lines: TransportLine[];
+  /** False while migration 00025 is not applied: the lines cannot be configured yet. */
+  settingsReady: boolean;
 };
 
 /** Every (destination, line, channel) of the grid, without the per-gram prices (light query). */
@@ -38,11 +45,22 @@ async function loadLineChannels(gridVersion: string) {
       .order("id")
       .range(from, from + 999);
     if (error) throw error;
-    for (const row of (data ?? []) as Array<{ destination: string; carrier: string; line_name: string | null; channel: string }>) {
+    for (const row of (data ?? []) as Array<{
+      destination: string;
+      carrier: string;
+      line_name: string | null;
+      channel: string;
+    }>) {
       const destination = row.destination.trim().toUpperCase();
       const lineName = row.line_name || null;
       const key = `${destination}|${row.carrier}|${lineName ?? ""}|${row.channel}`;
-      if (!rows.has(key)) rows.set(key, { destination, carrier: row.carrier, lineName, channel: row.channel });
+      if (!rows.has(key))
+        rows.set(key, {
+          destination,
+          carrier: row.carrier,
+          lineName,
+          channel: row.channel,
+        });
     }
     if (!data || data.length < 1000) break;
   }
@@ -51,11 +69,17 @@ async function loadLineChannels(gridVersion: string) {
 
 async function loadShippingMethods() {
   const admin = createAdminClient();
-  const { data } = await admin.from("pricing_meta").select("value").eq("key", "eccang_shipping_methods").maybeSingle();
+  const { data } = await admin
+    .from("pricing_meta")
+    .select("value")
+    .eq("key", "eccang_shipping_methods")
+    .maybeSingle();
   return parseShippingMethodMap(data?.value);
 }
 
-export function parseTransportChannel(raw: string | null | undefined): ShippingChannel | null {
+export function parseTransportChannel(
+  raw: string | null | undefined,
+): ShippingChannel | null {
   return TRANSPORT_CHANNELS.find((channel) => channel === raw) ?? null;
 }
 
@@ -68,9 +92,22 @@ export async function loadTransportOverview(
   const gridVersion = await getActiveGridVersion();
   const wanted = parseTransportChannel(rawChannel);
   if (!gridVersion) {
-    return { gridVersion: null, destinations: [], destination: null, channel: wanted ?? "standard", channels: [], lines: [] };
+    return {
+      gridVersion: null,
+      destinations: [],
+      destination: null,
+      channel: wanted ?? "standard",
+      channels: [],
+      lines: [],
+      settingsReady: false,
+    };
   }
-  const [lineChannels, methods] = await Promise.all([loadLineChannels(gridVersion), loadShippingMethods()]);
+  const [lineChannels, methods, lineSettings] = await Promise.all([
+    loadLineChannels(gridVersion),
+    loadShippingMethods(),
+    loadLineSettings(),
+  ]);
+  const settingsReady = lineSettings.ready;
   const perCountry = new Map<string, Set<string>>();
   for (const row of lineChannels) {
     const set = perCountry.get(row.destination) ?? new Set<string>();
@@ -81,17 +118,44 @@ export async function loadTransportOverview(
     .map(([code, lines]) => ({ code, lines: lines.size }))
     .sort((a, b) => b.lines - a.lines || a.code.localeCompare(b.code));
   const asked = rawDestination ? normalizeDestination(rawDestination, "") : "";
-  const destination = destinations.find((item) => item.code === asked)?.code ?? destinations[0]?.code ?? null;
+  const destination =
+    destinations.find((item) => item.code === asked)?.code ??
+    destinations[0]?.code ??
+    null;
   if (!destination) {
-    return { gridVersion, destinations, destination: null, channel: wanted ?? "standard", channels: [], lines: [] };
+    return {
+      gridVersion,
+      destinations,
+      destination: null,
+      channel: wanted ?? "standard",
+      channels: [],
+      lines: [],
+      settingsReady,
+    };
   }
   const here = lineChannels.filter((row) => row.destination === destination);
   const present = new Set(here.map((row) => row.channel));
   const channels = TRANSPORT_CHANNELS.filter((channel) => present.has(channel));
-  const channel = wanted && channels.includes(wanted) ? wanted : (channels[0] ?? "standard");
-  const cells = await loadRateCellsFor(gridVersion, [destination], [channel]);
-  const lines = summarizeTransportLines(cells, channel, here, (carrier, lineName) =>
-    resolveShippingMethod(methods, carrier, lineName),
+  const channel =
+    wanted && channels.includes(wanted) ? wanted : (channels[0] ?? "standard");
+  // The page shows every line, including the ones not open yet.
+  const cells = await loadRateCellsFor(gridVersion, [destination], [channel], {
+    includePending: true,
+  });
+  const lines = summarizeTransportLines(
+    cells,
+    channel,
+    here,
+    (carrier, lineName) => resolveShippingMethod(methods, carrier, lineName),
+    indexLineSettings(lineSettings.settings),
   );
-  return { gridVersion, destinations, destination, channel, channels, lines: options.withClientPrices ? lines : withoutClientPrices(lines) };
+  return {
+    gridVersion,
+    destinations,
+    destination,
+    channel,
+    channels,
+    lines: options.withClientPrices ? lines : withoutClientPrices(lines),
+    settingsReady,
+  };
 }

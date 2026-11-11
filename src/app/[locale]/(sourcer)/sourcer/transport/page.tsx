@@ -1,17 +1,13 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { OperationsTabs } from "@/components/admin/section-tabs";
 import { SourcerShell } from "@/components/sourcer/sourcer-shell";
+import { TransportTable } from "@/components/transport/transport-table";
 import { Link, redirect } from "@/i18n/routing";
 import { getAuthContext } from "@/lib/auth/context";
-import { formatNumber } from "@/lib/format";
 import { loadTransportOverview } from "@/lib/pricing/transport-server";
-import { TRANSPORT_SAMPLE_WEIGHTS_G } from "@/lib/pricing/transport-view";
+import { TRANSPORT_CHANNELS } from "@/lib/pricing/transport-view";
 
 export const dynamic = "force-dynamic";
-
-function weightLabel(weightG: number) {
-  return weightG >= 1000 ? `${weightG / 1000} kg` : `${weightG} g`;
-}
 
 /** Country name in the page language ("US" → "États-Unis"); the code when the runtime has none. */
 function countryName(code: string, locale: string) {
@@ -52,7 +48,9 @@ export default async function TransportPage({
     getTranslations("admin.pricingForms.channels"),
   ]);
   const locale = rawLocale === "fr" ? "fr" : rawLocale === "zh" ? "zh" : "en";
-  const overview = await loadTransportOverview(c, ch, { withClientPrices: isAdmin });
+  const overview = await loadTransportOverview(c, ch, {
+    withClientPrices: isAdmin,
+  });
   const { destination, channel, lines } = overview;
   const href = (country: string, kind: string) =>
     `/sourcer/transport?c=${country}&ch=${kind}`;
@@ -107,107 +105,21 @@ export default async function TransportPage({
               ))}
             </div>
 
-            <section className="overflow-x-auto rounded-2xl border border-[var(--line)] bg-[var(--card)]">
-              <table className="w-full min-w-[760px] text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-[var(--muted)]">
-                    <th className="px-5 py-3 font-medium">{t("table.line")}</th>
-                    {TRANSPORT_SAMPLE_WEIGHTS_G.map((weight) => (
-                      <th
-                        key={weight}
-                        className="px-3 py-3 text-right font-medium"
-                      >
-                        {weightLabel(weight)}
-                      </th>
-                    ))}
-                    <th className="px-3 py-3 text-right font-medium">
-                      {t("table.delivery")}
-                    </th>
-                    <th className="px-5 py-3 font-medium">
-                      {t("table.eccang")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lines.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={TRANSPORT_SAMPLE_WEIGHTS_G.length + 3}
-                        className="px-5 py-6 text-[var(--muted)]"
-                      >
-                        {t("empty")}
-                      </td>
-                    </tr>
-                  ) : null}
-                  {lines.map((line) => (
-                    <tr
-                      key={line.key}
-                      className="border-t border-[var(--line)] align-top"
-                    >
-                      <td className="px-5 py-4">
-                        <p>
-                          <span className="text-base font-bold">
-                            {line.carrier}
-                          </span>
-                          {line.lineName ? (
-                            <span className="ml-2 font-medium">
-                              {line.lineName}
-                            </span>
-                          ) : null}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--muted)]">
-                          {t("accepts", {
-                            list: line.channels
-                              .map((item) => tChannels(item))
-                              .join(", "),
-                          })}
-                        </p>
-                        <p className="mt-0.5 text-xs text-[var(--muted)]">
-                          {t("weightRange", {
-                            min: formatNumber(line.minG, locale),
-                            max: formatNumber(line.maxG, locale),
-                          })}
-                          {line.iossRequired ? ` · ${t("ioss")}` : ""}
-                        </p>
-                      </td>
-                      {line.samples.map((sample) => (
-                        <td key={sample.weightG} className="px-3 py-4 text-right tabular-nums">
-                          {sample.costRmb == null ? (
-                            <span className="text-[var(--muted)]">—</span>
-                          ) : (
-                            <span
-                              className={
-                                sample.cheapest ? "rounded-md bg-emerald-50 px-2 py-1 font-bold text-emerald-700" : "px-2 py-1"
-                              }
-                            >
-                              {formatNumber(sample.costRmb, locale, 1)}
-                            </span>
-                          )}
-                        </td>
-                      ))}
-                      <td className="px-3 py-4 text-right whitespace-nowrap">
-                        {line.deliveryRange ? (
-                          t("days", { range: line.deliveryRange })
-                        ) : (
-                          <span className="text-[var(--muted)]">—</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4">
-                        {line.eccangMethod ? (
-                          <span className="font-semibold text-emerald-700">
-                            {line.eccangMethod}
-                          </span>
-                        ) : (
-                          <span className="font-semibold text-[var(--rust-ink)]">
-                            {t("notLinked")}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
+            {overview.settingsReady ? null : (
+              <p className="rounded-xl bg-[var(--gold-soft)] px-4 py-3 text-sm">
+                {t("missingTable")}
+              </p>
+            )}
+            <TransportTable
+              key={`${destination}-${channel}`}
+              destination={destination}
+              lines={lines}
+              channelLabels={Object.fromEntries(
+                TRANSPORT_CHANNELS.map((item) => [item, tChannels(item)]),
+              )}
+              canEdit={overview.settingsReady}
+              locale={locale}
+            />
             <p className="text-xs text-[var(--muted)]">
               {t("legend", { grid: overview.gridVersion })}
             </p>

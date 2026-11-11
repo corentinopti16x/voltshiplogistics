@@ -1,5 +1,7 @@
 import "server-only";
+import { dropPendingLines } from "@/lib/domain/line-settings";
 import { resolveClientPricing } from "@/lib/domain/pricing-tiers";
+import { loadPendingLineKeys } from "@/lib/pricing/line-settings-server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { writeAudit } from "@/lib/auth/audit";
@@ -213,9 +215,13 @@ export async function loadRateCellsFor(
   gridVersion: string,
   destinations: string[],
   channels: string[],
+  options: { includePending?: boolean } = {},
 ): Promise<RateCell[]> {
   if (destinations.length === 0 || channels.length === 0) return [];
   const admin = createAdminClient();
+  // Lines marked « pending » on the Transport page are not open at Voltship yet: the pricing
+  // engine must never pick them. Only the Transport page itself asks for them.
+  const pending = options.includePending ? new Set<string>() : await loadPendingLineKeys();
   type Row = {
     grid_version: string;
     carrier: string;
@@ -254,7 +260,11 @@ export async function loadRateCellsFor(
     data.push(...((page ?? []) as unknown as Row[]));
     if (!page || page.length < 1000) break;
   }
-  return data.map((cell) => ({
+  const open = dropPendingLines(
+    data.map((cell) => ({ ...cell, lineName: cell.line_name })),
+    pending,
+  );
+  return open.map((cell) => ({
     gramPrices: parseGramArray(cell.gram_prices),
     gramCostsRmb: parseGramArray(cell.gram_costs_rmb),
     gridVersion: cell.grid_version,
