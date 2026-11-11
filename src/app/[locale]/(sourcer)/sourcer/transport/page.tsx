@@ -4,6 +4,7 @@ import { SourcerShell } from "@/components/sourcer/sourcer-shell";
 import { TransportTable } from "@/components/transport/transport-table";
 import { Link, redirect } from "@/i18n/routing";
 import { getAuthContext } from "@/lib/auth/context";
+import { loadStoredLinePrices } from "@/lib/pricing/line-price-server";
 import { loadTransportOverview } from "@/lib/pricing/transport-server";
 import { TRANSPORT_CHANNELS } from "@/lib/pricing/transport-view";
 
@@ -52,6 +53,9 @@ export default async function TransportPage({
     withClientPrices: isAdmin,
   });
   const { destination, channel, lines } = overview;
+  const storedPrices = destination
+    ? await loadStoredLinePrices(destination, channel).catch(() => ({}))
+    : {};
   const href = (country: string, kind: string) =>
     `/sourcer/transport?c=${country}&ch=${kind}`;
   const pill = (selected: boolean) =>
@@ -113,7 +117,10 @@ export default async function TransportPage({
             <TransportTable
               key={`${destination}-${channel}`}
               destination={destination}
+              channel={channel}
+              placeLabel={`${countryName(destination, locale)} · ${tChannels(channel)}`}
               lines={lines}
+              storedPrices={storedPrices}
               channelLabels={Object.fromEntries(
                 TRANSPORT_CHANNELS.map((item) => [item, tChannels(item)]),
               )}
