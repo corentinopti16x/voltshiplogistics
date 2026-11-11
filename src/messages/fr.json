@@ -1875,7 +1875,8 @@
       "operations": {
         "achats": "Achats & expéditions",
         "alerts": "À vérifier",
-        "lines": "Lignes"
+        "lines": "Lignes",
+        "transport": "Transport"
       },
       "results": {
         "week": "Par semaine",
@@ -2043,6 +2044,24 @@
         "no_zip": "Aucun code postal reconnu.",
         "too_many": "Liste trop longue ({count} codes, 60 000 maximum).",
         "not_configured": "ECCANG n’est pas configuré (ECCANG_API_HOST)."
+      }
+    },
+    "transportPage": {
+      "kicker": "Opérations Voltship",
+      "title": "Transport par pays",
+      "lead": "Toutes les lignes de la grille active vers un pays : ce qu’elles acceptent, ce qu’un colis coûte chez le transporteur selon son poids, le délai et la ligne ECCANG liée.",
+      "noGrid": "Aucune grille tarifaire active : importe et active une grille dans Tarification.",
+      "empty": "Aucune ligne pour ce type de produit vers ce pays.",
+      "accepts": "Accepte : {list}",
+      "weightRange": "De {min} g à {max} g",
+      "ioss": "IOSS exigé",
+      "days": "{range} j",
+      "notLinked": "Pas liée",
+      "legend": "Coût transporteur d’un colis en ¥ (RMB), interne à Voltship. En vert, la ligne la moins chère à ce poids. Grille {grid}.",
+      "table": {
+        "line": "Transporteur et ligne",
+        "delivery": "Délai",
+        "eccang": "Ligne ECCANG"
       }
     }
   },

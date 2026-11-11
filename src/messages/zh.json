@@ -946,7 +946,8 @@
       "operations": {
         "achats": "采购与发货",
         "alerts": "待核查",
-        "lines": "物流渠道"
+        "lines": "物流渠道",
+        "transport": "运输"
       },
       "results": {
         "week": "按周",
@@ -1114,6 +1115,24 @@
         "no_zip": "未识别到邮编。",
         "too_many": "清单过长（{count} 个，最多 60 000 个）。",
         "not_configured": "易仓未配置（ECCANG_API_HOST）。"
+      }
+    },
+    "transportPage": {
+      "kicker": "Voltship 运营",
+      "title": "按国家查看运输渠道",
+      "lead": "当前价格表中发往某个国家的全部渠道：可承运的货物类型、不同重量下承运商的收费、时效，以及对应的易仓物流产品。",
+      "noGrid": "没有生效的价格表：请先在“价格”中导入并启用。",
+      "empty": "该国家没有可承运此类货物的渠道。",
+      "accepts": "可承运：{list}",
+      "weightRange": "{min} 克 至 {max} 克",
+      "ioss": "需要 IOSS",
+      "days": "{range} 天",
+      "notLinked": "未关联",
+      "legend": "每票承运商成本，单位人民币（¥），仅供 Voltship 内部使用。绿色为该重量下最便宜的渠道。价格表 {grid}。",
+      "table": {
+        "line": "承运商和渠道",
+        "delivery": "时效",
+        "eccang": "易仓物流产品"
       }
     }
   },
