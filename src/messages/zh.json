@@ -1206,6 +1206,23 @@
           "failed": "未保存，请重试。",
           "forbidden": "仅限 Voltship 团队。"
         }
+      },
+      "all": {
+        "lead": "一次查看所有国家：每种货物类型有多少条已开通渠道，还有哪些需要处理。点击国家或单元格可查看该国的渠道和价格。",
+        "back": "所有国家",
+        "country": "国家",
+        "todo": "待处理",
+        "ok": "全部就绪",
+        "lines": "{count, plural, =0 {没有已开通渠道} other {# 条已开通渠道}}",
+        "active": "{count} 条渠道",
+        "noLine": "没有渠道",
+        "products": "{count} 个产品",
+        "pending": "{count} 条待开通",
+        "unlinked": "{count} 条渠道未关联易仓",
+        "noDelivery": "{count} 条渠道没有时效",
+        "blockedSummary": "{count} 个国家有产品但没有已开通渠道",
+        "okSummary": "每个产品在其销售国家都至少有一条已开通渠道",
+        "legend": "红色：该国家有此类产品在售，但没有已开通的渠道。国家来自价格表和产品资料中填写的市场。价格表 {grid}。"
       }
     }
   },

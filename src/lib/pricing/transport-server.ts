@@ -9,14 +9,25 @@ import {
 } from "@/lib/eccang/mapping";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { indexLineSettings } from "../domain/line-settings";
-import { normalizeDestination, type ShippingChannel } from "../domain/pricing";
-import { loadLineSettings } from "./line-settings-server";
-import { getActiveGridVersion, loadRateCellsFor } from "./server";
 import {
+  gridChannel,
+  normalizeDestination,
+  type ShippingChannel,
+} from "../domain/pricing";
+import type { ProductRow } from "../products/types";
+import { loadLineSettings } from "./line-settings-server";
+import {
+  getActiveGridVersion,
+  getProductMarkets,
+  loadRateCellsFor,
+} from "./server";
+import {
+  summarizeCountries,
   summarizeTransportLines,
   TRANSPORT_CHANNELS,
   withoutClientPrices,
-  type LineChannel,
+  type CountryLineRow,
+  type CountryRow,
   type TransportLine,
 } from "./transport-view";
 
@@ -36,11 +47,11 @@ export type TransportOverview = {
 /** Every (destination, line, channel) of the grid, without the per-gram prices (light query). */
 async function loadLineChannels(gridVersion: string) {
   const admin = createAdminClient();
-  const rows = new Map<string, LineChannel & { destination: string }>();
+  const rows = new Map<string, CountryLineRow>();
   for (let from = 0; from < 200_000; from += 1000) {
     const { data, error } = await admin
       .from("rate_grid_cells")
-      .select("destination, carrier, line_name, channel")
+      .select("destination, carrier, line_name, channel, delivery_range")
       .eq("grid_version", gridVersion)
       .order("id")
       .range(from, from + 999);
@@ -50,16 +61,20 @@ async function loadLineChannels(gridVersion: string) {
       carrier: string;
       line_name: string | null;
       channel: string;
+      delivery_range: string | null;
     }>) {
       const destination = row.destination.trim().toUpperCase();
       const lineName = row.line_name || null;
       const key = `${destination}|${row.carrier}|${lineName ?? ""}|${row.channel}`;
-      if (!rows.has(key))
+      const known = rows.get(key);
+      if (known) known.hasDelivery ||= !!row.delivery_range;
+      else
         rows.set(key, {
           destination,
           carrier: row.carrier,
           lineName,
           channel: row.channel,
+          hasDelivery: !!row.delivery_range,
         });
     }
     if (!data || data.length < 1000) break;
@@ -157,5 +172,56 @@ export async function loadTransportOverview(
     channels,
     lines: options.withClientPrices ? lines : withoutClientPrices(lines),
     settingsReady,
+  };
+}
+
+/** Products per "COUNTRY|channel": every market of every product that is not archived. */
+async function loadProductNeeds() {
+  const admin = createAdminClient();
+  const needs = new Map<string, number>();
+  for (let from = 0; from < 20_000; from += 1000) {
+    const { data, error } = await admin
+      .from("products_cache")
+      .select("id, quote_json, shipping_channel, lifecycle_status")
+      .not("shipping_channel", "is", null)
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw error;
+    for (const product of (data ?? []) as ProductRow[]) {
+      if (product.lifecycle_status === "archived") continue;
+      const channel = gridChannel(product.shipping_channel as string);
+      for (const market of getProductMarkets(product)) {
+        const key = `${market}|${channel}`;
+        needs.set(key, (needs.get(key) ?? 0) + 1);
+      }
+    }
+    if (!data || data.length < 1000) break;
+  }
+  return needs;
+}
+
+export type CountriesOverview = {
+  gridVersion: string | null;
+  countries: CountryRow[];
+};
+
+/** Every country at once: open lines per product type and what is missing. */
+export async function loadCountriesOverview(): Promise<CountriesOverview> {
+  const gridVersion = await getActiveGridVersion();
+  if (!gridVersion) return { gridVersion: null, countries: [] };
+  const [rows, methods, lineSettings, needs] = await Promise.all([
+    loadLineChannels(gridVersion),
+    loadShippingMethods(),
+    loadLineSettings(),
+    loadProductNeeds(),
+  ]);
+  return {
+    gridVersion,
+    countries: summarizeCountries(
+      rows,
+      needs,
+      (carrier, lineName) => resolveShippingMethod(methods, carrier, lineName),
+      indexLineSettings(lineSettings.settings),
+    ),
   };
 }

@@ -2135,6 +2135,23 @@
           "failed": "Non enregistré. Réessaie.",
           "forbidden": "Réservé à l’équipe Voltship."
         }
+      },
+      "all": {
+        "lead": "Tous les pays d’un coup : combien de lignes sont ouvertes par type de produit, et ce qu’il reste à régler. Clique un pays ou une case pour voir ses lignes et leurs prix.",
+        "back": "Tous les pays",
+        "country": "Pays",
+        "todo": "À régler",
+        "ok": "Tout est en place",
+        "lines": "{count, plural, =0 {aucune ligne active} one {# ligne active} other {# lignes actives}}",
+        "active": "{count, plural, one {# ligne} other {# lignes}}",
+        "noLine": "Aucune ligne",
+        "products": "{count, plural, one {# produit} other {# produits}}",
+        "pending": "{count} à ouvrir",
+        "unlinked": "{count, plural, one {# ligne pas liée à ECCANG} other {# lignes pas liées à ECCANG}}",
+        "noDelivery": "{count, plural, one {# ligne sans délai} other {# lignes sans délai}}",
+        "blockedSummary": "{count, plural, one {# pays a des produits sans ligne active} other {# pays ont des produits sans ligne active}}",
+        "okSummary": "Chaque produit a au moins une ligne active vers ses pays",
+        "legend": "En rouge : des produits sont vendus vers ce pays dans ce type, mais aucune ligne n’est active. Les pays viennent de la grille et des marchés renseignés sur les fiches produits. Grille {grid}."
       }
     }
   },
