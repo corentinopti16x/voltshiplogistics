@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { OperationsTabs } from "@/components/admin/section-tabs";
 import { SourcerShell } from "@/components/sourcer/sourcer-shell";
+import { LineSheetImport } from "@/components/transport/line-sheet-import";
 import { TransportTable } from "@/components/transport/transport-table";
 import { Link, redirect } from "@/i18n/routing";
 import { getAuthContext } from "@/lib/auth/context";
@@ -88,23 +89,31 @@ export default async function TransportPage({
             </p>
           ) : (
             <>
+              <div className="flex flex-wrap items-center justify-between gap-3">
               <p
-                className={`w-fit rounded-xl px-4 py-2.5 text-sm font-medium ${
-                  blocked > 0
-                    ? "bg-[var(--rust-soft)] text-[var(--rust-ink)]"
-                    : "bg-emerald-50 text-emerald-700"
-                }`}
-              >
-                {blocked > 0
-                  ? t("all.blockedSummary", { count: blocked })
-                  : t("all.okSummary")}
-                {unlinked > 0
-                  ? ` · ${t("all.unlinked", { count: unlinked })}`
-                  : ""}
-                {noDelivery > 0
-                  ? ` · ${t("all.noDelivery", { count: noDelivery })}`
-                  : ""}
-              </p>
+                  className={`w-fit rounded-xl px-4 py-2.5 text-sm font-medium ${
+                    blocked > 0
+                      ? "bg-[var(--rust-soft)] text-[var(--rust-ink)]"
+                      : "bg-emerald-50 text-emerald-700"
+                  }`}
+                >
+                  {blocked > 0
+                    ? t("all.blockedSummary", { count: blocked })
+                    : t("all.okSummary")}
+                  {unlinked > 0
+                    ? ` · ${t("all.unlinked", { count: unlinked })}`
+                    : ""}
+                  {noDelivery > 0
+                    ? ` · ${t("all.noDelivery", { count: noDelivery })}`
+                    : ""}
+                </p>
+                <LineSheetImport
+                  channelLabels={Object.fromEntries(
+                    TRANSPORT_CHANNELS.map((item) => [item, tChannels(item)]),
+                  )}
+                  locale={locale}
+                />
+              </div>
               <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--card)]">
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[860px] text-sm">

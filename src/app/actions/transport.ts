@@ -82,7 +82,7 @@ export type LinePriceInput = {
   carrier: string;
   lineName: string | null;
   /** True when the line does not exist yet for this country and product type. */
-  isNew: boolean;
+  isNew: boolean | "auto";
   price: { tiers: unknown; minBillableG: unknown };
 };
 
@@ -94,7 +94,11 @@ export async function previewLinePriceAction(
   | { ok: false; code: LinePriceFailure | "forbidden" }
 > {
   if (!(await teamContext())) return { ok: false, code: "forbidden" };
-  const result = await previewLinePrice(input, input.price, input.isNew).catch(
+  const result = await previewLinePrice(
+    input,
+    input.price,
+    input.isNew === true,
+  ).catch(
     () => ({ ok: false as const, error: "failed" as const }),
   );
   return result.ok ? result : { ok: false, code: result.error };
@@ -106,7 +110,10 @@ export async function previewLinePriceAction(
  */
 export async function saveLinePriceAction(
   input: LinePriceInput,
-): Promise<{ ok: true } | { ok: false; code: LinePriceFailure | "forbidden" }> {
+): Promise<
+  | { ok: true; created: boolean }
+  | { ok: false; code: LinePriceFailure | "forbidden" }
+> {
   const ctx = await teamContext();
   if (!ctx) return { ok: false, code: "forbidden" };
   const result = await applyLinePrice(
@@ -119,7 +126,7 @@ export async function saveLinePriceAction(
 
   await writeAudit({
     actorUserId: ctx.userId,
-    action: input.isNew ? "transport.line_added" : "transport.line_price",
+    action: result.created ? "transport.line_added" : "transport.line_price",
     entity: "rate_grid_cells",
     diff: {
       grid_version: result.gridVersion,
@@ -134,5 +141,50 @@ export async function saveLinePriceAction(
   });
   // Every product page, catalogue and margin view reads the grid.
   revalidatePath("/[locale]", "layout");
-  return { ok: true };
+  return { ok: true, created: result.created };
+}
+
+/**
+ * One line of a pasted sheet: its price (created or replaced), then the settings the sheet
+ * fills (status, ECCANG line, delivery time, note). Called line by line from the browser so
+ * a long sheet never runs into a request time limit.
+ */
+export async function importLineAction(entry: {
+  destination: string;
+  channel: ShippingChannel;
+  carrier: string;
+  lineName: string | null;
+  price: { tiers: unknown; minBillableG: unknown };
+  status: LineStatus | null;
+  eccangMethod: string | null;
+  deliveryDays: string | null;
+  note: string | null;
+}): Promise<
+  | { ok: true; created: boolean; settingsSaved: boolean }
+  | { ok: false; code: LinePriceFailure | "forbidden" }
+> {
+  const saved = await saveLinePriceAction({ ...entry, isNew: "auto" });
+  if (!saved.ok) return saved;
+  const ctx = await teamContext();
+  if (!ctx) return { ok: false, code: "forbidden" };
+  const patch: LineSettingPatch = {};
+  if (entry.status) patch.status = entry.status;
+  if (entry.eccangMethod) patch.eccangMethod = entry.eccangMethod;
+  if (entry.deliveryDays) patch.deliveryDays = entry.deliveryDays;
+  if (entry.note) patch.note = entry.note;
+  let settingsSaved = true;
+  if (Object.keys(patch).length > 0) {
+    const result = await saveLineSetting(
+      {
+        destination: entry.destination,
+        carrier: entry.carrier,
+        lineName: entry.lineName,
+      },
+      patch,
+      ctx.userId,
+    ).catch(() => ({ ok: false as const }));
+    settingsSaved = result.ok;
+  }
+  revalidatePath("/[locale]", "layout");
+  return { ok: true, created: saved.created, settingsSaved };
 }

@@ -207,7 +207,8 @@ type Prepared = {
 async function prepare(
   rawTarget: LinePriceTarget,
   rawPrice: unknown,
-  isNew: boolean,
+  /** "auto" = create the line or replace its price, whichever applies (import of several lines). */
+  isNew: boolean | "auto",
 ): Promise<{ ok: true; value: Prepared } | { ok: false; error: LinePriceFailure }> {
   const target = cleanTarget(rawTarget);
   if (!target) return { ok: false, error: "target" };
@@ -222,8 +223,10 @@ async function prepare(
     readPricingSettings(createAdminClient()),
   ]);
   const current = all.filter((cell) => sameLine(cell, target));
-  if (isNew && current.length > 0) return { ok: false, error: "exists" };
-  if (!isNew && current.length === 0) return { ok: false, error: "not_found" };
+  if (isNew === true && current.length > 0)
+    return { ok: false, error: "exists" };
+  if (isNew === false && current.length === 0)
+    return { ok: false, error: "not_found" };
   // What the line's cells carry today, in any product type of this country.
   const { data: carried, error: carriedError } = await createAdminClient()
     .from("rate_grid_cells")
@@ -385,12 +388,14 @@ export async function previewLinePrice(
 export async function applyLinePrice(
   rawTarget: LinePriceTarget,
   rawPrice: unknown,
-  isNew: boolean,
+  isNew: boolean | "auto",
   userId: string,
 ): Promise<
   | {
       ok: true;
       target: LinePriceTarget;
+      /** The line had no cell for this country and product type before. */
+      created: boolean;
       gridVersion: string;
       cells: number;
       before: Array<number | null>;
@@ -489,6 +494,7 @@ export async function applyLinePrice(
   return {
     ok: true,
     target,
+    created: current.length === 0,
     gridVersion,
     cells: rows.length,
     price,
