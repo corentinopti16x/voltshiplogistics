@@ -28,6 +28,8 @@ export type TransportSample = {
   price: number | null;
   /** True when this is the lowest carrier cost of the country at this weight. */
   cheapest: boolean;
+  /** True when the line has a bracket at this weight (kept when the costs are hidden). */
+  available: boolean;
 };
 
 export type TransportLine = {
@@ -102,7 +104,10 @@ export function summarizeTransportLines(
       iossRequired: lineCells.some((cell) => cell.iossRequired === true),
       minG: Math.min(...lineCells.map((cell) => cell.weightMinG)),
       maxG: Math.max(...lineCells.map((cell) => cell.weightMaxG)),
-      samples: weights.map((weightG) => ({ weightG, ...sampleAt(lineCells, weightG), cheapest: false })),
+      samples: weights.map((weightG) => {
+        const sample = sampleAt(lineCells, weightG);
+        return { weightG, ...sample, cheapest: false, available: sample.price != null || sample.costRmb != null };
+      }),
       eccangMethod: methodFor(first.carrier, first.lineName ?? null),
     };
   });
@@ -117,4 +122,15 @@ export function summarizeTransportLines(
   });
   const rank = (line: TransportLine) => line.samples[Math.min(1, line.samples.length - 1)]?.costRmb ?? Number.POSITIVE_INFINITY;
   return lines.sort((a, b) => rank(a) - rank(b) || a.key.localeCompare(b.key));
+}
+
+/**
+ * Same lines without any amount (carrier cost, client price): for the team members who are
+ * not admins. The order and the « cheapest » marks are kept.
+ */
+export function withoutCosts(lines: TransportLine[]): TransportLine[] {
+  return lines.map((line) => ({
+    ...line,
+    samples: line.samples.map((sample) => ({ ...sample, costRmb: null, price: null })),
+  }));
 }

@@ -1133,7 +1133,10 @@
         "line": "承运商和渠道",
         "delivery": "时效",
         "eccang": "易仓物流产品"
-      }
+      },
+      "cheapest": "最便宜",
+      "available": "可发",
+      "legendTeam": "绿色为该重量下最便宜的渠道。价格表 {grid}。"
     }
   },
   "orderAlerts": {
@@ -1243,7 +1246,8 @@
     "shell": {
       "queueLink": "采购队列",
       "staff": "员工",
-      "catalogLink": "产品"
+      "catalogLink": "产品",
+      "transportLink": "运输"
     },
     "form": {
       "clientFieldsTitle": "客户可见报价字段",

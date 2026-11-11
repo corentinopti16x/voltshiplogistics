@@ -35,7 +35,7 @@ export async function OperationsTabs({ active }: { active: "achats" | "alerts" |
     achats: "/admin/achats",
     alerts: "/admin/alerts",
     lines: "/admin/lines",
-    transport: "/admin/transport",
+    transport: "/sourcer/transport",
   } as const;
   return (
     <SectionTabs

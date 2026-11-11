@@ -1,13 +1,19 @@
 /**
- * Loader of the admin « Transport » page (lines of the active grid for one country).
- * Admin only: the page lives under the (admin) layout and the data carries carrier costs.
+ * Loader of the team « Transport » page (lines of the active grid for one country).
+ * The page checks the role; the carrier costs only leave this module for an admin.
  */
 
 import { parseShippingMethodMap, resolveShippingMethod } from "@/lib/eccang/mapping";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeDestination, type ShippingChannel } from "../domain/pricing";
 import { getActiveGridVersion, loadRateCellsFor } from "./server";
-import { summarizeTransportLines, TRANSPORT_CHANNELS, type LineChannel, type TransportLine } from "./transport-view";
+import {
+  summarizeTransportLines,
+  TRANSPORT_CHANNELS,
+  withoutCosts,
+  type LineChannel,
+  type TransportLine,
+} from "./transport-view";
 
 export type TransportOverview = {
   gridVersion: string | null;
@@ -53,9 +59,11 @@ export function parseTransportChannel(raw: string | null | undefined): ShippingC
   return TRANSPORT_CHANNELS.find((channel) => channel === raw) ?? null;
 }
 
+/** `withCosts: false` strips every amount server-side (team members who are not admins). */
 export async function loadTransportOverview(
   rawDestination: string | null | undefined,
   rawChannel: string | null | undefined,
+  options: { withCosts: boolean },
 ): Promise<TransportOverview> {
   const gridVersion = await getActiveGridVersion();
   const wanted = parseTransportChannel(rawChannel);
@@ -85,5 +93,5 @@ export async function loadTransportOverview(
   const lines = summarizeTransportLines(cells, channel, here, (carrier, lineName) =>
     resolveShippingMethod(methods, carrier, lineName),
   );
-  return { gridVersion, destinations, destination, channel, channels, lines };
+  return { gridVersion, destinations, destination, channel, channels, lines: options.withCosts ? lines : withoutCosts(lines) };
 }
