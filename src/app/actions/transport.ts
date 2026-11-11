@@ -7,6 +7,7 @@ import type { LineSetting, LineStatus } from "@/lib/domain/line-settings";
 import type { ShippingChannel } from "@/lib/domain/pricing";
 import {
   applyLinePrice,
+  setLineChannels,
   previewLinePrice,
   type LinePriceFailure,
   type LinePricePreview,
@@ -192,4 +193,39 @@ export async function importLineAction(entry: {
   }
   revalidatePath("/[locale]", "layout");
   return { ok: true, created: saved.created, settingsSaved };
+}
+
+/**
+ * Changes which product types a line accepts in one country: a new type gets the prices of
+ * `copyFrom`, a removed type is deleted from the active grid. Applied immediately.
+ */
+export async function setLineChannelsAction(input: {
+  destination: string;
+  carrier: string;
+  lineName: string | null;
+  add: ShippingChannel[];
+  remove: ShippingChannel[];
+  copyFrom: ShippingChannel;
+}): Promise<{ ok: true } | { ok: false; code: LinePriceFailure | "forbidden" }> {
+  const ctx = await teamContext();
+  if (!ctx) return { ok: false, code: "forbidden" };
+  const result = await setLineChannels(input, input).catch(() => ({
+    ok: false as const,
+    error: "failed" as const,
+  }));
+  if (!result.ok) return { ok: false, code: result.error };
+  await writeAudit({
+    actorUserId: ctx.userId,
+    action: "transport.line_types",
+    entity: "rate_grid_cells",
+    diff: {
+      grid_version: result.gridVersion,
+      line: `${input.destination}|${input.carrier}|${input.lineName ?? ""}`,
+      added: result.added,
+      removed: result.removed,
+      copied_from: input.copyFrom,
+    },
+  });
+  revalidatePath("/[locale]", "layout");
+  return { ok: true };
 }

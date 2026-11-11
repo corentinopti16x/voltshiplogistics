@@ -2188,6 +2188,19 @@
           "amounts": "a price per kilo or per parcel is needed",
           "min_billable": "minimum billed weight too high"
         }
+      },
+      "types": {
+        "edit": "Change",
+        "title": "Types accepted by {line}",
+        "help": "Tick the product types this line takes to this country.",
+        "willAdd": "Added: {list}, at the same price as « {from} ».",
+        "willRemove": "Removed from the grid: {list}. Products of this type will no longer ship on this line.",
+        "willRemoveLine": "No type left: the line is removed from this country.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "confirmRemove": "Confirm removal",
+        "saving": "Saving…",
+        "failed": "Not saved. Try again."
       }
     }
   },

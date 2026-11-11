@@ -2188,6 +2188,19 @@
           "amounts": "il faut un prix au kilo ou un prix par colis",
           "min_billable": "poids minimum facturé trop grand"
         }
+      },
+      "types": {
+        "edit": "Modifier",
+        "title": "Types acceptés par {line}",
+        "help": "Coche les types de produit que cette ligne prend vers ce pays.",
+        "willAdd": "Ajouté : {list}, au même prix que « {from} ».",
+        "willRemove": "Retiré de la grille : {list}. Les produits de ce type ne partiront plus sur cette ligne.",
+        "willRemoveLine": "Plus aucun type : la ligne est retirée de ce pays.",
+        "cancel": "Annuler",
+        "save": "Enregistrer",
+        "confirmRemove": "Confirmer le retrait",
+        "saving": "Enregistrement…",
+        "failed": "Non enregistré. Réessaie."
       }
     }
   },
