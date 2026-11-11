@@ -189,3 +189,117 @@ export function withoutClientPrices(lines: TransportLine[]): TransportLine[] {
     samples: line.samples.map((sample) => ({ ...sample, price: null })),
   }));
 }
+
+// ---------------------------------------------------------------------------
+// Every country at once
+// ---------------------------------------------------------------------------
+
+/** One line of the grid in one country and one channel, with what the overview checks. */
+export type CountryLineRow = LineChannel & {
+  destination: string;
+  hasDelivery: boolean;
+};
+
+export type CountryCell = {
+  channel: ShippingChannel;
+  /** Lines open at Voltship / not open yet, for this product type. */
+  active: number;
+  pending: number;
+  /** Products sold to this country in this product type. */
+  products: number;
+  /** Products are sold here but no line is open: nothing can ship. */
+  blocked: boolean;
+};
+
+export type CountryRow = {
+  code: string;
+  cells: CountryCell[];
+  /** Distinct active lines of the country, and how many miss an ECCANG line or a delivery time. */
+  lines: number;
+  unlinked: number;
+  noDelivery: number;
+  blocked: number;
+};
+
+/**
+ * One row per country: countries of the grid plus countries products are sold to.
+ * Countries where something cannot ship come first, then the busiest ones.
+ *
+ * @param rows every (country, line, channel) of the active grid
+ * @param needs products per "COUNTRY|channel" (grid channel)
+ */
+export function summarizeCountries(
+  rows: CountryLineRow[],
+  needs: ReadonlyMap<string, number>,
+  methodFor: (carrier: string, lineName: string | null) => string | null,
+  settings: ReadonlyMap<string, LineSetting> = new Map(),
+): CountryRow[] {
+  type Line = { active: boolean; linked: boolean; delivery: boolean };
+  const countries = new Map<
+    string,
+    { lines: Map<string, Line>; perChannel: Map<string, Set<string>> }
+  >();
+  const country = (code: string) => {
+    let entry = countries.get(code);
+    if (!entry) {
+      entry = { lines: new Map(), perChannel: new Map() };
+      countries.set(code, entry);
+    }
+    return entry;
+  };
+  for (const row of rows) {
+    const code = row.destination.trim().toUpperCase();
+    const entry = country(code);
+    const key = lineKey(row.carrier, row.lineName);
+    const setting = settings.get(
+      lineSettingKey(code, row.carrier, row.lineName),
+    );
+    const line = entry.lines.get(key) ?? {
+      active: (setting?.status ?? "active") === "active",
+      linked: !!(
+        setting?.eccangMethod ?? methodFor(row.carrier, row.lineName)
+      ),
+      delivery: !!setting?.deliveryDays,
+    };
+    if (row.hasDelivery) line.delivery = true;
+    entry.lines.set(key, line);
+    const channel = gridChannel(row.channel);
+    const set = entry.perChannel.get(channel) ?? new Set<string>();
+    set.add(key);
+    entry.perChannel.set(channel, set);
+  }
+  for (const key of needs.keys()) country(key.split("|")[0]);
+
+  const out: CountryRow[] = [...countries.entries()].map(([code, entry]) => {
+    const cells = TRANSPORT_CHANNELS.map((channel) => {
+      const keys = [...(entry.perChannel.get(channel) ?? [])];
+      const active = keys.filter((key) => entry.lines.get(key)?.active).length;
+      const products = needs.get(`${code}|${channel}`) ?? 0;
+      return {
+        channel,
+        active,
+        pending: keys.length - active,
+        products,
+        blocked: products > 0 && active === 0,
+      };
+    });
+    const open = [...entry.lines.values()].filter((line) => line.active);
+    return {
+      code,
+      cells,
+      lines: open.length,
+      unlinked: open.filter((line) => !line.linked).length,
+      noDelivery: open.filter((line) => !line.delivery).length,
+      blocked: cells.filter((cell) => cell.blocked).length,
+    };
+  });
+  const sold = (row: CountryRow) =>
+    row.cells.reduce((sum, cell) => sum + cell.products, 0);
+  return out.sort(
+    (a, b) =>
+      b.blocked - a.blocked ||
+      sold(b) - sold(a) ||
+      b.lines - a.lines ||
+      a.code.localeCompare(b.code),
+  );
+}

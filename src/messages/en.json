@@ -2135,6 +2135,23 @@
           "failed": "Not saved. Try again.",
           "forbidden": "Voltship team only."
         }
+      },
+      "all": {
+        "lead": "Every country at once: how many lines are open per product type, and what is left to fix. Click a country or a cell to see its lines and prices.",
+        "back": "All countries",
+        "country": "Country",
+        "todo": "To fix",
+        "ok": "All set",
+        "lines": "{count, plural, =0 {no active line} one {# active line} other {# active lines}}",
+        "active": "{count, plural, one {# line} other {# lines}}",
+        "noLine": "No line",
+        "products": "{count, plural, one {# product} other {# products}}",
+        "pending": "{count} to open",
+        "unlinked": "{count, plural, one {# line not linked to ECCANG} other {# lines not linked to ECCANG}}",
+        "noDelivery": "{count, plural, one {# line without delivery time} other {# lines without delivery time}}",
+        "blockedSummary": "{count, plural, one {# country has products without an active line} other {# countries have products without an active line}}",
+        "okSummary": "Every product has at least one active line to its countries",
+        "legend": "Red: products are sold to this country in this type, but no line is active. Countries come from the grid and from the markets set on the product sheets. Grid {grid}."
       }
     }
   },
