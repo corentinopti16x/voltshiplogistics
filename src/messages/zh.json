@@ -1259,6 +1259,19 @@
           "amounts": "需要填写每公斤价格或每票费用",
           "min_billable": "最低计费重量过大"
         }
+      },
+      "types": {
+        "edit": "修改",
+        "title": "{line} 可承运的货物类型",
+        "help": "勾选该渠道发往此国家可承运的货物类型。",
+        "willAdd": "新增：{list}，价格与“{from}”相同。",
+        "willRemove": "从价格表中移除：{list}。此类产品将不再走这个渠道。",
+        "willRemoveLine": "没有任何类型：该渠道将从此国家移除。",
+        "cancel": "取消",
+        "save": "保存",
+        "confirmRemove": "确认移除",
+        "saving": "正在保存…",
+        "failed": "未保存，请重试。"
       }
     }
   },

@@ -10,6 +10,7 @@ import {
   TRANSPORT_SAMPLE_WEIGHTS_G,
   type TransportLine,
 } from "@/lib/pricing/transport-view";
+import { LineTypesDialog } from "./line-types-dialog";
 import {
   LinePriceDialog,
   type LinePriceDialogTarget,
@@ -115,6 +116,7 @@ export function TransportTable({
   }
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
   const [pricing, setPricing] = useState<LinePriceDialogTarget | null>(null);
+  const [typing, setTyping] = useState<TransportLine | null>(null);
   const carriers = [
     ...new Set([
       ...lines.map((line) => line.carrier),
@@ -266,6 +268,13 @@ export function TransportTable({
                           .join(", "),
                       })}
                       {line.iossRequired ? ` · ${t("ioss")}` : ""}
+                      <button
+                        type="button"
+                        onClick={() => setTyping(line)}
+                        className="ml-2 font-semibold text-[var(--navy)] hover:underline"
+                      >
+                        {t("types.edit")}
+                      </button>
                     </p>
                     <div className="mt-1.5 -ml-2">
                       <InlineText
@@ -388,6 +397,23 @@ export function TransportTable({
           </tbody>
         </table>
       </div>
+      {typing ? (
+        <LineTypesDialog
+          key={typing.key}
+          destination={destination}
+          carrier={typing.carrier}
+          lineName={typing.lineName}
+          current={typing.channels}
+          copyFrom={channel}
+          channelLabels={channelLabels}
+          onClose={() => setTyping(null)}
+          onSaved={() => {
+            setTyping(null);
+            setSave({ kind: "saved", at: timeNow() });
+            router.refresh();
+          }}
+        />
+      ) : null}
       {pricing ? (
         <LinePriceDialog
           key={pricing.line ? `${pricing.line.carrier}|${pricing.line.lineName ?? ""}` : "new"}

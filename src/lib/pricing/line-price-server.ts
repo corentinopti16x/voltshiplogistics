@@ -505,3 +505,68 @@ export async function applyLinePrice(
     ),
   };
 }
+
+/**
+ * Product types a line accepts in one country. Adding a type copies the line's cells of
+ * `copyFrom` (same prices) into the new type; removing a type deletes its cells from the
+ * active grid. Removing the last type removes the line from that country.
+ */
+export async function setLineChannels(
+  raw: { destination: string; carrier: string; lineName: string | null },
+  change: { add: ShippingChannel[]; remove: ShippingChannel[]; copyFrom: ShippingChannel },
+): Promise<
+  | { ok: true; gridVersion: string; added: ShippingChannel[]; removed: ShippingChannel[] }
+  | { ok: false; error: LinePriceFailure }
+> {
+  const target = cleanTarget({ ...raw, channel: change.copyFrom });
+  const valid = (list: ShippingChannel[]) =>
+    list.every((channel) => TRANSPORT_CHANNELS.includes(channel));
+  if (!target || !valid(change.add) || !valid(change.remove))
+    return { ok: false, error: "target" };
+  if (change.add.some((channel) => change.remove.includes(channel)))
+    return { ok: false, error: "target" };
+  const gridVersion = await getActiveGridVersion();
+  if (!gridVersion) return { ok: false, error: "no_grid" };
+  const admin = createAdminClient();
+  const line = () =>
+    admin
+      .from("rate_grid_cells")
+      .select("*")
+      .eq("grid_version", gridVersion)
+      .eq("destination", target.destination)
+      .eq("carrier", target.carrier)
+      .eq("line_name", target.lineName ?? "");
+  const { data, error } = await line().limit(5000);
+  if (error) return { ok: false, error: "failed" };
+  const cells = (data ?? []) as Array<Record<string, unknown> & { id: string; channel: string }>;
+  const source = cells.filter((cell) => cell.channel === gridChannel(change.copyFrom));
+  const present = new Set(cells.map((cell) => cell.channel));
+  const added = change.add.filter((channel) => !present.has(channel));
+  if (added.length > 0 && source.length === 0) return { ok: false, error: "not_found" };
+  for (const channel of added) {
+    const rows = source.map((cell) => {
+      const copy: Record<string, unknown> = { ...cell, channel };
+      delete copy.id;
+      return copy;
+    });
+    for (let index = 0; index < rows.length; index += 200) {
+      const { error: insertError } = await admin
+        .from("rate_grid_cells")
+        .insert(rows.slice(index, index + 200));
+      if (insertError) return { ok: false, error: "failed" };
+    }
+  }
+  const removed = change.remove.filter((channel) => present.has(channel));
+  for (const channel of removed) {
+    const { error: deleteError } = await admin
+      .from("rate_grid_cells")
+      .delete()
+      .eq("grid_version", gridVersion)
+      .eq("destination", target.destination)
+      .eq("carrier", target.carrier)
+      .eq("line_name", target.lineName ?? "")
+      .eq("channel", channel);
+    if (deleteError) return { ok: false, error: "failed" };
+  }
+  return { ok: true, gridVersion, added, removed };
+}
