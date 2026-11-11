@@ -27,6 +27,7 @@ import { priceFromCarrierCost } from "./ai-import";
 import { calculateCatalogQuotes } from "./catalog";
 import {
   buildLinePriceCells,
+  gridLineName,
   linePriceCostRmb,
   linePriceKey,
   normalizeLinePrice,
@@ -100,15 +101,13 @@ function cleanTarget(
   const carrier = String(raw.carrier ?? "")
     .replace(/\s+/g, " ")
     .trim();
-  const lineName =
-    String(raw.lineName ?? "")
-      .replace(/\s+/g, " ")
-      .trim() || null;
+  // Same form as the grid: "Carrier Line".
+  const lineName = gridLineName(carrier, String(raw.lineName ?? ""));
   if (!/^[A-Z]{2}$/.test(destination)) return null;
   if (normalizeDestination(destination, "") !== destination) return null;
   if (!TRANSPORT_CHANNELS.includes(raw.channel)) return null;
   if (!/^[\p{L}\p{N} ._-]{1,40}$/u.test(carrier)) return null;
-  if (lineName && (lineName.length > 80 || /[|\n]/.test(lineName)))
+  if (lineName && (lineName.length > 120 || /[|\n]/.test(lineName)))
     return null;
   return { destination, channel: raw.channel, carrier, lineName };
 }

@@ -111,7 +111,7 @@ export async function previewLinePriceAction(
 export async function saveLinePriceAction(
   input: LinePriceInput,
 ): Promise<
-  | { ok: true; created: boolean }
+  | { ok: true; created: boolean; lineName: string | null }
   | { ok: false; code: LinePriceFailure | "forbidden" }
 > {
   const ctx = await teamContext();
@@ -141,7 +141,11 @@ export async function saveLinePriceAction(
   });
   // Every product page, catalogue and margin view reads the grid.
   revalidatePath("/[locale]", "layout");
-  return { ok: true, created: result.created };
+  return {
+    ok: true,
+    created: result.created,
+    lineName: result.target.lineName,
+  };
 }
 
 /**
@@ -178,7 +182,8 @@ export async function importLineAction(entry: {
       {
         destination: entry.destination,
         carrier: entry.carrier,
-        lineName: entry.lineName,
+        // The name as it is stored in the grid ("Carrier Line").
+        lineName: saved.lineName,
       },
       patch,
       ctx.userId,

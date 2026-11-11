@@ -145,6 +145,28 @@ export function buildLinePriceCells(
   return cells;
 }
 
+/**
+ * Line names of the grid start with the carrier ("YunExpress THPHR-CHC"). A name typed or
+ * pasted without it ("THPHR-CHC") is the same line: this gives the grid's form.
+ */
+export function gridLineName(carrier: string, lineName: string | null) {
+  const name = (lineName ?? "").replace(/\s+/g, " ").trim();
+  if (!name) return null;
+  const prefix = `${carrier.trim()} `;
+  return name.toLowerCase().startsWith(prefix.toLowerCase())
+    ? name
+    : `${prefix}${name}`;
+}
+
+/** The line name without the carrier in front, for display next to the carrier. */
+export function shortLineName(carrier: string, lineName: string | null) {
+  const name = (lineName ?? "").trim();
+  const prefix = `${carrier.trim()} `;
+  return name.toLowerCase().startsWith(prefix.toLowerCase())
+    ? name.slice(prefix.length).trim()
+    : name;
+}
+
 /** Key of a line's price in one country and one channel ("US|cosmetics|YunExpress|商派普货"). */
 export function linePriceKey(line: {
   destination: string;

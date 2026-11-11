@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { saveLineSettingAction } from "@/app/actions/transport";
 import { useRouter } from "@/i18n/routing";
 import type { ShippingChannel } from "@/lib/domain/pricing";
-import type { LinePrice } from "@/lib/pricing/line-price";
+import { shortLineName, type LinePrice } from "@/lib/pricing/line-price";
 import {
   TRANSPORT_SAMPLE_WEIGHTS_G,
   type TransportLine,
@@ -255,7 +255,7 @@ export function TransportTable({
                       </span>
                       {line.lineName ? (
                         <span className="ml-2 font-medium">
-                          {line.lineName}
+                          {shortLineName(line.carrier, line.lineName)}
                         </span>
                       ) : null}
                     </p>
@@ -272,7 +272,7 @@ export function TransportTable({
                         value={line.note ?? ""}
                         placeholder={t("notePlaceholder")}
                         label={t("noteLabel", {
-                          line: `${line.carrier} ${line.lineName ?? ""}`,
+                          line: `${line.carrier} ${shortLineName(line.carrier, line.lineName)}`,
                         })}
                         disabled={!canEdit}
                         className="text-[13px]"
@@ -319,7 +319,7 @@ export function TransportTable({
                         })
                       }
                       aria-label={t("price.editLabel", {
-                        line: `${line.carrier} ${line.lineName ?? ""}`,
+                        line: `${line.carrier} ${shortLineName(line.carrier, line.lineName)}`,
                       })}
                       className="rounded-md px-2 py-1 text-xs font-semibold whitespace-nowrap text-[var(--navy)] ring-1 ring-[var(--line)] transition-colors hover:bg-[var(--navy)] hover:text-white hover:ring-[var(--navy)]"
                     >
@@ -331,7 +331,7 @@ export function TransportTable({
                       value={line.deliveryRange ?? ""}
                       placeholder={t("deliveryPlaceholder")}
                       label={t("deliveryLabel", {
-                        line: `${line.carrier} ${line.lineName ?? ""}`,
+                        line: `${line.carrier} ${shortLineName(line.carrier, line.lineName)}`,
                       })}
                       disabled={!canEdit}
                       className="text-right"
@@ -345,7 +345,7 @@ export function TransportTable({
                       value={line.eccangMethod ?? ""}
                       placeholder={t("notLinked")}
                       label={t("eccangLabel", {
-                        line: `${line.carrier} ${line.lineName ?? ""}`,
+                        line: `${line.carrier} ${shortLineName(line.carrier, line.lineName)}`,
                       })}
                       disabled={!canEdit}
                       className={
@@ -364,7 +364,7 @@ export function TransportTable({
                       role="switch"
                       aria-checked={!pending}
                       aria-label={t("statusLabel", {
-                        line: `${line.carrier} ${line.lineName ?? ""}`,
+                        line: `${line.carrier} ${shortLineName(line.carrier, line.lineName)}`,
                       })}
                       disabled={!canEdit}
                       onClick={() =>
