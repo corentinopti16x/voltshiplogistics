@@ -2053,15 +2053,35 @@
       "noGrid": "No active rate grid: import and activate one in Pricing.",
       "empty": "No line for this product type to this country.",
       "accepts": "Accepts: {list}",
-      "weightRange": "From {min} g to {max} g",
       "ioss": "IOSS required",
-      "days": "{range} d",
       "notLinked": "Not linked",
-      "legend": "Carrier cost of one parcel in ¥ (RMB), internal to Voltship. Green: the cheapest line at that weight. Grid {grid}.",
+      "legend": "Carrier cost of one parcel in ¥ (RMB), internal to Voltship. Green: the cheapest active line at that weight. A line « to open » is never picked for a product. Grid {grid}.",
       "table": {
         "line": "Carrier and line",
-        "delivery": "Delivery",
-        "eccang": "ECCANG line"
+        "delivery": "Delivery (days)",
+        "eccang": "ECCANG line",
+        "status": "Status"
+      },
+      "editHint": "Click a delivery time, an ECCANG line, a note or a status to change it. It is saved right away.",
+      "readOnly": "Read-only for now.",
+      "saving": "Saving…",
+      "saved": "Saved at {time}",
+      "missingTable": "To configure the lines, run migration 00025_carrier_line_settings.sql in Supabase. Until then the page is read-only.",
+      "notePlaceholder": "Add a note",
+      "noteLabel": "Note for {line}",
+      "deliveryPlaceholder": "Delivery",
+      "deliveryLabel": "Delivery time of {line}, in days",
+      "eccangLabel": "ECCANG line of {line}",
+      "statusLabel": "{line} is open at Voltship",
+      "status": {
+        "active": "Active",
+        "pending": "To open"
+      },
+      "errors": {
+        "forbidden": "Not saved: Voltship team only.",
+        "missing_table": "Not saved: migration 00025 has not been run.",
+        "invalid": "Not saved: text too long (300 characters at most).",
+        "failed": "Not saved. Try again."
       }
     }
   },
