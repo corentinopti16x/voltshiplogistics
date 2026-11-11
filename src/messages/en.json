@@ -1875,7 +1875,8 @@
       "operations": {
         "achats": "Purchasing & shipping",
         "alerts": "To review",
-        "lines": "Carrier lines"
+        "lines": "Carrier lines",
+        "transport": "Transport"
       },
       "results": {
         "week": "By week",
@@ -2044,6 +2045,24 @@
         "too_many": "List too long ({count} codes, 60,000 max).",
         "not_configured": "ECCANG is not configured (ECCANG_API_HOST)."
       }
+    },
+    "transportPage": {
+      "kicker": "Voltship operations",
+      "title": "Transport by country",
+      "lead": "Every line of the active grid to a country: what it accepts, what a parcel costs at the carrier by weight, the delivery time and the linked ECCANG line.",
+      "noGrid": "No active rate grid: import and activate one in Pricing.",
+      "empty": "No line for this product type to this country.",
+      "accepts": "Accepts: {list}",
+      "weightRange": "From {min} g to {max} g",
+      "ioss": "IOSS required",
+      "days": "{range} d",
+      "notLinked": "Not linked",
+      "legend": "Carrier cost of one parcel in ¥ (RMB), internal to Voltship. Green: the cheapest line at that weight. Grid {grid}.",
+      "table": {
+        "line": "Carrier and line",
+        "delivery": "Delivery",
+        "eccang": "ECCANG line"
+      }
     }
   },
   "impersonate": {
@@ -2119,7 +2138,8 @@
     "shell": {
       "queueLink": "Sourcing queue",
       "staff": "Staff",
-      "catalogLink": "Products"
+      "catalogLink": "Products",
+      "transportLink": "Transport"
     },
     "form": {
       "clientFieldsTitle": "Client-safe quote fields",

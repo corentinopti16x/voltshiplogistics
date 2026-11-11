@@ -26,12 +26,17 @@ export function SectionTabs({ tabs, active, spaced = true }: { tabs: SectionTab[
 }
 
 /**
- * « Achats & expéditions »: what to buy / ship, the orders to review before sending, and the
- * carrier lines the parcels actually left on.
+ * « Achats & expéditions »: what to buy / ship, the orders to review before sending, the
+ * carrier lines the parcels actually left on, and every line of the grid country by country.
  */
-export async function OperationsTabs({ active }: { active: "achats" | "alerts" | "lines" }) {
+export async function OperationsTabs({ active }: { active: "achats" | "alerts" | "lines" | "transport" }) {
   const [t, alerts] = await Promise.all([getTranslations("admin.tabs.operations"), countOpenOrderAlerts().catch(() => 0)]);
-  const hrefs = { achats: "/admin/achats", alerts: "/admin/alerts", lines: "/admin/lines" } as const;
+  const hrefs = {
+    achats: "/admin/achats",
+    alerts: "/admin/alerts",
+    lines: "/admin/lines",
+    transport: "/sourcer/transport",
+  } as const;
   return (
     <SectionTabs
       spaced={false}
@@ -40,6 +45,7 @@ export async function OperationsTabs({ active }: { active: "achats" | "alerts" |
         { href: hrefs.achats, label: t("achats") },
         { href: hrefs.alerts, label: t("alerts"), count: alerts },
         { href: hrefs.lines, label: t("lines") },
+        { href: hrefs.transport, label: t("transport") },
       ]}
     />
   );
