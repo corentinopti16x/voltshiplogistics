@@ -9,6 +9,7 @@ import {
   hasInternalBattery,
   parseParcelDimensions,
   type CarrierLineRef,
+  type RateCell,
   type ShippingChannel,
 } from "@/lib/domain/pricing";
 import {
@@ -54,7 +55,14 @@ export type CatalogQuote = {
  * grid, the clients' paliers and carrier rules once, then runs the same `calculateCogs`
  * selection as `calculateProductCogsMatrix` (forced line → chosen line → cheapest allowed).
  */
-export async function calculateCatalogQuotes(products: ProductRow[]): Promise<Map<string, CatalogQuote>> {
+export async function calculateCatalogQuotes(
+  products: ProductRow[],
+  /**
+   * `markets`: only quote these markets. `cells`: quote on these rate cells instead of the
+   * active grid's (preview of a price change on the Transport page).
+   */
+  options: { markets?: string[]; cells?: RateCell[] } = {},
+): Promise<Map<string, CatalogQuote>> {
   const out = new Map<string, CatalogQuote>();
   const ready = products.filter(
     (product) => product.client_price != null && product.weight_g != null && !!product.shipping_channel,
@@ -86,10 +94,15 @@ export async function calculateCatalogQuotes(products: ProductRow[]): Promise<Ma
     profiles.set(client.id, resolveClientPricing(client));
     rules.set(client.id, parseCarrierRules(client.carrier_rules_json));
   }
-  const marketsOf = new Map(ready.map((product) => [product.id, getProductMarkets(product)]));
+  const marketsOf = new Map(
+    ready.map((product) => {
+      const markets = getProductMarkets(product);
+      return [product.id, options.markets ? markets.filter((market) => options.markets?.includes(market)) : markets];
+    }),
+  );
   const destinations = [...new Set([...marketsOf.values()].flat())];
   const channels = [...new Set(ready.map((product) => product.shipping_channel as string))];
-  const cells = await loadRateCellsFor(activeGridVersion, destinations, channels);
+  const cells = options.cells ?? (await loadRateCellsFor(activeGridVersion, destinations, channels));
 
   for (const product of ready) {
     const clientRules = rules.get(product.client_id) ?? EMPTY_CARRIER_RULES;

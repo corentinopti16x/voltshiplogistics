@@ -4,10 +4,16 @@ import { useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { saveLineSettingAction } from "@/app/actions/transport";
 import { useRouter } from "@/i18n/routing";
+import type { ShippingChannel } from "@/lib/domain/pricing";
+import type { LinePrice } from "@/lib/pricing/line-price";
 import {
   TRANSPORT_SAMPLE_WEIGHTS_G,
   type TransportLine,
 } from "@/lib/pricing/transport-view";
+import {
+  LinePriceDialog,
+  type LinePriceDialogTarget,
+} from "./line-price-dialog";
 
 type Field = "status" | "eccangMethod" | "deliveryDays" | "note";
 type SaveState =
@@ -79,14 +85,23 @@ function InlineText({
 
 export function TransportTable({
   destination,
+  channel,
+  placeLabel,
   lines: initialLines,
+  storedPrices,
   channelLabels,
   canEdit,
   locale,
 }: {
   destination: string;
+  channel: ShippingChannel;
+  /** "États-Unis · Standard", shown in the price panel. */
+  placeLabel: string;
   lines: TransportLine[];
+  /** Tiers last entered for each line (by line key), to pre-fill the price panel. */
+  storedPrices: Record<string, LinePrice>;
   channelLabels: Record<string, string>;
+  /** Status, ECCANG line, delivery time and note need migration 00025; prices do not. */
   canEdit: boolean;
   locale: string;
 }) {
@@ -99,6 +114,21 @@ export function TransportTable({
     setLines(initialLines);
   }
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
+  const [pricing, setPricing] = useState<LinePriceDialogTarget | null>(null);
+  const carriers = [
+    ...new Set([
+      ...lines.map((line) => line.carrier),
+      "YunExpress",
+      "Tongyou",
+      "Huahan",
+      "4PX",
+    ]),
+  ];
+  const timeNow = () =>
+    new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date());
   const [, startTransition] = useTransition();
   const number = (value: number) =>
     new Intl.NumberFormat(locale === "zh" ? "zh-CN" : locale, {
@@ -135,13 +165,7 @@ export function TransportTable({
         setSave({ kind: "error", code: result.code });
         return;
       }
-      setSave({
-        kind: "saved",
-        at: new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : locale, {
-          hour: "2-digit",
-          minute: "2-digit",
-        }).format(new Date()),
-      });
+      setSave({ kind: "saved", at: timeNow() });
       // Order, « cheapest » marks and fallbacks are computed on the server.
       router.refresh();
     });
@@ -153,6 +177,7 @@ export function TransportTable({
         <span className="text-[var(--muted)]">
           {canEdit ? t("editHint") : t("readOnly")}
         </span>
+        <span className="flex items-center gap-4">
         <span
           role="status"
           aria-live="polite"
@@ -172,6 +197,16 @@ export function TransportTable({
                 ? t(`errors.${save.code}`)
                 : ""}
         </span>
+          <button
+            type="button"
+            onClick={() =>
+              setPricing({ line: null, currentRmb: [], stored: null })
+            }
+            className="rounded-lg bg-[var(--navy)] px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-white transition-opacity hover:opacity-90"
+          >
+            {t("price.addLine")}
+          </button>
+        </span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[900px] text-sm">
@@ -183,6 +218,7 @@ export function TransportTable({
                   {weightLabel(weight)}
                 </th>
               ))}
+              <th className="px-2 py-3" />
               <th className="w-28 px-2 py-3 text-right font-medium">
                 {t("table.delivery")}
               </th>
@@ -198,7 +234,7 @@ export function TransportTable({
             {lines.length === 0 ? (
               <tr>
                 <td
-                  colSpan={TRANSPORT_SAMPLE_WEIGHTS_G.length + 4}
+                  colSpan={TRANSPORT_SAMPLE_WEIGHTS_G.length + 5}
                   className="px-5 py-8 text-[var(--muted)]"
                 >
                   {t("empty")}
@@ -266,6 +302,30 @@ export function TransportTable({
                       )}
                     </td>
                   ))}
+                  <td className="px-2 py-3.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPricing({
+                          line: {
+                            carrier: line.carrier,
+                            lineName: line.lineName,
+                            maxG: line.maxG,
+                          },
+                          currentRmb: line.samples.map(
+                            (sample) => sample.costRmb,
+                          ),
+                          stored: storedPrices[line.key] ?? null,
+                        })
+                      }
+                      aria-label={t("price.editLabel", {
+                        line: `${line.carrier} ${line.lineName ?? ""}`,
+                      })}
+                      className="rounded-md px-2 py-1 text-xs font-semibold whitespace-nowrap text-[var(--navy)] ring-1 ring-[var(--line)] transition-colors hover:bg-[var(--navy)] hover:text-white hover:ring-[var(--navy)]"
+                    >
+                      {t("price.edit")}
+                    </button>
+                  </td>
                   <td className="px-2 py-3">
                     <InlineText
                       value={line.deliveryRange ?? ""}
@@ -328,6 +388,23 @@ export function TransportTable({
           </tbody>
         </table>
       </div>
+      {pricing ? (
+        <LinePriceDialog
+          key={pricing.line ? `${pricing.line.carrier}|${pricing.line.lineName ?? ""}` : "new"}
+          target={pricing}
+          destination={destination}
+          channel={channel}
+          placeLabel={placeLabel}
+          carriers={carriers}
+          locale={locale}
+          onClose={() => setPricing(null)}
+          onSaved={() => {
+            setPricing(null);
+            setSave({ kind: "saved", at: timeNow() });
+            router.refresh();
+          }}
+        />
+      ) : null}
     </section>
   );
 }
