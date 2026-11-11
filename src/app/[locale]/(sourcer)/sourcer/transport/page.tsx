@@ -23,8 +23,8 @@ function countryName(code: string, locale: string) {
 }
 
 /**
- * Voltship team page (sourcer + admin). The carrier costs are INTERNAL: only an admin gets
- * the amounts; the rest of the team sees which line is the cheapest at each weight.
+ * Voltship team page (sourcer + admin): the team configures the transport, so it sees the
+ * carrier costs in RMB. Client prices and margins are never shown here.
  */
 export default async function TransportPage({
   params,
@@ -52,7 +52,7 @@ export default async function TransportPage({
     getTranslations("admin.pricingForms.channels"),
   ]);
   const locale = rawLocale === "fr" ? "fr" : rawLocale === "zh" ? "zh" : "en";
-  const overview = await loadTransportOverview(c, ch, { withCosts: isAdmin });
+  const overview = await loadTransportOverview(c, ch, { withClientPrices: isAdmin });
   const { destination, channel, lines } = overview;
   const href = (country: string, kind: string) =>
     `/sourcer/transport?c=${country}&ch=${kind}`;
@@ -171,28 +171,13 @@ export default async function TransportPage({
                         </p>
                       </td>
                       {line.samples.map((sample) => (
-                        <td
-                          key={sample.weightG}
-                          className="px-3 py-4 text-right tabular-nums"
-                        >
-                          {!sample.available ? (
+                        <td key={sample.weightG} className="px-3 py-4 text-right tabular-nums">
+                          {sample.costRmb == null ? (
                             <span className="text-[var(--muted)]">—</span>
-                          ) : sample.costRmb == null ? (
-                            sample.cheapest ? (
-                              <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">
-                                {t("cheapest")}
-                              </span>
-                            ) : (
-                              <span className="text-[var(--muted)]">
-                                {t("available")}
-                              </span>
-                            )
                           ) : (
                             <span
                               className={
-                                sample.cheapest
-                                  ? "rounded-md bg-emerald-50 px-2 py-1 font-bold text-emerald-700"
-                                  : "px-2 py-1"
+                                sample.cheapest ? "rounded-md bg-emerald-50 px-2 py-1 font-bold text-emerald-700" : "px-2 py-1"
                               }
                             >
                               {formatNumber(sample.costRmb, locale, 1)}
@@ -224,9 +209,7 @@ export default async function TransportPage({
               </table>
             </section>
             <p className="text-xs text-[var(--muted)]">
-              {t(isAdmin ? "legend" : "legendTeam", {
-                grid: overview.gridVersion,
-              })}
+              {t("legend", { grid: overview.gridVersion })}
             </p>
           </>
         )}

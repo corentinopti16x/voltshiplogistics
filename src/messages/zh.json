@@ -1133,10 +1133,7 @@
         "line": "承运商和渠道",
         "delivery": "时效",
         "eccang": "易仓物流产品"
-      },
-      "cheapest": "最便宜",
-      "available": "可发",
-      "legendTeam": "绿色为该重量下最便宜的渠道。价格表 {grid}。"
+      }
     }
   },
   "orderAlerts": {

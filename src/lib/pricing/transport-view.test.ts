@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RateCell } from "../domain/pricing";
-import { summarizeTransportLines, withoutCosts } from "./transport-view";
+import { summarizeTransportLines, withoutClientPrices } from "./transport-view";
 
 function cell(over: Partial<RateCell>): RateCell {
   return {
@@ -69,15 +69,13 @@ describe("summarizeTransportLines", () => {
     expect(lines[0].deliveryRange).toBe("9-12");
   });
 
-  it("hides every amount for non-admins but keeps availability and the cheapest marks", () => {
+  it("hides the client prices for non-admins but keeps the carrier costs and the cheapest marks", () => {
     const cells = [cell({}), cell({ carrier: "Huahan", lineName: "PK0590", weightMaxG: 400, carrierCostRmb: 30 })];
-    const hidden = withoutCosts(summarizeTransportLines(cells, "electronics_battery", [], noMethod));
-    expect(hidden.flatMap((line) => line.samples.map((sample) => [sample.costRmb, sample.price]))).toEqual(
-      Array(8).fill([null, null]),
-    );
-    expect(hidden[0].samples.map((sample) => sample.available)).toEqual([true, true, false, false]);
-    expect(hidden[0].samples.map((sample) => sample.cheapest)).toEqual([true, true, false, false]);
-    expect(JSON.stringify(hidden)).not.toMatch(/"costRmb":\d|"price":\d/);
+    const team = withoutClientPrices(summarizeTransportLines(cells, "electronics_battery", [], noMethod));
+    expect(team.flatMap((line) => line.samples.map((sample) => sample.price))).toEqual(Array(8).fill(null));
+    expect(team[0].samples.map((sample) => sample.costRmb)).toEqual([30, 30, null, null]);
+    expect(team[0].samples.map((sample) => sample.cheapest)).toEqual([true, true, false, false]);
+    expect(JSON.stringify(team)).not.toMatch(/"price":\d/);
   });
 
   it("returns no line when the country has nothing in the channel", () => {

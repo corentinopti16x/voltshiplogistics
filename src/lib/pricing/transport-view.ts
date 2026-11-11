@@ -3,7 +3,7 @@
  * accepts, its carrier cost at a few parcel weights, its delivery time and the ECCANG
  * shipping method it is linked to. Pure (no I/O) so the summary is unit-tested.
  *
- * INTERNAL: carries carrier costs in RMB — admin pages only.
+ * INTERNAL: carries carrier costs in RMB — Voltship team pages only (never a client page).
  */
 
 import { cellAtWeight, gridChannel, lineKey, type RateCell, type ShippingChannel } from "../domain/pricing";
@@ -125,12 +125,13 @@ export function summarizeTransportLines(
 }
 
 /**
- * Same lines without any amount (carrier cost, client price): for the team members who are
- * not admins. The order and the « cheapest » marks are kept.
+ * Same lines without the client grid price (EUR): for the team members who configure the
+ * transport but are not admins. They keep the carrier costs (RMB) they enter themselves;
+ * client prices and margins stay admin-only.
  */
-export function withoutCosts(lines: TransportLine[]): TransportLine[] {
+export function withoutClientPrices(lines: TransportLine[]): TransportLine[] {
   return lines.map((line) => ({
     ...line,
-    samples: line.samples.map((sample) => ({ ...sample, costRmb: null, price: null })),
+    samples: line.samples.map((sample) => ({ ...sample, price: null })),
   }));
 }

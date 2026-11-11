@@ -1,6 +1,6 @@
 /**
  * Loader of the team « Transport » page (lines of the active grid for one country).
- * The page checks the role; the carrier costs only leave this module for an admin.
+ * The page checks the role (Voltship team only); client prices only leave this module for an admin.
  */
 
 import { parseShippingMethodMap, resolveShippingMethod } from "@/lib/eccang/mapping";
@@ -10,7 +10,7 @@ import { getActiveGridVersion, loadRateCellsFor } from "./server";
 import {
   summarizeTransportLines,
   TRANSPORT_CHANNELS,
-  withoutCosts,
+  withoutClientPrices,
   type LineChannel,
   type TransportLine,
 } from "./transport-view";
@@ -59,11 +59,11 @@ export function parseTransportChannel(raw: string | null | undefined): ShippingC
   return TRANSPORT_CHANNELS.find((channel) => channel === raw) ?? null;
 }
 
-/** `withCosts: false` strips every amount server-side (team members who are not admins). */
+/** `withClientPrices: false` strips the client grid prices server-side (team members who are not admins). */
 export async function loadTransportOverview(
   rawDestination: string | null | undefined,
   rawChannel: string | null | undefined,
-  options: { withCosts: boolean },
+  options: { withClientPrices: boolean },
 ): Promise<TransportOverview> {
   const gridVersion = await getActiveGridVersion();
   const wanted = parseTransportChannel(rawChannel);
@@ -93,5 +93,5 @@ export async function loadTransportOverview(
   const lines = summarizeTransportLines(cells, channel, here, (carrier, lineName) =>
     resolveShippingMethod(methods, carrier, lineName),
   );
-  return { gridVersion, destinations, destination, channel, channels, lines: options.withCosts ? lines : withoutCosts(lines) };
+  return { gridVersion, destinations, destination, channel, channels, lines: options.withClientPrices ? lines : withoutClientPrices(lines) };
 }

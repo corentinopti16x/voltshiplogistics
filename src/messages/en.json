@@ -2062,10 +2062,7 @@
         "line": "Carrier and line",
         "delivery": "Delivery",
         "eccang": "ECCANG line"
-      },
-      "cheapest": "Cheapest",
-      "available": "Available",
-      "legendTeam": "Green: the cheapest line at that weight. Grid {grid}."
+      }
     }
   },
   "impersonate": {

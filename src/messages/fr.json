@@ -2062,10 +2062,7 @@
         "line": "Transporteur et ligne",
         "delivery": "Délai",
         "eccang": "Ligne ECCANG"
-      },
-      "cheapest": "La moins chère",
-      "available": "Disponible",
-      "legendTeam": "En vert, la ligne la moins chère à ce poids. Grille {grid}."
+      }
     }
   },
   "impersonate": {
