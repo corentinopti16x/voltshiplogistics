@@ -2152,6 +2152,42 @@
         "blockedSummary": "{count, plural, one {# pays a des produits sans ligne active} other {# pays ont des produits sans ligne active}}",
         "okSummary": "Chaque produit a au moins une ligne active vers ses pays",
         "legend": "En rouge : des produits sont vendus vers ce pays dans ce type, mais aucune ligne n’est active. Les pays viennent de la grille et des marchés renseignés sur les fiches produits. Grille {grid}."
+      },
+      "sheet": {
+        "open": "Importer plusieurs lignes",
+        "title": "Importer plusieurs lignes",
+        "help": "Colle un tableau copié depuis Excel ou Google Sheets : une rangée par tranche de poids, avec ces colonnes dans cet ordre. Une ligne qui existe déjà reçoit le nouveau prix, les autres sont créées. Une case vide dans état, ligne ECCANG, délai ou commentaire ne change rien.",
+        "paste": "Colle le tableau ici",
+        "row": "Rangée {row}",
+        "line": "Ligne",
+        "result": "Résultat",
+        "hint": "Vérifie le coût d’un colis (¥) de chaque ligne avant d’importer. Rien n’est enregistré avant.",
+        "progress": "{done} sur {total} lignes traitées",
+        "cancel": "Annuler",
+        "close": "Fermer",
+        "running": "Import en cours…",
+        "import": "{count, plural, =0 {Importer} one {Importer # ligne} other {Importer # lignes}}",
+        "status": {
+          "active": "active",
+          "pending": "à ouvrir"
+        },
+        "outcome": {
+          "created": "Ajoutée",
+          "updated": "Prix mis à jour",
+          "partial": "Prix enregistré, état et code non enregistrés (migration 00025)",
+          "failed": "Non enregistrée"
+        },
+        "problems": {
+          "columns": "il faut au moins 7 colonnes",
+          "country": "le pays doit être un code à 2 lettres (US, FR…)",
+          "type": "type de produit inconnu (standard, batterie, cosmétique, aimant, sensible)",
+          "carrier": "transporteur manquant",
+          "status": "état inconnu (active ou à ouvrir)",
+          "empty": "aucune tranche",
+          "weights": "poids des tranches invalides ou en double",
+          "amounts": "il faut un prix au kilo ou un prix par colis",
+          "min_billable": "poids minimum facturé trop grand"
+        }
       }
     }
   },

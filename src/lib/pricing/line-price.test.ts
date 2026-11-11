@@ -3,7 +3,9 @@ import {
   buildLinePriceCells,
   linePriceBrackets,
   linePriceCostRmb,
+  gridLineName,
   linePriceKey,
+  shortLineName,
   normalizeLinePrice,
   type LinePrice,
 } from "./line-price";
@@ -138,5 +140,22 @@ describe("linePriceKey", () => {
         lineName: "商派普货",
       }),
     ).toBe("US|standard|YunExpress|商派普货");
+  });
+});
+
+describe("grid line names", () => {
+  it("puts the carrier in front once", () => {
+    expect(gridLineName("YunExpress", "THPHR-CHC")).toBe("YunExpress THPHR-CHC");
+    expect(gridLineName("YunExpress", " YunExpress  THPHR-CHC ")).toBe(
+      "YunExpress THPHR-CHC",
+    );
+    expect(gridLineName("Tongyou", "")).toBeNull();
+  });
+
+  it("shows the line without its carrier", () => {
+    expect(shortLineName("Huahan", "Huahan 智尚宝-特敏 PK0578")).toBe(
+      "智尚宝-特敏 PK0578",
+    );
+    expect(shortLineName("Huahan", "PK0590")).toBe("PK0590");
   });
 });

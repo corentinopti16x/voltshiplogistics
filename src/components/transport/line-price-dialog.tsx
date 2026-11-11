@@ -11,6 +11,7 @@ import {
   LINE_PRICE_MAX_TIERS,
   linePriceCostRmb,
   normalizeLinePrice,
+  shortLineName,
   type LinePrice,
 } from "@/lib/pricing/line-price";
 import type { LinePricePreview } from "@/lib/pricing/line-price-server";
@@ -171,7 +172,10 @@ export function LinePriceDialog({
   const title = isNew
     ? t("titleNew")
     : t("title", {
-        line: [target.line?.carrier, target.line?.lineName]
+        line: [
+          target.line?.carrier,
+          shortLineName(target.line?.carrier ?? "", target.line?.lineName ?? null),
+        ]
           .filter(Boolean)
           .join(" "),
       });
@@ -238,6 +242,7 @@ export function LinePriceDialog({
                   className={fieldClass}
                   value={lineName}
                   maxLength={80}
+                  // The carrier is added in front when the line is saved, as in the grid.
                   placeholder={t("lineNamePlaceholder")}
                   onChange={(event) => edit(() => setLineName(event.target.value))}
                 />

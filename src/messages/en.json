@@ -2152,6 +2152,42 @@
         "blockedSummary": "{count, plural, one {# country has products without an active line} other {# countries have products without an active line}}",
         "okSummary": "Every product has at least one active line to its countries",
         "legend": "Red: products are sold to this country in this type, but no line is active. Countries come from the grid and from the markets set on the product sheets. Grid {grid}."
+      },
+      "sheet": {
+        "open": "Import several lines",
+        "title": "Import several lines",
+        "help": "Paste a table copied from Excel or Google Sheets: one row per weight tier, with these columns in this order. A line that already exists gets the new price, the others are created. An empty cell in status, ECCANG line, delivery or note changes nothing.",
+        "paste": "Paste the table here",
+        "row": "Row {row}",
+        "line": "Line",
+        "result": "Result",
+        "hint": "Check the parcel cost (¥) of each line before importing. Nothing is saved before that.",
+        "progress": "{done} of {total} lines done",
+        "cancel": "Cancel",
+        "close": "Close",
+        "running": "Importing…",
+        "import": "{count, plural, =0 {Import} one {Import # line} other {Import # lines}}",
+        "status": {
+          "active": "active",
+          "pending": "to open"
+        },
+        "outcome": {
+          "created": "Added",
+          "updated": "Price updated",
+          "partial": "Price saved, status and code not saved (migration 00025)",
+          "failed": "Not saved"
+        },
+        "problems": {
+          "columns": "at least 7 columns are needed",
+          "country": "the country must be a 2-letter code (US, FR…)",
+          "type": "unknown product type (standard, battery, cosmetics, magnetic, sensitive)",
+          "carrier": "carrier missing",
+          "status": "unknown status (active or to open)",
+          "empty": "no tier",
+          "weights": "invalid or duplicate tier weights",
+          "amounts": "a price per kilo or per parcel is needed",
+          "min_billable": "minimum billed weight too high"
+        }
       }
     }
   },
