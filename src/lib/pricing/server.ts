@@ -289,7 +289,29 @@ async function getGridEffectiveDate(gridVersion: string) {
     .select("effective_date")
     .eq("grid_version", gridVersion)
     .maybeSingle();
-  return data?.effective_date ? String(data.effective_date) : null;
+  const effective = data?.effective_date ? String(data.effective_date) : null;
+  // A grid edited in place from the Transport page (line price, types) keeps its version:
+  // the date shown next to a COGS is then the day of the last edit, not the import day.
+  const { data: meta } = await admin
+    .from("pricing_meta")
+    .select("value")
+    .eq("key", GRID_MODIFIED_KEY)
+    .maybeSingle();
+  const [version, day] = String(meta?.value ?? "").split("|");
+  if (version === gridVersion && /^\d{4}-\d{2}-\d{2}$/.test(day ?? "")) {
+    return !effective || day > effective.slice(0, 10) ? day : effective;
+  }
+  return effective;
+}
+
+/** pricing_meta key: "<grid version>|<YYYY-MM-DD>" of the last in-place edit of the active grid. */
+export const GRID_MODIFIED_KEY = "grid_modified_at";
+
+/** Records that the active grid was edited in place today (Transport page). */
+export async function markGridModified(gridVersion: string) {
+  await createAdminClient()
+    .from("pricing_meta")
+    .upsert({ key: GRID_MODIFIED_KEY, value: `${gridVersion}|${new Date().toISOString().slice(0, 10)}` });
 }
 
 /**
