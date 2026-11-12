@@ -2236,7 +2236,9 @@
       "missing": {
         "price": "prix",
         "weight": "poids",
-        "channel": "canal"
+        "channel": "canal",
+        "photo": "photo",
+        "name": "nom"
       },
       "listSeparator": ", ",
       "statuses": {
@@ -2256,7 +2258,10 @@
       "hideZero": "Les masquer",
       "trendNew": "nouveau",
       "trendHint": "{previous} les 7 jours d'avant",
-      "marginLink": "Marge →"
+      "marginLink": "Marge →",
+      "toQuote": "À chiffrer",
+      "allOpen": "Tous",
+      "filterLabel": "Filtrer par état"
     },
     "product": {
       "backToTodo": "← À compléter",

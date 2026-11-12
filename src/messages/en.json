@@ -2236,7 +2236,9 @@
       "missing": {
         "price": "price",
         "weight": "weight",
-        "channel": "channel"
+        "channel": "channel",
+        "photo": "photo",
+        "name": "name"
       },
       "listSeparator": ", ",
       "statuses": {
@@ -2256,7 +2258,10 @@
       "hideZero": "Hide them",
       "trendNew": "new",
       "trendHint": "{previous} the 7 days before",
-      "marginLink": "Margin →"
+      "marginLink": "Margin →",
+      "toQuote": "To quote",
+      "allOpen": "All",
+      "filterLabel": "Filter by status"
     },
     "product": {
       "backToTodo": "← To complete",

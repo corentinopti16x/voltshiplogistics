@@ -104,5 +104,9 @@ export function resolveCarrierSelection(
 /** Display label of a line: "YunExpress CHC" or just the carrier for legacy single-line grids. */
 export function carrierLineLabel(ref: CarrierLineRef | null | undefined) {
   if (!ref) return "";
-  return ref.lineName ? `${ref.carrier} ${ref.lineName}` : ref.carrier;
+  if (!ref.lineName) return ref.carrier;
+  // Grid line names already start with the carrier ("YunExpress 特惠带电 THZXR"): say it once.
+  return ref.lineName.toLowerCase().startsWith(`${ref.carrier.toLowerCase()} `)
+    ? ref.lineName
+    : `${ref.carrier} ${ref.lineName}`;
 }
