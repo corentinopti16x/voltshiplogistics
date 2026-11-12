@@ -205,6 +205,9 @@ describe("carrier line choice — rules parsing", () => {
     expect(parseLineKey("|x")).toBeNull();
     expect(carrierLineLabel({ carrier: "YunExpress", lineName: "CHC" })).toBe("YunExpress CHC");
     expect(carrierLineLabel({ carrier: "4PX", lineName: null })).toBe("4PX");
+    expect(carrierLineLabel({ carrier: "YunExpress", lineName: "YunExpress 特惠带电 THZXR" })).toBe(
+      "YunExpress 特惠带电 THZXR",
+    );
     expect(allowedLinesFromRules(cells, { blocked: [], forced: {} })).toBeNull();
   });
 });

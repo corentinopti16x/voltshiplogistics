@@ -66,7 +66,14 @@ export default async function SourcerPage({
   });
   type QueueRow = ProductRow & { clients: { name: string; code: string | null } | null };
   const query = (filters.q ?? "").trim().toLowerCase();
-  const status = filters.status ?? "";
+  // Default view: what still needs a quote. "all" shows every open product.
+  const TO_QUOTE = ["brief_received", "factories", "samples", "negotiation"];
+  const status = filters.status ?? "todo";
+  const matchesStatus = (row: { sourcing_status: string | null }, wanted: string) =>
+    wanted === "all" ||
+    (wanted === "todo"
+      ? TO_QUOTE.includes(row.sourcing_status ?? "brief_received")
+      : row.sourcing_status === wanted);
   const allRows = [...(data ?? []), ...restockedInStock] as QueueRow[];
   // Units sold over 90 days (Shopify cache), per product of the queue.
   const clientIds = [...new Set(allRows.map((row) => row.client_id))];
@@ -113,15 +120,17 @@ export default async function SourcerPage({
   const sort: SortKey = SORT_KEYS.includes(filters.sort as SortKey) ? (filters.sort as SortKey) : "created";
   const dir =
     filters.dir === "desc" || filters.dir === "asc" ? filters.dir : sort === "sales" || sort === "sales7" ? "desc" : "asc";
-  const rows = allRows.filter((row) => {
+  // Everything but the status filter, so each status pill can show its own count.
+  const scoped = allRows.filter((row) => {
     if (!showZero && isShopifyImport(row.migration_state) && (sales.get(row.id) ?? 0) === 0) return false;
     if (query && !`${row.title} ${row.sku ?? ""} ${row.clients?.name ?? ""}`.toLowerCase().includes(query)) {
       return false;
     }
-    if (status && row.sourcing_status !== status) return false;
     if (filters.backfill === "true" && row.migration_state !== "imported_pending") return false;
     return true;
   });
+  const rows = scoped.filter((row) => matchesStatus(row, status));
+  const countOf = (wanted: string) => scoped.filter((row) => matchesStatus(row, wanted)).length;
   const compare = (a: QueueRow, b: QueueRow) => {
     switch (sort) {
       case "sales":
@@ -141,10 +150,11 @@ export default async function SourcerPage({
   rows.sort(
     (a, b) => (dir === "desc" ? -compare(a, b) : compare(a, b)) || String(a.created_at).localeCompare(String(b.created_at)),
   );
-  const href = (next: { sort?: SortKey; dir?: string; zero?: boolean }) => {
+  const href = (next: { sort?: SortKey; dir?: string; zero?: boolean; status?: string }) => {
     const params = new URLSearchParams();
     if (filters.q) params.set("q", filters.q);
-    if (status) params.set("status", status);
+    const nextStatus = next.status ?? status;
+    if (nextStatus !== "todo") params.set("status", nextStatus);
     if (filters.backfill === "true") params.set("backfill", "true");
     const nextSort = next.sort ?? sort;
     if (nextSort !== "created") params.set("sort", nextSort);
@@ -195,27 +205,32 @@ export default async function SourcerPage({
         </span>
       </div>
 
-      <form method="get" className="mt-6 grid gap-3 sm:grid-cols-4">
+      <nav className="mt-6 flex flex-wrap gap-2" aria-label={t("filterLabel")}>
+        {["todo", "quote_sent", "flagged", "all"].map((item) => (
+          <Link
+            key={item}
+            href={href({ status: item })}
+            aria-current={status === item ? "page" : undefined}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+              status === item
+                ? "bg-[var(--navy)] text-white"
+                : "bg-[var(--card)] text-[var(--ink)] ring-1 ring-[var(--line)] hover:ring-[var(--navy)]"
+            }`}
+          >
+            {item === "todo" ? t("toQuote") : item === "all" ? t("allOpen") : t(`statuses.${item}`)}
+            <span className="ml-2 tabular-nums opacity-70">{countOf(item)}</span>
+          </Link>
+        ))}
+      </nav>
+
+      <form method="get" className="mt-4 grid gap-3 sm:grid-cols-3">
         <input
           name="q"
           defaultValue={filters.q}
           placeholder={t("searchPlaceholder")}
           className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
         />
-        <select
-          name="status"
-          defaultValue={status}
-          className="rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm"
-        >
-          <option value="">{t("allStatuses")}</option>
-          {["brief_received", "factories", "samples", "negotiation", "quote_sent", "flagged"].map(
-            (item) => (
-              <option key={item} value={item}>
-                {t(`statuses.${item}`)}
-              </option>
-            ),
-          )}
-        </select>
+        <input type="hidden" name="status" value={status} />
         <label className="flex items-center gap-2 rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm">
           <input
             type="checkbox"
@@ -263,7 +278,13 @@ export default async function SourcerPage({
             </thead>
             <tbody>
               {rows.map((row) => {
+                // A product cannot be quoted without knowing what it is: photo and name come first.
+                const blocking = [
+                  !row.photo_url ? "photo" : null,
+                  !row.title?.trim() ? "name" : null,
+                ].filter(Boolean);
                 const missing = [
+                  ...blocking,
                   row.client_price == null ? "price" : null,
                   row.weight_g == null ? "weight" : null,
                   !row.shipping_channel ? "channel" : null,
@@ -295,7 +316,11 @@ export default async function SourcerPage({
                     <td className="px-4 py-3">
                       {t(`statuses.${row.sourcing_status ?? "brief_received"}`)}
                     </td>
-                    <td className="px-4 py-3 text-[var(--muted)]">
+                    <td
+                      className={`px-4 py-3 ${
+                        blocking.length ? "font-medium text-[var(--rust-ink)]" : "text-[var(--muted)]"
+                      }`}
+                    >
                       {missing.length
                         ? missing.map((item) => t(`missing.${item}`)).join(t("listSeparator"))
                         : t("ready")}

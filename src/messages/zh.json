@@ -1341,7 +1341,9 @@
       "missing": {
         "price": "价格",
         "weight": "重量",
-        "channel": "物流渠道"
+        "channel": "物流渠道",
+        "photo": "图片",
+        "name": "名称"
       },
       "listSeparator": "、",
       "statuses": {
@@ -1361,7 +1363,10 @@
       "hideZero": "隐藏",
       "trendNew": "新",
       "trendHint": "前 7 天：{previous}",
-      "marginLink": "利润 →"
+      "marginLink": "利润 →",
+      "toQuote": "待报价",
+      "allOpen": "全部",
+      "filterLabel": "按状态筛选"
     },
     "product": {
       "backToTodo": "← 待完善",
