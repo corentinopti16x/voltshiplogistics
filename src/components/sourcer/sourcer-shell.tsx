@@ -26,11 +26,11 @@ export async function SourcerShell({
               <AdminNavLinks />
             ) : (
               <nav className="flex items-center gap-4 text-sm">
-                <Link href="/sourcer/products" className="font-medium">
-                  {t("catalogLink")}
-                </Link>
                 <Link href="/sourcer" className="font-medium">
                   {t("queueLink")}
+                </Link>
+                <Link href="/sourcer/products" className="font-medium">
+                  {t("catalogLink")}
                 </Link>
                 <Link href="/sourcer/transport" className="font-medium">
                   {t("transportLink")}

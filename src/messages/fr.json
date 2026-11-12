@@ -2277,12 +2277,19 @@
       "notes": "Notes",
       "reference": "Référence",
       "openSourceLink": "Ouvrir le lien source",
-      "sales90": "{count} ventes sur 90 j"
+      "sales90": "{count} ventes sur 90 j",
+      "queue": {
+        "position": "Produit {position} sur {total} à chiffrer",
+        "outside": "{total} produits à chiffrer",
+        "previous": "‹ Précédent",
+        "next": "Suivant : {title} ›",
+        "last": "Dernier produit à chiffrer"
+      }
     },
     "shell": {
-      "queueLink": "File de sourcing",
+      "queueLink": "À chiffrer",
       "staff": "Équipe",
-      "catalogLink": "Produits",
+      "catalogLink": "Tous les produits",
       "transportLink": "Transport"
     },
     "form": {
@@ -2382,7 +2389,8 @@
       "advancedTitle": "Options avancées",
       "advancedHint": "boîte, emballage spécifique, vente en set — rarement utilisé",
       "customsPrefill": "Préremplir ({name})",
-      "customsPrefillHint": "Clique sur « Préremplir » pour le nom déclaré, le code HS et les dimensions habituels, puis vérifie."
+      "customsPrefillHint": "Clique sur « Préremplir » pour le nom déclaré, le code HS et les dimensions habituels, puis vérifie.",
+      "nextToQuote": "Produit suivant à chiffrer ›"
     },
     "announced": {
       "title": "Prix annoncés au client",

@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/routing";
+import { Link, useRouter } from "@/i18n/routing";
 import {
   flagSourcingAction,
   saveSourcingDraftAction,
@@ -140,10 +140,9 @@ export function SourcingWorkForm({
   const ticked = tickedAttributes(parseProductAttributes(request.attributes));
   const [channel, setChannel] = useState<string>(gridChannel(product.shipping_channel ?? suggested ?? ""));
 
+  // After a quote is sent the sourcer stays on the product and chooses when to move on.
   useEffect(() => {
-    if (sendState.ok && sendState.nextId) {
-      router.push(`/sourcer/${sendState.nextId}`);
-    }
+    if (sendState.ok) router.refresh();
   }, [router, sendState]);
 
   return (
@@ -534,7 +533,19 @@ export function SourcingWorkForm({
           </p>
         ) : null}
         {saveState.ok ? <p className="text-sm text-emerald-800">{t("draftSaved")}</p> : null}
-        {sendState.ok ? <p className="text-sm text-emerald-800">{t("quoteSent")}</p> : null}
+        {sendState.ok ? (
+          <p className="flex flex-wrap items-center gap-3 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+            {t("quoteSent")}
+            {sendState.nextId ? (
+              <Link
+                href={`/sourcer/${sendState.nextId}`}
+                className="rounded-lg bg-emerald-700 px-3 py-1.5 font-semibold text-white hover:opacity-90"
+              >
+                {t("nextToQuote")}
+              </Link>
+            ) : null}
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-3">
           <button
             type="submit"
