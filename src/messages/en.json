@@ -2284,6 +2284,12 @@
         "previous": "‹ Previous",
         "next": "Next: {title} ›",
         "last": "Last product to quote"
+      },
+      "folds": {
+        "cogs": "Landed cost by country and quantity",
+        "upsells": "Upsells and kits",
+        "buy": "How many to buy",
+        "announced": "Prices announced to the client"
       }
     },
     "shell": {

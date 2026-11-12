@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { loadQuoteQueue } from "@/lib/products/queue";
 import { queuePosition } from "@/lib/products/queue-core";
 import { notFound } from "next/navigation";
@@ -184,10 +185,6 @@ export default async function SourcerProductPage({
       </section>
 
       <div className="mt-6">
-        <BuyAdvice lines={buyLines} locale={locale} coverDays={DEFAULT_BUY_OPTIONS.coverDays} />
-      </div>
-
-      <div className="mt-6">
         <SourcingWorkForm
           product={product}
           work={work}
@@ -195,9 +192,8 @@ export default async function SourcerProductPage({
           packagingLadder={settings.packaging_ladder}
         />
       </div>
-      <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6" id="carrier">
-        <h2 className="text-sm font-semibold">{tCarrier("title")}</h2>
-        <p className="mt-1 text-xs text-[var(--muted)]">{tCarrier("lead")}</p>
+      <Fold title={tCarrier("title")} hint={tCarrier("lead")}>
+        <div id="carrier">
         {!matrix || !views ? (
           <p className="mt-3 text-sm text-[var(--muted)]">{tCarrier("error")}</p>
         ) : matrix.missingReason ? (
@@ -207,10 +203,11 @@ export default async function SourcerProductPage({
         ) : (
           <CarrierSelector productId={product.id} markets={views.carrierMarkets} canEdit staff />
         )}
-      </section>
+        </div>
+      </Fold>
 
       {matrix && views ? (
-        <div className="mt-6">
+        <Fold title={t("folds.cogs")}>
           <CogsMatrix
             markets={views.matrixMarkets}
             quantities={matrix.quantities}
@@ -222,9 +219,10 @@ export default async function SourcerProductPage({
             missingReason={matrix.missingReason}
             packPieces={packPieces(product.quote_json)}
           />
-        </div>
+        </Fold>
       ) : null}
 
+      <Fold title={t("folds.upsells")}>
       <div className="mt-6">
         <UpsellsPanel
           product={product}
@@ -246,7 +244,13 @@ export default async function SourcerProductPage({
           />
         </div>
       ) : null}
+      </Fold>
 
+      <Fold title={t("folds.buy")}>
+        <BuyAdvice lines={buyLines} locale={locale} coverDays={DEFAULT_BUY_OPTIONS.coverDays} />
+      </Fold>
+
+      <Fold title={t("folds.announced")}>
       <div className="mt-6">
         <AnnouncedPricesForm productId={product.id} quoteJson={product.quote_json} markets={getProductMarkets(product)} />
       </div>
@@ -260,7 +264,26 @@ export default async function SourcerProductPage({
           />
         </div>
       ) : null}
+      </Fold>
     </SourcerShell>
+  );
+}
+
+/** A secondary block of the sheet: closed by default, nothing is removed. */
+function Fold({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  return (
+    <details className="group mt-4 rounded-2xl border border-[var(--line)] bg-[var(--card)]">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-4 text-sm font-semibold">
+        <span>
+          {title}
+          {hint ? <span className="mt-0.5 block text-xs font-normal text-[var(--muted)]">{hint}</span> : null}
+        </span>
+        <span aria-hidden className="text-[var(--muted)] transition-transform group-open:rotate-90">
+          ›
+        </span>
+      </summary>
+      <div className="border-t border-[var(--line)] px-6 pt-2 pb-6">{children}</div>
+    </details>
   );
 }
 
