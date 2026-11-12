@@ -2277,12 +2277,19 @@
       "notes": "Notes",
       "reference": "Reference",
       "openSourceLink": "Open source link",
-      "sales90": "{count} sold in 90 days"
+      "sales90": "{count} sold in 90 days",
+      "queue": {
+        "position": "Product {position} of {total} to quote",
+        "outside": "{total} products to quote",
+        "previous": "‹ Previous",
+        "next": "Next: {title} ›",
+        "last": "Last product to quote"
+      }
     },
     "shell": {
-      "queueLink": "Sourcing queue",
+      "queueLink": "To quote",
       "staff": "Staff",
-      "catalogLink": "Products",
+      "catalogLink": "All products",
       "transportLink": "Transport"
     },
     "form": {
@@ -2382,7 +2389,8 @@
       "advancedTitle": "Advanced options",
       "advancedHint": "box, specific packaging, sold as a set — rarely used",
       "customsPrefill": "Pre-fill ({name})",
-      "customsPrefillHint": "Click « Pre-fill » for the usual declared name, HS code and dimensions, then check."
+      "customsPrefillHint": "Click « Pre-fill » for the usual declared name, HS code and dimensions, then check.",
+      "nextToQuote": "Next product to quote ›"
     },
     "announced": {
       "title": "Prices announced to the client",

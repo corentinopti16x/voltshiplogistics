@@ -1,3 +1,5 @@
+import { loadQuoteQueue } from "@/lib/products/queue";
+import { queuePosition } from "@/lib/products/queue-core";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { redirect, Link } from "@/i18n/routing";
@@ -92,14 +94,46 @@ export default async function SourcerProductPage({
   const skuKeys = productSkuKeys([product], salesVariants).get(product.id) ?? new Set<string>();
   const buyLines = await loadProductBuyLines(product.client_id, product.id, skuKeys).catch(() => []);
 
+  const place = queuePosition(await loadQuoteQueue().catch(() => []), product.id);
+
   return (
     <SourcerShell role={ctx.role}>
-      <Link
-        href={from === "todo" ? "/admin/todo" : "/sourcer"}
-        className="text-sm text-[var(--muted)] hover:text-[var(--ink)]"
-      >
-        {from === "todo" ? t("backToTodo") : t("backToQueue")}
-      </Link>
+      <div className="sticky top-0 z-10 -mx-2 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[var(--card)]/95 px-4 py-3 ring-1 ring-[var(--line)] backdrop-blur">
+        <div className="flex items-center gap-4">
+    <Link
+            href={from === "todo" ? "/admin/todo" : "/sourcer"}
+            className="text-sm text-[var(--muted)] hover:text-[var(--ink)]"
+          >
+            {from === "todo" ? t("backToTodo") : t("backToQueue")}
+          </Link>
+          <span className="text-sm font-semibold">
+            {place.position
+              ? t("queue.position", { position: place.position, total: place.total })
+              : t("queue.outside", { total: place.total })}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          {place.previous ? (
+            <Link
+              href={`/sourcer/${place.previous.id}`}
+              className="rounded-lg px-3 py-1.5 font-medium ring-1 ring-[var(--line)] hover:ring-[var(--navy)]"
+            >
+              {t("queue.previous")}
+            </Link>
+          ) : null}
+          {place.next ? (
+            <Link
+              href={`/sourcer/${place.next.id}`}
+              title={place.next.title}
+              className="max-w-xs truncate rounded-lg bg-[var(--navy)] px-3 py-1.5 font-semibold text-white hover:opacity-90"
+            >
+              {t("queue.next", { title: place.next.title })}
+            </Link>
+          ) : (
+            <span className="text-[var(--muted)]">{t("queue.last")}</span>
+          )}
+        </div>
+      </div>
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <ProductPhoto
           src={product.photo_url}
