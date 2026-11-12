@@ -7,6 +7,7 @@ import {
   type SourcingPreviewInput,
   type SourcingPreviewResult,
 } from "@/app/actions/sourcing-preview";
+import { sourcingDecision } from "@/lib/products/decision";
 
 const DEBOUNCE_MS = 450;
 
@@ -18,7 +19,14 @@ function eur(value: number) {
  * COGS computed live from the values being typed on the sourcing form (not saved yet).
  * Sticky beside the form so the sourcer sees the result without scrolling or saving.
  */
-export function LiveCogsPanel({ input }: { input: SourcingPreviewInput }) {
+export function LiveCogsPanel({
+  input,
+  sellingPrice = null,
+}: {
+  input: SourcingPreviewInput;
+  /** Shopify selling price of the product (shop currency), for the decision aid. */
+  sellingPrice?: number | null;
+}) {
   const t = useTranslations("sourcer.live");
   const [result, setResult] = useState<SourcingPreviewResult | null>(null);
   const [pending, startTransition] = useTransition();
@@ -69,6 +77,53 @@ export function LiveCogsPanel({ input }: { input: SourcingPreviewInput }) {
                 <Row label={t("handling")} value={eur(single.handling)} />
               </dl>
               {single.lineName ? <p className="mt-1 text-[11px] text-[var(--muted)]">{single.lineName}</p> : null}
+              {(() => {
+                const decision = sourcingDecision({
+                  sellingPrice,
+                  cogs: single.cogs,
+                  shipping: single.shipping,
+                });
+                const pct = (value: number) => `${Math.round(value * 100)} %`;
+                const tone = {
+                  good: "bg-emerald-50 text-emerald-800",
+                  limit: "bg-amber-50 text-amber-900",
+                  bad: "bg-[var(--rust-soft)] text-[var(--rust-ink)]",
+                };
+                return (
+                  <div className="mt-4 border-t border-[var(--line)] pt-3">
+                    <p className="text-xs font-semibold">{t("decision.title")}</p>
+                    <dl className="mt-2 space-y-1 text-xs">
+                      <Row
+                        label={t("decision.selling")}
+                        value={sellingPrice ? sellingPrice.toFixed(2) : t("decision.unknown")}
+                      />
+                    </dl>
+                    {decision.costLevel && decision.costShare != null ? (
+                      <p className={`mt-2 rounded-lg px-3 py-2 text-xs font-semibold ${tone[decision.costLevel]}`}>
+                        {t(`decision.cost.${decision.costLevel}`, { share: pct(decision.costShare) })}
+                        <span className="block font-normal">
+                          {t("decision.left", { amount: (decision.left ?? 0).toFixed(2) })}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-xs text-[var(--muted)]">{t("decision.noSelling")}</p>
+                    )}
+                    {decision.shippingShare != null ? (
+                      <p
+                        className={`mt-2 rounded-lg px-3 py-2 text-xs font-semibold ${
+                          decision.heavy ? tone.bad : tone.good
+                        }`}
+                      >
+                        {t(decision.heavy ? "decision.heavy" : "decision.light", {
+                          share: pct(decision.shippingShare),
+                          weight: single.weightG,
+                        })}
+                      </p>
+                    ) : null}
+                    <p className="mt-2 text-[11px] text-[var(--muted)]">{t("decision.rule")}</p>
+                  </div>
+                );
+              })()}
             </div>
           ) : (
             <p className="mt-3 text-xs text-[var(--muted)]">{t("noLine")}</p>

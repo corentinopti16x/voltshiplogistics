@@ -2506,7 +2506,22 @@
       "handling": "Handling + commission",
       "noLine": "No line covers this weight on this market.",
       "market": "Market",
-      "hint": "Updated as you type, same grid and rules as the matrix. Remember to save."
+      "hint": "Updated as you type, same grid and rules as the matrix. Remember to save.",
+      "decision": {
+        "title": "Decision aid",
+        "selling": "Shopify selling price",
+        "unknown": "unknown",
+        "noSelling": "No Shopify selling price for this product: cannot tell whether the price is right.",
+        "cost": {
+          "good": "Good price: the landed cost is {share} of the selling price.",
+          "limit": "Borderline: the landed cost is {share} of the selling price.",
+          "bad": "Too expensive: the landed cost is {share} of the selling price."
+        },
+        "left": "{amount} per unit is left to the client, before advertising.",
+        "heavy": "Too heavy: shipping is {share} of the landed cost ({weight} g).",
+        "light": "Weight is fine: shipping is {share} of the landed cost ({weight} g).",
+        "rule": "Guide: good up to 30 % of the selling price, borderline up to 40 %, too expensive above. Too heavy when shipping is more than half the landed cost. Selling price in the shop's currency."
+      }
     },
     "quick": {
       "factory": "Factory ¥",
