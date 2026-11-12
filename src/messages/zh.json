@@ -1316,7 +1316,24 @@
     "reopen": "重新打开"
   },
   "sourcer": {
+    "newProduct": {
+      "back": "← 采购列表",
+      "title": "为客户新建产品",
+      "lead": "客户通过消息提出了产品需求：在这里创建，产品会进入「待报价」，客户在自己的页面也能看到。",
+      "client": "客户",
+      "clientPick": "选择客户",
+      "name": "产品名称",
+      "photo": "照片",
+      "link": "产品链接",
+      "photoOrLink": "照片或链接，至少填一个。",
+      "markets": "销售国家",
+      "notes": "客户需求",
+      "notesHint": "客户的要求：数量、颜色、规格……",
+      "create": "创建产品",
+      "creating": "创建中…"
+    },
     "queue": {
+      "newProduct": "新建产品",
       "eyebrow": "运营",
       "title": "采购队列",
       "intro": "按创建时间从早到晚排列。请填写客户可见的报价，供应商信息仅限内部使用。",

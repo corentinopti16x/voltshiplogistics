@@ -2220,7 +2220,24 @@
   "sourcer": {
     "title": "File sourcing",
     "soon": "Les demandes les plus anciennes d’abord. Complétez le devis et envoyez le COGS client.",
+    "newProduct": {
+      "back": "← File de sourcing",
+      "title": "Nouveau produit pour un client",
+      "lead": "Un client a demandé un produit par message : crée la fiche ici, elle arrive dans « À chiffrer » et le client la voit dans son espace.",
+      "client": "Client",
+      "clientPick": "Choisir le client",
+      "name": "Nom du produit",
+      "photo": "Photo",
+      "link": "Lien du produit",
+      "photoOrLink": "Une photo ou un lien, au moins l'un des deux.",
+      "markets": "Pays de vente",
+      "notes": "Demande du client",
+      "notesHint": "Ce que le client a demandé : quantité, couleur, exigences…",
+      "create": "Créer la fiche",
+      "creating": "Création…"
+    },
     "queue": {
+      "newProduct": "Nouveau produit",
       "eyebrow": "Opérations",
       "title": "File de sourcing",
       "intro": "Les plus anciennes d'abord. Remplis le devis visible par le client et garde les infos fournisseur en interne.",
