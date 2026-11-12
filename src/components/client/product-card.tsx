@@ -1,15 +1,12 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
-import { Metric } from "@/components/ui/stat";
-import { LifecycleBadge } from "@/components/client/lifecycle-badge";
 import { ProductPhoto } from "@/components/client/product-photo";
 import { ProductImageCarousel } from "@/components/client/product-image-carousel";
 import { SIMPLE_PIPELINE, isMigratedProduct, simpleStage } from "@/lib/products/types";
 import type { DashboardPeriod } from "@/lib/products/periods";
-import { cogsForQuantity } from "@/lib/products/average-order";
 import type { ProductInsight } from "@/lib/products/overview";
-import { formatAmount, formatDays, formatNumber, formatRatio } from "@/lib/format";
+import { formatAmount, formatNumber } from "@/lib/format";
 
 /**
  * Product card used on the dashboard and the products list.
@@ -20,7 +17,6 @@ import { formatAmount, formatDays, formatNumber, formatRatio } from "@/lib/forma
 export async function ProductCard({
   insight,
   stockAlert = false,
-  period = "7d",
 }: {
   insight: ProductInsight;
   stockAlert?: boolean;
@@ -28,21 +24,12 @@ export async function ProductCard({
   period?: DashboardPeriod;
 }) {
   const [t, locale] = await Promise.all([getTranslations("products.card"), getLocale()]);
-  const { product, metrics, cogs, cogsSource, economics, cogsLadder, shopifyImages, estimate } = insight;
+  const { product, metrics, cogs, cogsLadder, shopifyImages, estimate } = insight;
   // Early estimate (client answers × active grid) — only while no real quote exists.
   const early = estimate && estimate.cogs != null ? estimate : null;
   const migrated = isMigratedProduct(product);
   const stage = simpleStage(product.sourcing_status);
   const stageIndex = SIMPLE_PIPELINE.indexOf(stage);
-  const window = metrics?.windows[period] ?? null;
-  const periodLabel = t(`period.${period}`);
-  // Average order of this product over the period: units per order, basket, COGS at that
-  // quantity (live grid ladder) and the resulting gross margin per order.
-  const avgQty = window && window.orders > 0 ? window.units / window.orders : null;
-  const avgBasket =
-    window?.revenue != null && window.orders > 0 ? window.revenue / window.orders : null;
-  const avgCogs = cogsForQuantity(cogsLadder, avgQty) ?? (avgQty != null && cogs != null ? cogs * avgQty : null);
-  const avgMargin = avgBasket != null && avgCogs != null ? avgBasket - avgCogs : null;
   const daysLeft = metrics?.daysLeft ?? null;
   const lowStock = stockAlert || (daysLeft != null && daysLeft < 19 && product.lifecycle_status !== "dead");
 
@@ -68,7 +55,6 @@ export async function ProductCard({
           <ProductPhoto src={product.photo_url} alt={product.title} className="h-full w-full" />
         )}
         <span className="pointer-events-none absolute top-2.5 left-2.5 z-[3] flex gap-1.5">
-          <LifecycleBadge status={product.lifecycle_status} />
           {insight.quotePending ? <Badge tone="navy">{t("quoteReady")}</Badge> : null}
         </span>
         {lowStock ? (
@@ -79,100 +65,19 @@ export async function ProductCard({
       </span>
 
       <span className="flex flex-1 flex-col gap-3 p-4">
-        <span className="flex items-start justify-between gap-2">
-          <span className="line-clamp-2 text-[15px] leading-snug font-bold">{product.title}</span>
-          {product.sku ? (
-            <span className="shrink-0 text-[11px] text-[var(--faint)]">{product.sku}</span>
-          ) : null}
-        </span>
-
-        <span className="grid grid-cols-3 gap-x-2 rounded-[10px] bg-[var(--card-soft)] px-2.5 py-2">
-          <Metric
-            label={t("periodUnits", { period: periodLabel })}
-            value={window ? formatNumber(window.units, locale) : "—"}
-          />
-          <Metric
-            label={t("periodRevenue", { period: periodLabel })}
-            value={
-              window?.revenue != null
-                ? formatAmount(window.revenue, locale)
-                : window && window.units === 0
-                  ? formatAmount(0, locale)
-                  : "—"
-            }
-          />
-          <Metric
-            label={t("avgQty")}
-            value={avgQty == null ? "—" : formatNumber(avgQty, locale, 1)}
-          />
-        </span>
-
-        <span className="grid grid-cols-3 gap-x-2 gap-y-2.5">
-          <Metric
-            label={avgBasket != null ? t("avgBasket") : t("price")}
-            value={formatAmount(avgBasket ?? product.selling_price, locale)}
-          />
-          <Metric
-            label={avgMargin != null ? t("avgMargin") : t("grossMargin")}
-            value={formatAmount(avgMargin ?? economics.profit, locale)}
-            tone={(avgMargin ?? economics.profit ?? 0) < 0 ? "warning" : "default"}
-          />
-          <Metric
-            label={t("stockDays")}
-            value={daysLeft == null ? "—" : t("days", { days: formatDays(daysLeft, locale) })}
-            tone={lowStock ? "warning" : "default"}
-          />
-          {early ? (
-            <Metric
-              label={t("cogsEarly")}
-              tone="muted"
-              value={
-                <span className="rounded-[6px] border border-dashed border-[var(--line)] px-1.5 italic">
-                  ≈ {formatAmount(early.cogs, locale)}
-                </span>
-              }
-            />
-          ) : (
-            <Metric
-              label={
-                avgCogs != null && avgQty != null
-                  ? t("avgCogs")
-                  : cogsSource === "accepted"
-                    ? t("cogsReal")
-                    : t("cogsEstimate")
-              }
-              value={formatAmount(avgCogs ?? cogs, locale)}
-            />
-          )}
-          <Metric
-            label={early ? t("roasEarly") : t("roas")}
-            tone={early ? "muted" : "default"}
-            value={
-              <>
-                {formatRatio((early ? early.economics : economics).roasBe, locale)}
-                <span className="text-[var(--faint)]"> · </span>
-                <span className={early ? "" : "text-[var(--gold-text)]"}>
-                  {formatRatio((early ? early.economics : economics).roasTarget, locale)}
-                </span>
-              </>
-            }
-          />
-        </span>
-        {early ? (
-          <span className="text-[11px] italic text-[var(--faint)]">{t("cogsEarlyNote")}</span>
-        ) : null}
+        <span className="line-clamp-2 text-[15px] leading-snug font-bold">{product.title}</span>
 
         {/* COGS 1·2·3·4·5 — live grid on the primary market (calculateProductCogsMatrix) */}
         {cogsLadder.some((step) => step.cogs != null) ? (
-          <span className="flex flex-col gap-1 rounded-[10px] bg-[var(--card-soft)] px-2.5 py-2">
+          <span className="flex flex-col gap-2 rounded-[10px] bg-[var(--card-soft)] px-3 py-2.5">
             <span className="text-[11px] font-semibold text-[var(--muted)]">
-              {t("cogsLadder", { market: insight.primaryMarket })}
-              {insight.carrierLine ? (
-                <span className="font-medium text-[var(--faint)]"> · {t("via", { line: insight.carrierLine })}</span>
-              ) : null}
+              {t("unitPrice", { market: insight.primaryMarket })}
             </span>
-            <span className="grid grid-cols-5 gap-1">
-              {cogsLadder.map((step) => (
+            <span className="tabular text-2xl leading-none font-bold">
+              {cogsLadder[0]?.cogs == null ? "—" : formatAmount(cogsLadder[0].cogs, locale)}
+            </span>
+            <span className="grid grid-cols-4 gap-1 border-t border-[var(--line-soft)] pt-2">
+              {cogsLadder.slice(1).map((step) => (
                 <span key={step.quantity} className="flex min-w-0 flex-col">
                   <span className="text-[10px] font-bold text-[var(--faint)]">×{step.quantity}</span>
                   <span
@@ -185,7 +90,23 @@ export async function ProductCard({
               ))}
             </span>
           </span>
-        ) : null}
+        ) : (
+          <span className="flex flex-col gap-1 rounded-[10px] bg-[var(--card-soft)] px-3 py-2.5">
+            <span className="text-[11px] font-semibold text-[var(--muted)]">
+              {t("unitPrice", { market: insight.primaryMarket })}
+            </span>
+            <span className="tabular text-2xl leading-none font-bold">
+              {early?.cogs != null
+                ? formatAmount(early.cogs, locale)
+                : cogs != null
+                  ? formatAmount(cogs, locale)
+                  : "—"}
+            </span>
+            <span className="text-[11px] text-[var(--faint)]">
+              {early?.cogs != null ? t("cogsEarlyNote") : cogs != null ? "" : t("pricePending")}
+            </span>
+          </span>
+        )}
 
         <span className="mt-auto flex flex-col gap-1.5">
           {migrated ? null : (

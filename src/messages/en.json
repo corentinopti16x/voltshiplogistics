@@ -606,7 +606,9 @@
       "avgQty": "Avg qty / order",
       "avgBasket": "Avg basket",
       "avgMargin": "Margin / order",
-      "avgCogs": "Avg COGS"
+      "avgCogs": "Avg COGS",
+      "unitPrice": "Your price per unit, delivered · {market}",
+      "pricePending": "Price being calculated"
     },
     "howItWorks": {
       "title": "How it works",
@@ -744,7 +746,9 @@
       "parentsTitle": "Sold with",
       "parentsLead": "This product is sold as an upsell of these products. The full parcel COGS (product + upsells) is on their page, in “Frequently bought together”.",
       "announced": "Announced price"
-    }
+    },
+    "searchButton": "Search",
+    "searchField": "Search a product"
   },
   "economics": {
     "title": "Unit economics",
