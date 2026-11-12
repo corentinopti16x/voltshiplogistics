@@ -35,7 +35,7 @@ import {
   type LinePriceError,
 } from "./line-price";
 import { loadLineSettings, saveLineSetting } from "./line-settings-server";
-import { getActiveGridVersion, loadRateCellsFor } from "./server";
+import { getActiveGridVersion, loadRateCellsFor, markGridModified } from "./server";
 import { readPricingSettings } from "./settings";
 import {
   TRANSPORT_CHANNELS,
@@ -464,6 +464,8 @@ export async function applyLinePrice(
     if (error) return { ok: false, error: "failed" };
   }
 
+  await markGridModified(gridVersion).catch(() => null);
+
   // Remember what was typed, so the form opens with it next time.
   const stored = await readStoredPrices();
   stored[linePriceKey(target)] = {
@@ -568,5 +570,6 @@ export async function setLineChannels(
       .eq("channel", channel);
     if (deleteError) return { ok: false, error: "failed" };
   }
+  if (added.length > 0 || removed.length > 0) await markGridModified(gridVersion).catch(() => null);
   return { ok: true, gridVersion, added, removed };
 }
