@@ -1,3 +1,4 @@
+import { fillEmptyFromAirtable, mergeQuoteAppFirst } from "./app-wins";
 import "server-only";
 
 import { randomUUID } from "crypto";
@@ -323,6 +324,27 @@ export async function syncAirtableRecord(
       _photo_source: source?.id ?? previousSource,
     },
   };
+  // The app is the source of truth for a product it already has: Airtable only fills
+  // what is still empty there. AIRTABLE_OVERRIDES_APP=true restores the old behaviour.
+  if (existing?.id && process.env.AIRTABLE_OVERRIDES_APP !== "true") {
+    const { data: current } = await admin
+      .from("products_cache")
+      .select("*")
+      .eq("id", existing.id)
+      .maybeSingle();
+    const patch = fillEmptyFromAirtable((current ?? {}) as Record<string, unknown>, row);
+    const quote = mergeQuoteAppFirst(existingQuote, {
+      ...row.quote_json,
+      _photo_source: source?.id ?? previousSource,
+    });
+    const { error: updateError } = await admin
+      .from("products_cache")
+      .update({ ...patch, photo_url: existing.photo_url ?? photoUrl, quote_json: quote })
+      .eq("id", existing.id);
+    return updateError
+      ? { ok: false as const, error: updateError.message }
+      : { ok: true as const };
+  }
   const { error } = await admin
     .from("products_cache")
     .upsert(merged, { onConflict: "airtable_record_id" });
