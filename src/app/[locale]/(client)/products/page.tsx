@@ -4,10 +4,8 @@ import { getAuthContext } from "@/lib/auth/context";
 import { listRestockAlerts } from "@/lib/products/queries";
 import { loadProductInsights, type ProductInsight } from "@/lib/products/overview";
 import { ProductCard } from "@/components/client/product-card";
-import { ProductFilters } from "@/components/client/product-filters";
 import { SIMPLE_PIPELINE, isMigratedProduct, simpleStage } from "@/lib/products/types";
 import { parseDashboardPeriod } from "@/lib/products/periods";
-import { PeriodTabs } from "@/components/client/period-tabs";
 import { Bolt, ButtonLink, EmptyState, PageTitle } from "@/components/ui";
 
 export default async function ProductsPage({
@@ -91,13 +89,6 @@ export default async function ProductsPage({
     }
   });
 
-  const counts = {
-    all: insights.length,
-    testing: insights.filter((row) => row.product.lifecycle_status === "testing").length,
-    winning: insights.filter((row) => row.product.lifecycle_status === "winning").length,
-    declining: insights.filter((row) => row.product.lifecycle_status === "declining").length,
-    dead: insights.filter((row) => row.product.lifecycle_status === "dead").length,
-  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -113,27 +104,18 @@ export default async function ProductsPage({
         }
       />
 
-      <ProductFilters
-        q={q}
-        lifecycle={lifecycle}
-        sourcing={sourcing}
-        sort={sort}
-        minSales={minSalesRaw}
-        period={period}
-        counts={counts}
-      />
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[13px] text-[var(--muted)]">{t("periodHint")}</p>
-        <PeriodTabs
-          basePath="/products"
-          period={period}
-          label={t("periodLabel")}
-          params={Object.fromEntries(
-            Object.entries({ q, lifecycle, sourcing, sort, min: minSalesRaw }).filter(([, v]) => v),
-          )}
+      <form method="get" className="flex max-w-md gap-2">
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder={t("searchField")}
+          aria-label={t("searchField")}
+          className="min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--navy)]"
         />
-      </div>
+        <button className="cursor-pointer rounded-xl bg-[var(--navy)] px-4 py-2.5 text-sm font-semibold text-white">
+          {t("searchButton")}
+        </button>
+      </form>
 
       {loadError ? (
         <p className="rounded-xl border border-[#f0d9b5] bg-[var(--gold-soft)] px-4 py-3 text-sm text-[var(--gold-ink)]">

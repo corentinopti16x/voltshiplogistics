@@ -606,7 +606,9 @@
       "avgQty": "Qté moy. / cmd",
       "avgBasket": "Panier moyen",
       "avgMargin": "Marge / cmd",
-      "avgCogs": "COGS moyen"
+      "avgCogs": "COGS moyen",
+      "unitPrice": "Ton prix par unité, livré · {market}",
+      "pricePending": "Prix en cours de calcul"
     },
     "howItWorks": {
       "title": "Comment ça se passe",
@@ -744,7 +746,9 @@
       "parentsTitle": "Vendu avec",
       "parentsLead": "Ce produit part en upsell de ces produits. Le COGS du colis complet (produit + upsells) est sur leur fiche, bloc « Souvent achetés ensemble ».",
       "announced": "Prix annoncé"
-    }
+    },
+    "searchButton": "Rechercher",
+    "searchField": "Rechercher un produit"
   },
   "economics": {
     "title": "Économie unitaire",
