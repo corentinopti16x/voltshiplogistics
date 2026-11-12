@@ -2501,7 +2501,22 @@
       "handling": "Préparation + commission",
       "noLine": "Aucune ligne ne couvre ce poids sur ce marché.",
       "market": "Marché",
-      "hint": "Mis à jour à chaque saisie, même grille et mêmes règles que la matrice. Pense à enregistrer."
+      "hint": "Mis à jour à chaque saisie, même grille et mêmes règles que la matrice. Pense à enregistrer.",
+      "decision": {
+        "title": "Aide à la décision",
+        "selling": "Prix de vente Shopify",
+        "unknown": "inconnu",
+        "noSelling": "Pas de prix de vente Shopify pour ce produit : impossible de dire si le prix est bon.",
+        "cost": {
+          "good": "Bon prix : le prix de revient fait {share} du prix de vente.",
+          "limit": "Limite : le prix de revient fait {share} du prix de vente.",
+          "bad": "Trop cher : le prix de revient fait {share} du prix de vente."
+        },
+        "left": "Il reste {amount} par unité au client, avant sa publicité.",
+        "heavy": "Trop lourd : le transport fait {share} du prix de revient ({weight} g).",
+        "light": "Poids correct : le transport fait {share} du prix de revient ({weight} g).",
+        "rule": "Repères : bon jusqu’à 30 % du prix de vente, limite jusqu’à 40 %, trop cher au-delà. Trop lourd quand le transport dépasse la moitié du prix de revient. Prix de vente dans la devise de la boutique."
+      }
     },
     "quick": {
       "factory": "Prix usine ¥",

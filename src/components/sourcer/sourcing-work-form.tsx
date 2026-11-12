@@ -580,6 +580,7 @@ export function SourcingWorkForm({
       </form>
     </div>
     <LiveCogsPanel
+      sellingPrice={product.selling_price}
       input={{
         productId: product.id,
         clientPrice,
