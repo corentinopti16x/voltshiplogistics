@@ -16,6 +16,7 @@ import {
   saveLineSetting,
   type LineSettingPatch,
 } from "@/lib/pricing/line-settings-server";
+import { recordPriceChanges } from "@/lib/products/price-changes";
 import { TRANSPORT_SAMPLE_WEIGHTS_G } from "@/lib/pricing/transport-view";
 
 export type TransportActionResult =
@@ -117,6 +118,10 @@ export async function saveLinePriceAction(
 > {
   const ctx = await teamContext();
   if (!ctx) return { ok: false, code: "forbidden" };
+  // What each client pays before the change, kept to show them the date it moved.
+  const impact = await previewLinePrice(input, input.price, input.isNew === true).catch(
+    () => null,
+  );
   const result = await applyLinePrice(
     input,
     input.price,
@@ -140,6 +145,13 @@ export async function saveLinePriceAction(
       cells: result.cells,
     },
   });
+  if (impact?.ok) {
+    await recordPriceChanges(
+      ctx.userId,
+      result.target.destination,
+      impact.preview.products,
+    ).catch(() => null);
+  }
   // Every product page, catalogue and margin view reads the grid.
   revalidatePath("/[locale]", "layout");
   return {

@@ -372,6 +372,11 @@
     }
   },
   "products": {
+    "priceChanges": {
+      "title": "Prices that changed",
+      "lead": "Price for 1 unit, shipping included.",
+      "since": "since {date}"
+    },
     "title": "Products",
     "lead": "Your library, ranked from your Shopify sales. Open a card for the quote, stock and unit economics.",
     "new": "New product",

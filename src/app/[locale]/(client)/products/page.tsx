@@ -1,8 +1,11 @@
 import { getActiveShopId } from "@/lib/shops/active";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { getAuthContext } from "@/lib/auth/context";
 import { listRestockAlerts } from "@/lib/products/queries";
 import { loadProductInsights, type ProductInsight } from "@/lib/products/overview";
+import { loadRecentPriceChanges } from "@/lib/products/price-changes";
+import type { PriceChange } from "@/lib/products/price-changes-core";
+import { formatAmount } from "@/lib/format";
 import { ProductCard } from "@/components/client/product-card";
 import { SIMPLE_PIPELINE, isMigratedProduct, simpleStage } from "@/lib/products/types";
 import { parseDashboardPeriod } from "@/lib/products/periods";
@@ -40,7 +43,9 @@ export default async function ProductsPage({
   let insights: ProductInsight[] = [];
   let alertIds = new Set<string>();
   let loadError = false;
+  let priceChanges: PriceChange[] = [];
   if (ctx?.clientId) {
+    priceChanges = await loadRecentPriceChanges(ctx.clientId).catch(() => []);
     try {
       const overview = await loadProductInsights(
         ctx.clientId,
@@ -90,6 +95,12 @@ export default async function ProductsPage({
   });
 
 
+  // Only the products shown to this client (active shop), 8 latest changes.
+  const titleOf = new Map(insights.map((row) => [row.product.id, row.product.title]));
+  const shownChanges = priceChanges.filter((change) => titleOf.has(change.productId)).slice(0, 8);
+  const locale = await getLocale();
+  const dateLabel = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" });
+
   return (
     <div className="flex flex-col gap-5">
       <PageTitle
@@ -116,6 +127,34 @@ export default async function ProductsPage({
           {t("searchButton")}
         </button>
       </form>
+
+      {shownChanges.length > 0 ? (
+        <section className="vs-card px-5 py-4" aria-labelledby="price-changes-title">
+          <h2 id="price-changes-title" className="text-sm font-semibold text-[var(--ink)]">
+            {t("priceChanges.title")}
+          </h2>
+          <p className="mt-0.5 text-xs text-[var(--muted)]">{t("priceChanges.lead")}</p>
+          <ul className="mt-3 divide-y divide-[var(--line)] text-sm">
+            {shownChanges.map((change) => (
+              <li
+                key={`${change.productId}-${change.market}`}
+                className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2"
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  {titleOf.get(change.productId)}
+                  <span className="ml-2 text-xs text-[var(--muted)]">{change.market}</span>
+                </span>
+                <span className="tabular-nums">
+                  {formatAmount(change.before, locale)} → <strong>{formatAmount(change.after, locale)}</strong>
+                </span>
+                <span className="w-28 text-right text-xs text-[var(--muted)]">
+                  {t("priceChanges.since", { date: dateLabel.format(new Date(change.at)) })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {loadError ? (
         <p className="rounded-xl border border-[#f0d9b5] bg-[var(--gold-soft)] px-4 py-3 text-sm text-[var(--gold-ink)]">

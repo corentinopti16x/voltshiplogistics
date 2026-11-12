@@ -69,6 +69,7 @@ export type LinePricePreviewProduct = {
   id: string;
   title: string;
   client: string;
+  clientId: string;
   /** COGS of 1 unit on this market (what the client pays), before and after. */
   before: number | null;
   after: number | null;
@@ -358,6 +359,7 @@ export async function previewLinePrice(
         id: product.id,
         title: product.title,
         client: clientName.get(product.client_id) ?? "",
+        clientId: product.client_id,
         before: beforeCogs,
         after: afterCogs,
         onLineBefore,

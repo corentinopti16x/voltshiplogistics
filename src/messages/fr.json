@@ -372,6 +372,11 @@
     }
   },
   "products": {
+    "priceChanges": {
+      "title": "Prix qui ont changé",
+      "lead": "Prix pour 1 unité, transport compris.",
+      "since": "depuis le {date}"
+    },
     "title": "Produits",
     "lead": "Ta bibliothèque, classée selon tes ventes Shopify. Clique une carte pour le devis, le stock et l'économie unitaire.",
     "new": "Nouveau produit",
