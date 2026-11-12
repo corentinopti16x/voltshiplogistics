@@ -200,9 +200,17 @@ export default async function SourcerPage({
             {t("intro")}
           </p>
         </div>
-        <span className="rounded-full bg-[var(--card)] px-3 py-1 text-sm ring-1 ring-[var(--line)]">
-          {t("openCount", { count: rows.length })}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="rounded-full bg-[var(--card)] px-3 py-1 text-sm ring-1 ring-[var(--line)]">
+            {t("openCount", { count: rows.length })}
+          </span>
+          <Link
+            href="/sourcer/new"
+            className="rounded-[10px] bg-[var(--navy)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-hover)]"
+          >
+            {t("newProduct")}
+          </Link>
+        </div>
       </div>
 
       <nav className="mt-6 flex flex-wrap gap-2" aria-label={t("filterLabel")}>

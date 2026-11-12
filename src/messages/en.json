@@ -2220,7 +2220,24 @@
   "sourcer": {
     "title": "Sourcing queue",
     "soon": "Oldest requests first. Complete the quote fields and send the client-ready COGS.",
+    "newProduct": {
+      "back": "← Sourcing queue",
+      "title": "New product for a client",
+      "lead": "A client asked for a product by message: create it here. It lands in the to-quote list and the client sees it in their space.",
+      "client": "Client",
+      "clientPick": "Choose the client",
+      "name": "Product name",
+      "photo": "Photo",
+      "link": "Product link",
+      "photoOrLink": "A photo or a link, at least one of the two.",
+      "markets": "Markets",
+      "notes": "Client request",
+      "notesHint": "What the client asked for: quantity, colour, requirements…",
+      "create": "Create the product",
+      "creating": "Creating…"
+    },
     "queue": {
+      "newProduct": "New product",
       "eyebrow": "Operations",
       "title": "Sourcing queue",
       "intro": "Oldest first. Fill the client-safe quote and keep supplier details internal.",

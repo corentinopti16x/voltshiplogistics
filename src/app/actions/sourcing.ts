@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getAuthContext } from "@/lib/auth/context";
 import { getAirtableConfig } from "@/lib/airtable/config";
+import { createProductFromForm } from "@/lib/products/create";
 import { patchAirtableProduct } from "@/lib/airtable/products";
 import { createNotification } from "@/lib/notifications/server";
 import {
@@ -511,4 +512,29 @@ export async function quickSaveSourcingAction(
   revalidateSourcing(productId);
   revalidatePath("/[locale]/sourcer/products", "page");
   return { ok: true };
+}
+
+/**
+ * The team creates a product request on behalf of a client (request received by message):
+ * same record as the client's own « new product » form, it lands in « À chiffrer ».
+ */
+export async function createProductForClientAction(
+  _prev: SourcingActionResult | undefined,
+  formData: FormData,
+): Promise<SourcingActionResult> {
+  const { ctx, error } = await requireSourcer();
+  if (!ctx) return { ok: false, error: error ?? "Sourcer access required." };
+  const clientId = String(formData.get("client_id") ?? "").trim();
+  if (!clientId) return { ok: false, error: "Choisis le client." };
+  const { data: client } = await createAdminClient()
+    .from("clients")
+    .select("id")
+    .eq("id", clientId)
+    .maybeSingle();
+  if (!client) return { ok: false, error: "Client introuvable." };
+  const created = await createProductFromForm(clientId, formData);
+  if (!created.ok) return { ok: false, error: created.error };
+  revalidatePath("/[locale]/sourcer", "page");
+  revalidatePath("/[locale]/products", "page");
+  return { ok: true, nextId: created.id };
 }
