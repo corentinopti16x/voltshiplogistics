@@ -2284,6 +2284,12 @@
         "previous": "‹ Précédent",
         "next": "Suivant : {title} ›",
         "last": "Dernier produit à chiffrer"
+      },
+      "folds": {
+        "cogs": "Prix de revient par pays et par quantité",
+        "upsells": "Upsells et kits",
+        "buy": "Combien acheter",
+        "announced": "Prix annoncés au client"
       }
     },
     "shell": {
