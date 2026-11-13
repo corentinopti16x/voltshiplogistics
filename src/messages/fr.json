@@ -2559,8 +2559,8 @@
         },
         "left": "Il reste {amount} par unité au client, avant sa publicité.",
         "heavy": "Trop lourd : le transport fait {share} du prix de revient ({weight} g).",
-        "light": "Poids correct : le transport fait {share} du prix de revient ({weight} g).",
-        "rule": "Repères : bon jusqu’à 30 % du prix de vente, limite jusqu’à 40 %, trop cher au-delà. Trop lourd quand le transport dépasse la moitié du prix de revient. Prix de vente dans la devise de la boutique."
+        "light": "Transport : {share} du prix de revient ({weight} g).",
+        "rule": "Repères : bon jusqu’à 30 % du prix de vente, limite jusqu’à 40 %, trop cher au-delà. « Trop lourd » s’affiche seulement si le prix n’est pas bon et que le transport dépasse la moitié du prix de revient. Prix de vente dans la devise de la boutique."
       }
     },
     "quick": {

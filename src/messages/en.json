@@ -2559,8 +2559,8 @@
         },
         "left": "{amount} per unit is left to the client, before advertising.",
         "heavy": "Too heavy: shipping is {share} of the landed cost ({weight} g).",
-        "light": "Weight is fine: shipping is {share} of the landed cost ({weight} g).",
-        "rule": "Guide: good up to 30 % of the selling price, borderline up to 40 %, too expensive above. Too heavy when shipping is more than half the landed cost. Selling price in the shop's currency."
+        "light": "Shipping: {share} of the landed cost ({weight} g).",
+        "rule": "Guide: good up to 30 % of the selling price, borderline up to 40 %, too expensive above. “Too heavy” only shows when the price is not good and shipping is more than half the landed cost. Selling price in the shop's currency."
       }
     },
     "quick": {
