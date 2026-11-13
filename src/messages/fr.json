@@ -2560,7 +2560,7 @@
         "left": "Il reste {amount} par unité au client, avant sa publicité.",
         "heavy": "Trop lourd : le transport fait {share} du prix de revient ({weight} g).",
         "light": "Transport : {share} du prix de revient ({weight} g).",
-        "rule": "Repères : bon jusqu’à 30 % du prix de vente, limite jusqu’à 40 %, trop cher au-delà. « Trop lourd » s’affiche seulement si le prix n’est pas bon et que le transport dépasse la moitié du prix de revient. Prix de vente dans la devise de la boutique."
+        "rule": "Repères : bon jusqu’à 30 % du prix de vente, limite jusqu’à 40 %, trop cher au-delà. « Trop lourd » s’affiche seulement si le prix n’est pas bon, que le colis pèse 250 g ou plus et que le transport dépasse la moitié du prix de revient. En dessous de 250 g, c’est le minimum du transporteur : alléger ne change rien. Prix de vente dans la devise de la boutique."
       }
     },
     "quick": {

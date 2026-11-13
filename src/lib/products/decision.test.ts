@@ -9,7 +9,7 @@ describe("sourcingDecision", () => {
       heavy: false,
     });
     expect(sourcingDecision({ sellingPrice: 40, cogs: 14, shipping: 4 }).costLevel).toBe("limit");
-    expect(sourcingDecision({ sellingPrice: 59.9, cogs: 33.29, shipping: 22 })).toMatchObject({
+    expect(sourcingDecision({ sellingPrice: 59.9, cogs: 33.29, shipping: 22, weightG: 1535 })).toMatchObject({
       costLevel: "bad",
       heavy: true,
     });
@@ -27,6 +27,13 @@ describe("sourcingDecision", () => {
       costLevel: "good",
       heavy: false,
     });
+  });
+
+  it("never calls a parcel under 250 g heavy: the carrier minimum sets the price", () => {
+    // 33 g, too expensive, shipping above half of the cost: typing 0.01 g would change nothing.
+    expect(
+      sourcingDecision({ sellingPrice: 9.99, cogs: 5.6, shipping: 3.9, weightG: 63 }),
+    ).toMatchObject({ costLevel: "bad", heavy: false });
   });
 
   it("says nothing without a landed cost", () => {

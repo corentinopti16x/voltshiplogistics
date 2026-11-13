@@ -14,6 +14,8 @@ export const DECISION_THRESHOLDS = {
   costLimit: 0.4,
   /** Shipping / COGS: above half, the parcel weight costs more than everything else. */
   weightHeavy: 0.5,
+  /** Under this parcel weight the carrier's minimum sets the price: lighter changes nothing. */
+  heavyFromG: 250,
 } as const;
 
 export type DecisionLevel = "good" | "limit" | "bad";
@@ -32,6 +34,8 @@ export function sourcingDecision(input: {
   sellingPrice: number | null | undefined;
   cogs: number | null | undefined;
   shipping: number | null | undefined;
+  /** Parcel weight in grams (product + packaging). */
+  weightG?: number | null;
 }): SourcingDecision {
   const cogs = Number(input.cogs);
   const hasCogs = Number.isFinite(cogs) && cogs > 0;
@@ -56,6 +60,7 @@ export function sourcingDecision(input: {
     shippingShare,
     heavy:
       (costLevel === "limit" || costLevel === "bad") &&
+      Number(input.weightG) >= DECISION_THRESHOLDS.heavyFromG &&
       shippingShare != null &&
       shippingShare > DECISION_THRESHOLDS.weightHeavy,
   };

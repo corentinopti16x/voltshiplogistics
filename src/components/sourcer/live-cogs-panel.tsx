@@ -82,6 +82,7 @@ export function LiveCogsPanel({
                   sellingPrice,
                   cogs: single.cogs,
                   shipping: single.shipping,
+                  weightG: single.weightG,
                 });
                 const pct = (value: number) => `${Math.round(value * 100)} %`;
                 const tone = {
