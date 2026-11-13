@@ -18,7 +18,15 @@ describe("sourcingDecision", () => {
   it("says nothing about the price without a selling price", () => {
     const result = sourcingDecision({ sellingPrice: null, cogs: 12, shipping: 7 });
     expect(result.costLevel).toBeNull();
-    expect(result.heavy).toBe(true);
+    expect(result.heavy).toBe(false);
+  });
+
+  it("does not call a light product heavy when its price is good", () => {
+    // 48 g, shipping is 70 % of the cost (carrier minimum), cost is 16 % of the selling price.
+    expect(sourcingDecision({ sellingPrice: 34.99, cogs: 5.61, shipping: 3.92 })).toMatchObject({
+      costLevel: "good",
+      heavy: false,
+    });
   });
 
   it("says nothing without a landed cost", () => {

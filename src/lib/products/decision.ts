@@ -3,7 +3,9 @@
  * Two questions the team keeps asking: « is the price right? » and « is it too heavy? ».
  *
  * - price : landed cost (COGS, 1 unit) as a share of the Shopify selling price.
- * - weight: shipping as a share of the landed cost.
+ * - weight: shipping as a share of the landed cost. It is only flagged when the price is not
+ *   good: a light, cheap product always has shipping above half of its cost (the carrier's
+ *   minimum per parcel), and that is not a problem when the price is right.
  * Thresholds are deliberately simple and shown to the user next to the verdict.
  */
 export const DECISION_THRESHOLDS = {
@@ -39,18 +41,22 @@ export function sourcingDecision(input: {
   const costShare = hasCogs && hasSelling ? cogs / selling : null;
   const shippingShare =
     hasCogs && Number.isFinite(shipping) && shipping >= 0 ? shipping / cogs : null;
+  const costLevel: DecisionLevel | null =
+    costShare == null
+      ? null
+      : costShare <= DECISION_THRESHOLDS.costGood
+        ? "good"
+        : costShare <= DECISION_THRESHOLDS.costLimit
+          ? "limit"
+          : "bad";
   return {
     costShare,
-    costLevel:
-      costShare == null
-        ? null
-        : costShare <= DECISION_THRESHOLDS.costGood
-          ? "good"
-          : costShare <= DECISION_THRESHOLDS.costLimit
-            ? "limit"
-            : "bad",
+    costLevel,
     left: costShare == null ? null : Math.round((selling - cogs) * 100) / 100,
     shippingShare,
-    heavy: shippingShare != null && shippingShare > DECISION_THRESHOLDS.weightHeavy,
+    heavy:
+      (costLevel === "limit" || costLevel === "bad") &&
+      shippingShare != null &&
+      shippingShare > DECISION_THRESHOLDS.weightHeavy,
   };
 }

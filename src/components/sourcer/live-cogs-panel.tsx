@@ -110,9 +110,11 @@ export function LiveCogsPanel({
                     )}
                     {decision.shippingShare != null ? (
                       <p
-                        className={`mt-2 rounded-lg px-3 py-2 text-xs font-semibold ${
-                          decision.heavy ? tone.bad : tone.good
-                        }`}
+                        className={
+                          decision.heavy
+                            ? `mt-2 rounded-lg px-3 py-2 text-xs font-semibold ${tone.bad}`
+                            : "mt-2 text-xs text-[var(--muted)]"
+                        }
                       >
                         {t(decision.heavy ? "decision.heavy" : "decision.light", {
                           share: pct(decision.shippingShare),
