@@ -31,6 +31,8 @@ import { BuyAdvice } from "@/components/sourcer/buy-advice";
 import { loadProductBuyLines } from "@/lib/orders/to-ship-server";
 import { DEFAULT_BUY_OPTIONS } from "@/lib/orders/to-ship";
 import { productSkuKeys } from "@/lib/products/sales90";
+import { loadVariantPrices } from "@/lib/products/variant-prices-server";
+import { VariantPrices } from "@/components/sourcer/variant-prices";
 
 export default async function SourcerProductPage({
   params,
@@ -73,6 +75,7 @@ export default async function SourcerProductPage({
     clients: { name: string; code: string | null; financial_profile_json: unknown };
   };
   const request = getProductRequest(product);
+  const variantPrices = await loadVariantPrices(product).catch(() => null);
   // Same engine and carrier choice as the client's product page: the line shown per market
   // is the one priced in the COGS (and the one ECCANG must use).
   const matrix = await calculateProductCogsMatrix(product).catch(() => null);
@@ -192,6 +195,7 @@ export default async function SourcerProductPage({
           packagingLadder={settings.packaging_ladder}
         />
       </div>
+      {variantPrices ? <VariantPrices productId={product.id} markets={variantPrices} /> : null}
       <Fold title={tCarrier("title")} hint={tCarrier("lead")}>
         <div id="carrier">
         {!matrix || !views ? (

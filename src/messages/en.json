@@ -2547,6 +2547,27 @@
       "noLine": "No line covers this weight on this market.",
       "market": "Market",
       "hint": "Updated as you type, same grid and rules as the matrix. Remember to save.",
+      "variants": {
+        "title": "Price per Shopify variant",
+        "lead": "This product is sold in several variants (lots, packs). For each: the number of pieces, its selling price and what the order costs delivered.",
+        "variant": "Variant",
+        "pieces": "Pieces",
+        "piecesOf": "Pieces in variant {name}",
+        "selling": "Selling price",
+        "cogs": "Landed cost",
+        "verdict": "Verdict",
+        "guessed": "read from the name",
+        "unnamed": "Unnamed",
+        "more": "+{count}",
+        "error": "Not saved.",
+        "noVerdict": "A price is missing",
+        "level": {
+          "good": "Good price · {share}",
+          "limit": "Borderline · {share}",
+          "bad": "Too expensive · {share}"
+        },
+        "rule": "Fix the number of pieces if the app got it wrong: the landed cost is recalculated. Selling price in the shop's currency."
+      },
       "decision": {
         "title": "Decision aid",
         "selling": "Shopify selling price",

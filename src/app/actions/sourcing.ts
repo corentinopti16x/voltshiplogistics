@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { getAuthContext } from "@/lib/auth/context";
 import { getAirtableConfig } from "@/lib/airtable/config";
 import { createProductFromForm } from "@/lib/products/create";
+import { VARIANT_UNITS_MAX } from "@/lib/products/variant-units";
 import { patchAirtableProduct } from "@/lib/airtable/products";
 import { createNotification } from "@/lib/notifications/server";
 import {
@@ -537,4 +538,31 @@ export async function createProductForClientAction(
   revalidatePath("/[locale]/sourcer", "page");
   revalidatePath("/[locale]/products", "page");
   return { ok: true, nextId: created.id };
+}
+
+/**
+ * The team sets how many pieces a Shopify variant contains (lot of 24, pack of 4…);
+ * empty = back to the number read in the variant name.
+ */
+export async function setVariantUnitsAction(input: {
+  productId: string;
+  ids: string[];
+  units: number | null;
+}): Promise<SourcingActionResult> {
+  const { ctx, error } = await requireSourcer();
+  if (!ctx) return { ok: false, error: error ?? "Sourcer access required." };
+  const ids = (input.ids ?? []).map(String).filter(Boolean).slice(0, 100);
+  if (ids.length === 0) return { ok: false, error: "Aucune variante." };
+  const units = input.units == null ? null : Number(input.units);
+  if (units != null && (!Number.isInteger(units) || units < 1 || units > VARIANT_UNITS_MAX)) {
+    return { ok: false, error: `Entre 1 et ${VARIANT_UNITS_MAX} pièces.` };
+  }
+  const { error: updateError } = await createAdminClient()
+    .from("shopify_products_cache")
+    .update({ pack_units: units })
+    .eq("imported_product_id", String(input.productId))
+    .in("id", ids);
+  if (updateError) return { ok: false, error: updateError.message };
+  revalidatePath("/[locale]/sourcer/[id]", "page");
+  return { ok: true };
 }

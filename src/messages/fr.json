@@ -2547,6 +2547,27 @@
       "noLine": "Aucune ligne ne couvre ce poids sur ce marché.",
       "market": "Marché",
       "hint": "Mis à jour à chaque saisie, même grille et mêmes règles que la matrice. Pense à enregistrer.",
+      "variants": {
+        "title": "Prix par variante Shopify",
+        "lead": "Ce produit se vend en plusieurs variantes (lots, packs). Pour chacune : le nombre de pièces, son prix de vente et ce que la commande coûte livrée.",
+        "variant": "Variante",
+        "pieces": "Pièces",
+        "piecesOf": "Pièces dans la variante {name}",
+        "selling": "Prix de vente",
+        "cogs": "Prix de revient",
+        "verdict": "Verdict",
+        "guessed": "lu dans le nom",
+        "unnamed": "Sans nom",
+        "more": "+{count}",
+        "error": "Non enregistré.",
+        "noVerdict": "Il manque un prix",
+        "level": {
+          "good": "Bon prix · {share}",
+          "limit": "Limite · {share}",
+          "bad": "Trop cher · {share}"
+        },
+        "rule": "Corrige le nombre de pièces si l’app s’est trompée : le prix de revient se recalcule. Prix de vente dans la devise de la boutique."
+      },
       "decision": {
         "title": "Aide à la décision",
         "selling": "Prix de vente Shopify",

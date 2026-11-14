@@ -1645,6 +1645,27 @@
       "noLine": "该市场没有覆盖这个重量的渠道。",
       "market": "市场",
       "hint": "输入时自动更新，和下面的成本表用同一个运费表和规则。记得保存。",
+      "variants": {
+        "title": "按 Shopify 规格的价格",
+        "lead": "这个产品按多个规格销售（套装、多件装）。每个规格显示：件数、售价、整单到手成本。",
+        "variant": "规格",
+        "pieces": "件数",
+        "piecesOf": "规格 {name} 的件数",
+        "selling": "售价",
+        "cogs": "到手成本",
+        "verdict": "结论",
+        "guessed": "从名称读取",
+        "unnamed": "未命名",
+        "more": "+{count}",
+        "error": "未保存。",
+        "noVerdict": "缺少价格",
+        "level": {
+          "good": "价格合适 · {share}",
+          "limit": "偏高 · {share}",
+          "bad": "太贵 · {share}"
+        },
+        "rule": "如果件数不对，请直接修改，到手成本会自动重算。售价为店铺币种。"
+      },
       "decision": {
         "title": "决策参考",
         "selling": "Shopify 售价",
