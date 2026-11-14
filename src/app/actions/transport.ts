@@ -177,7 +177,13 @@ export async function importLineAction(entry: {
   deliveryDays: string | null;
   note: string | null;
 }): Promise<
-  | { ok: true; created: boolean; settingsSaved: boolean }
+  | {
+      ok: true;
+      created: boolean;
+      settingsSaved: boolean;
+      /** Why status / ECCANG line / delay / comment were not saved, when they were not. */
+      settingsError?: "missing_table" | "invalid" | "failed";
+    }
   | { ok: false; code: LinePriceFailure | "forbidden" }
 > {
   const saved = await saveLinePriceAction({ ...entry, isNew: "auto" });
@@ -190,6 +196,7 @@ export async function importLineAction(entry: {
   if (entry.deliveryDays) patch.deliveryDays = entry.deliveryDays;
   if (entry.note) patch.note = entry.note;
   let settingsSaved = true;
+  let settingsError: "missing_table" | "invalid" | "failed" | undefined;
   if (Object.keys(patch).length > 0) {
     const result = await saveLineSetting(
       {
@@ -200,11 +207,12 @@ export async function importLineAction(entry: {
       },
       patch,
       ctx.userId,
-    ).catch(() => ({ ok: false as const }));
+    ).catch(() => ({ ok: false as const, code: "failed" as const }));
     settingsSaved = result.ok;
+    if (!result.ok) settingsError = result.code;
   }
   revalidatePath("/[locale]", "layout");
-  return { ok: true, created: saved.created, settingsSaved };
+  return { ok: true, created: saved.created, settingsSaved, settingsError };
 }
 
 /**

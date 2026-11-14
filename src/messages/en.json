@@ -2183,7 +2183,9 @@
         "outcome": {
           "created": "Added",
           "updated": "Price updated",
-          "partial": "Price saved, status and code not saved (migration 00025)",
+          "partial": "Price saved; status, ECCANG line, delay and comment not saved (error). Try again.",
+          "partialText": "Price saved; the rest is refused: a text is longer than 600 characters (comment, delay or ECCANG line).",
+          "partialTable": "Price saved; the rest needs migration 00025.",
           "failed": "Not saved"
         },
         "problems": {

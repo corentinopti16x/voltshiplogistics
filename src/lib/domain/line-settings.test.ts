@@ -66,7 +66,7 @@ describe("line settings", () => {
     });
     expect(cleanSettingText("   ")).toEqual({ ok: true, value: null });
     expect(cleanSettingText(null)).toEqual({ ok: true, value: null });
-    expect(cleanSettingText("x".repeat(301))).toEqual({ ok: false });
+    expect(cleanSettingText("x".repeat(601))).toEqual({ ok: false });
     expect(cleanSettingText(12)).toEqual({ ok: false });
   });
 });

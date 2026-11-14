@@ -60,7 +60,7 @@ function InlineText({
       aria-label={label}
       placeholder={placeholder}
       disabled={disabled}
-      maxLength={300}
+      maxLength={600}
       onChange={(event) => setDraft(event.target.value)}
       onKeyDown={(event) => {
         if (event.key === "Enter") event.currentTarget.blur();
