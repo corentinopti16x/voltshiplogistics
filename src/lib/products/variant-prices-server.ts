@@ -37,13 +37,20 @@ export async function loadVariantPrices(product: ProductRow): Promise<VariantPri
     .order("price", { ascending: true });
   if (error || !data || data.length === 0) return null;
 
-  const groups = new Map<string, Omit<VariantPriceRow, "cogs" | "shipping" | "weightG" | "decision">>();
-  for (const row of data as Array<{
+  type CacheRow = {
     id: string;
     variant_title: string | null;
     price: number | string | null;
     pack_units: number | null;
-  }>) {
+  };
+  // The cache keeps variants deleted on Shopify: the sync no longer sees them, so they have
+  // neither name nor price once the live ones do. They are left out.
+  const all = data as CacheRow[];
+  const synced = all.filter((row) => row.price != null || row.variant_title);
+  const live = synced.length > 0 ? synced : all;
+
+  const groups = new Map<string, Omit<VariantPriceRow, "cogs" | "shipping" | "weightG" | "decision">>();
+  for (const row of live) {
     const { units, guessed } = variantUnits(row);
     const price = row.price == null ? null : Number(row.price);
     const key = `${units}|${price ?? ""}`;
