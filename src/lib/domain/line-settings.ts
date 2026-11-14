@@ -60,15 +60,15 @@ export function dropPendingLines<
   );
 }
 
-const MAX_TEXT = 300;
+export const LINE_SETTING_MAX_TEXT = 600;
 
-/** Trims a free text field; empty → null; refuses anything longer than 300 characters. */
+/** Trims a free text field; empty → null; refuses anything longer than 600 characters. */
 export function cleanSettingText(
   raw: unknown,
 ): { ok: true; value: string | null } | { ok: false } {
   if (raw == null) return { ok: true, value: null };
   if (typeof raw !== "string") return { ok: false };
   const value = raw.replace(/\s+/g, " ").trim();
-  if (value.length > MAX_TEXT) return { ok: false };
+  if (value.length > LINE_SETTING_MAX_TEXT) return { ok: false };
   return { ok: true, value: value || null };
 }

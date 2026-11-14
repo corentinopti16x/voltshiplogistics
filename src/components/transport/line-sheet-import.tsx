@@ -8,7 +8,7 @@ import { linePriceCostRmb } from "@/lib/pricing/line-price";
 import { LINE_SHEET_COLUMNS, parseLineSheet } from "@/lib/pricing/line-sheet";
 import { TRANSPORT_SAMPLE_WEIGHTS_G } from "@/lib/pricing/transport-view";
 
-type Outcome = "created" | "updated" | "partial" | "failed";
+type Outcome = "created" | "updated" | "partial" | "partialText" | "partialTable" | "failed";
 
 function weightLabel(weightG: number) {
   return weightG >= 1000 ? `${weightG / 1000} kg` : `${weightG} g`;
@@ -58,7 +58,11 @@ export function LineSheetImport({
       const outcome: Outcome = !result.ok
         ? "failed"
         : !result.settingsSaved
-          ? "partial"
+          ? result.settingsError === "invalid"
+            ? "partialText"
+            : result.settingsError === "missing_table"
+              ? "partialTable"
+              : "partial"
           : result.created
             ? "created"
             : "updated";
@@ -172,7 +176,7 @@ export function LineSheetImport({
                             className={`py-2.5 pl-3 text-xs font-semibold ${
                               outcome === "failed"
                                 ? "text-[var(--rust-ink)]"
-                                : outcome === "partial"
+                                : outcome?.startsWith("partial")
                                   ? "text-[#8a5a00]"
                                   : "text-emerald-700"
                             }`}

@@ -2183,7 +2183,9 @@
         "outcome": {
           "created": "Ajoutée",
           "updated": "Prix mis à jour",
-          "partial": "Prix enregistré, état et code non enregistrés (migration 00025)",
+          "partial": "Prix enregistré ; état, ligne ECCANG, délai et commentaire non enregistrés (erreur). Réessaie.",
+          "partialText": "Prix enregistré ; le reste est refusé : un texte dépasse 600 caractères (commentaire, délai ou ligne ECCANG).",
+          "partialTable": "Prix enregistré ; le reste demande la migration 00025.",
           "failed": "Non enregistrée"
         },
         "problems": {
