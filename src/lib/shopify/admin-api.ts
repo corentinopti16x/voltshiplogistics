@@ -1,3 +1,4 @@
+import { variantLabel } from "@/lib/products/variant-units";
 import "server-only";
 import { effectiveSku, lineSku } from "@/lib/shopify/sku";
 import { loadVariantSkuResolver, refreshClientEffectiveSkus } from "@/lib/shopify/sku-resolve";
@@ -77,9 +78,14 @@ type ShopifyProduct = {
   title: string;
   status: string;
   image?: { src?: string } | null;
+  options?: Array<{ name?: string | null; position?: number | null }>;
   variants: Array<{
     id: number;
     sku: string | null;
+    title?: string | null;
+    option1?: string | null;
+    option2?: string | null;
+    option3?: string | null;
     price?: string | null;
     image_id?: number | null;
   }>;
@@ -683,6 +689,9 @@ export async function syncShopifyProducts(input: {
       path,
     );
     for (const product of response.data.products) {
+      const optionNames = [...(product.options ?? [])]
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map((option) => option.name ?? null);
       for (const variant of product.variants) {
         const price = Number(variant.price);
         if (Number.isFinite(price) && price > 0) priceByVariant.set(String(variant.id), price);
@@ -698,6 +707,12 @@ export async function syncShopifyProducts(input: {
           photo_url: images[0] ?? null,
           images_json: images,
           status: product.status,
+          variant_title: variantLabel(
+            optionNames,
+            [variant.option1, variant.option2, variant.option3],
+            variant.title,
+          ),
+          price: Number.isFinite(price) && price > 0 ? price : null,
           updated_at: new Date().toISOString(),
         });
       }
@@ -707,9 +722,21 @@ export async function syncShopifyProducts(input: {
 
   const admin = createAdminClient();
   if (rows.length > 0) {
-    const { error } = await admin
+    let { error } = await admin
       .from("shopify_products_cache")
       .upsert(rows, { onConflict: "shop_id,shopify_variant_id" });
+    if (error && /variant_title|price/.test(error.message ?? "")) {
+      // Migration 00026 not run yet: the sync keeps working without the variant name and price.
+      const legacy = rows.map((row) => {
+        const copy = { ...row };
+        delete copy.variant_title;
+        delete copy.price;
+        return copy;
+      });
+      ({ error } = await admin
+        .from("shopify_products_cache")
+        .upsert(legacy, { onConflict: "shop_id,shopify_variant_id" }));
+    }
     if (error) throw error;
   }
   // Effective SKUs are decided on the whole catalogue of the client (all shops).
