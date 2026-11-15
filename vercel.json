@@ -39,6 +39,10 @@
     {
       "path": "/api/cron/upsells",
       "schedule": "45 2 * * *"
+    },
+    {
+      "path": "/api/cron/demo-refresh",
+      "schedule": "5 0 * * *"
     }
   ]
 }
