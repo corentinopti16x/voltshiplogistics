@@ -135,6 +135,19 @@ async function allRows<T>(page: (from: number, to: number) => PromiseLike<{ data
   return rows;
 }
 
+const LIFECYCLE_FR: Record<string, string> = {
+  testing: "repasse en test",
+  winning: "passe en Winning 🔥",
+  declining: "ralentit : ses ventes baissent",
+  dead: "ne se vend plus",
+};
+
+/** Notification text in the client's language (French clients were getting English). */
+export function lifecycleMessage(title: string, status: string, language?: string | null) {
+  if (language === "fr" && LIFECYCLE_FR[status]) return `${title} ${LIFECYCLE_FR[status]}.`;
+  return `${title} is now ${status}.`;
+}
+
 export async function classifyAllProducts() {
   const admin = createAdminClient();
   const products = await allRows<ProductRow>((from, to) =>
@@ -142,13 +155,15 @@ export async function classifyAllProducts() {
   );
   const clientIds = [...new Set(products.map((row) => row.client_id))];
   const thresholdMap = new Map<string, unknown>();
+  const languageMap = new Map<string, string | null>();
   if (clientIds.length > 0) {
     const { data: clients } = await admin
       .from("clients")
-      .select("id, lifecycle_thresholds_json")
+      .select("id, lifecycle_thresholds_json, language")
       .in("id", clientIds);
     for (const client of clients ?? []) {
       thresholdMap.set(client.id, client.lifecycle_thresholds_json);
+      languageMap.set(client.id, client.language);
     }
   }
 
@@ -250,7 +265,7 @@ export async function classifyAllProducts() {
         productTitle: product.title,
         from: product.lifecycle_status,
         to: status,
-        message: `${product.title} is now ${status}.`,
+        message: lifecycleMessage(product.title, status, languageMap.get(product.client_id)),
       },
     });
     changed += 1;

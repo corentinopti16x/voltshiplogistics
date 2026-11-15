@@ -6,7 +6,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import type { ActionResult } from "@/app/actions/admin";
 import { generateApiKey } from "@/lib/public-api/keys";
 import { fetchGmailMessage, refreshGmailAccessToken, sendGmailReply } from "@/lib/support/gmail";
-import { syncMailbox, type MailboxRow } from "@/lib/support/sync";
+import { isDemoMailbox, syncMailbox, type MailboxRow } from "@/lib/support/sync";
 
 export type SupportActionResult = ActionResult & { apiKey?: string };
 
@@ -86,6 +86,15 @@ export async function disconnectGmailAction(
   const id = String(formData.get("mailbox_id") ?? "").trim();
   if (!id) return { ok: false, error: "Mailbox is required." };
   const admin = createAdminClient();
+  const { data: current } = await admin
+    .from("support_mailboxes")
+    .select("refresh_token_encrypted")
+    .eq("id", id)
+    .eq("client_id", ctx.clientId)
+    .maybeSingle();
+  if (current && isDemoMailbox(current)) {
+    return { ok: false, error: "Compte de démonstration : la boîte mail reste connectée." };
+  }
   // Threads/messages are kept for history; the token is dropped and the mailbox disabled.
   const { error: updateError } = await admin
     .from("support_mailboxes")
@@ -206,6 +215,37 @@ export async function sendSupportReplyAction(
     .not("rfc_message_id", "is", null)
     .order("received_at", { ascending: true });
   const references = (rfcRows ?? []).map((r) => r.rfc_message_id).filter(Boolean).join(" ") || null;
+
+  if (isDemoMailbox(mailbox)) {
+    // Demo account: the reply is stored as sent, no e-mail leaves.
+    const now = new Date().toISOString();
+    const { data: saved, error: insertError } = await admin
+      .from("support_messages")
+      .insert({
+        thread_id: thread.id,
+        provider_message_id: `demo-out-${crypto.randomUUID()}`,
+        direction: "out",
+        body_text: body,
+        received_at: now,
+        sent_at: now,
+      })
+      .select("id")
+      .single();
+    if (insertError) return { ok: false, error: insertError.message };
+    if (draftId) {
+      await admin
+        .from("support_drafts")
+        .update({ approved_at: now, sent_message_id: saved?.id ?? null, body_text: body })
+        .eq("id", draftId)
+        .eq("thread_id", thread.id);
+    }
+    await admin
+      .from("support_threads")
+      .update({ status: "answered", last_message_at: now, last_direction: "out", snippet: body.slice(0, 200) })
+      .eq("id", thread.id);
+    revalidateSupport(thread.id);
+    return { ok: true };
+  }
 
   try {
     const accessToken = await refreshGmailAccessToken(mailbox.refresh_token_encrypted);

@@ -209,7 +209,21 @@ export async function draftForThread(clientId: string, threadId: string) {
   return saved?.id ?? null;
 }
 
+/** Token of the demo account's mailbox (« Petit Nuage »): never synced, nothing is ever sent. */
+export const DEMO_MAILBOX_TOKEN = "demo";
+
+export function isDemoMailbox(mailbox: { refresh_token_encrypted?: string | null }) {
+  return mailbox.refresh_token_encrypted === DEMO_MAILBOX_TOKEN;
+}
+
 export async function syncMailbox(mailbox: MailboxRow) {
+  if (isDemoMailbox(mailbox)) {
+    await createAdminClient()
+      .from("support_mailboxes")
+      .update({ last_sync_at: new Date().toISOString(), sync_error: null })
+      .eq("id", mailbox.id);
+    return { fetched: 0, stored: 0, drafted: 0 };
+  }
   const admin = createAdminClient();
   const accessToken = await refreshGmailAccessToken(mailbox.refresh_token_encrypted);
   const { ids, historyId } = await listNewGmailMessageIds(accessToken, mailbox.history_id);
