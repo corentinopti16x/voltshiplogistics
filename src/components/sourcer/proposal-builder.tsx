@@ -320,7 +320,7 @@ export function ProposalBuilder({ countries }: { countries: string[] }) {
                         ) : null}
                       </td>
                       <td className="py-2.5 pr-3 whitespace-nowrap">
-                        {market.delivery ? t("doc.days", { range: market.delivery }) : "—"}
+                        {market.delivery ? (/^[\d\s–-]+$/.test(market.delivery) ? t("doc.days", { range: market.delivery.trim() }) : market.delivery) : "—"}
                       </td>
                       {market.cells.map((cell, cellIndex) => (
                         <td key={cellIndex} className={`py-2.5 pl-3 text-right whitespace-nowrap tabular-nums ${cellIndex === 0 ? "font-semibold" : ""}`}>
