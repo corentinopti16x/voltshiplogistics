@@ -330,6 +330,11 @@ export async function calculateProductCogsMatrix(
     /** Override the client's admin rules (default: loaded from `clients.carrier_rules_json`). */
     carrierRules?: CarrierRules | null;
     /**
+     * Pricing of a prospect who is not a client yet (palier preset): replaces the lookup of
+     * the product's client.
+     */
+    pricingProfile?: ClientPricingProfile | null;
+    /**
      * Early-estimate overrides: run the same engine on client-declared values when
      * Voltship has not set weight/channel/price yet. `commissionPct` replaces the
      * client's sourcing commission (0 = no Voltship sourcing commission applied).
@@ -374,7 +379,9 @@ export async function calculateProductCogsMatrix(
 
   const [activeGridVersion, baseProfile, settings, rules] = await Promise.all([
     getActiveGridVersion(),
-    getClientPricingProfile(product.client_id),
+    options.pricingProfile
+      ? Promise.resolve(options.pricingProfile)
+      : getClientPricingProfile(product.client_id),
     readPricingSettings(createAdminClient()),
     options.carrierRules ? Promise.resolve(options.carrierRules) : loadCarrierRules(product.client_id),
   ]);
