@@ -157,7 +157,8 @@ export default async function ProductDetailPage({
             carrier: breakdown.carrier,
             line: breakdown.lineName ? ` ${breakdown.lineName}` : "",
             tier: formatWeightTier(breakdown.weightMinG, breakdown.weightMaxG),
-            price: formatAmount(breakdown.shippingBase, locale),
+            // The price the client pays: never the grid price before their terms.
+            price: formatAmount(breakdown.shipping, locale),
             delivery: breakdown.deliveryRange ? ` · ${breakdown.deliveryRange}` : "",
           })} · ${
             breakdown.packagingWeightG
@@ -402,7 +403,7 @@ export default async function ProductDetailPage({
                     carrier: acceptedSnapshot.carrier,
                     line: acceptedSnapshot.lineName ? ` ${acceptedSnapshot.lineName}` : "",
                     tier: formatWeightTier(acceptedSnapshot.weightMinG, acceptedSnapshot.weightMaxG),
-                    price: formatAmount(acceptedSnapshot.shippingBase, locale),
+                    price: formatAmount(acceptedSnapshot.shipping, locale),
                     delivery: acceptedSnapshot.deliveryRange ? ` · ${acceptedSnapshot.deliveryRange}` : "",
                   })}
                 </p>

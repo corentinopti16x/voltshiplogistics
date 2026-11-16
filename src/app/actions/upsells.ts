@@ -60,6 +60,22 @@ export async function refreshUpsellsAction(formData: FormData): Promise<void> {
 export type ComposeResult = { ok: boolean; error?: string; breakdown?: BundleBreakdown | null; missingReason?: string | null };
 
 /**
+ * What leaves the server for the browser: product price with the sourcing fee inside,
+ * transport at the price paid, no separate fee, no price before the client's terms and no
+ * per-item negotiated price (rule « le grade du client n'apparaît nulle part »).
+ */
+function clientBundleView(breakdown: BundleBreakdown | null): BundleBreakdown | null {
+  if (!breakdown) return null;
+  return {
+    ...breakdown,
+    items: [],
+    product: Math.round((breakdown.product + breakdown.commission) * 100) / 100,
+    commission: 0,
+    shippingBase: breakdown.shipping,
+  };
+}
+
+/**
  * COGS of a parcel main product + chosen upsells. The client of the product (or Voltship
  * staff) only; quantities 0–20, only upsells linked to the product.
  */
@@ -86,5 +102,5 @@ export async function composeCogsAction(
     .filter((line): line is { product: ProductRow; quantity: number } => !!line.product);
   if (lines.length === 0) return { ok: true, breakdown: null, missingReason: null };
   const result = await calculateComposedCogs(main, lines, market);
-  return { ok: true, breakdown: result.breakdown, missingReason: result.missingReason };
+  return { ok: true, breakdown: clientBundleView(result.breakdown), missingReason: result.missingReason };
 }

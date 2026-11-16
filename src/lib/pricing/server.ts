@@ -443,7 +443,24 @@ export async function calculateProductCogsMatrix(
         preference: selection.preference,
         forced: selection.forced,
         autoCarriers,
-        options: listRateOptions(cells, { ...common, weightG: parcelWeightG(unitWeightG, 1, extras), quantity: 1 }),
+        // Each line at the price THIS client pays for 1 unit (their transport terms applied):
+        // a grid price next to the price paid would reveal the client's terms.
+        options: listRateOptions(cells, { ...common, weightG: parcelWeightG(unitWeightG, 1, extras), quantity: 1 }).map(
+          (option) => {
+            const paid = calculateCogs({
+              ...common,
+              autoCarriers: null,
+              carrierPreference: { carrier: option.carrier, lineName: option.lineName },
+              cells,
+              clientPrice,
+              quantity: 1,
+              ...profile,
+            });
+            const sameLine =
+              paid && paid.carrier === option.carrier && (paid.lineName ?? null) === (option.lineName ?? null);
+            return sameLine ? { ...option, price: paid.shipping } : option;
+          },
+        ),
         cells: quantities.map((quantity) => {
           const computed = calculateCogs({ ...common, cells, clientPrice, quantity, ...profile });
           const announced = announcedPriceFor(announcedPrices, destination, quantity);
