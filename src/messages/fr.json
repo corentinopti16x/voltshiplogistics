@@ -2616,6 +2616,57 @@
       "days": "{days} j",
       "empty": "Aucune vente ni commande en attente sur 60 jours pour ce produit.",
       "howto": "Même calcul que la page Achats : commandes pas encore expédiées + ventes par jour × (délai + couverture) − stock − en route. Stock et en route viennent d'ECCANG."
+    },
+    "proposal": {
+      "back": "← Retour à la file",
+      "title": "Proposition de prix",
+      "lead": "Pour un prospect qui n'a pas encore de compte : ajoute ses produits, choisis les pays, et l'app calcule le prix livré avec les tarifs transport du jour. Tu l'enregistres ensuite en PDF pour lui envoyer. Rien n'est enregistré dans l'app.",
+      "linkLabel": "Proposition prospect",
+      "prospect": "Nom du prospect",
+      "prospectHint": "Nom ou boutique",
+      "tier": "Palier de prix",
+      "markets": "Pays de livraison ({max} maximum)",
+      "products": "Produits",
+      "photo": "Photo",
+      "name": "Nom du produit",
+      "price": "Prix usine, par unité",
+      "currency": "Devise",
+      "weight": "Poids (g)",
+      "type": "Type de produit",
+      "remove": "Retirer",
+      "add": "+ Ajouter un produit",
+      "note": "Note en bas de la proposition (facultatif)",
+      "noteHint": "Ex. : quantité minimum, délai de production…",
+      "detail": "Afficher le détail du prix pour 1 unité (produit, transport, préparation)",
+      "calculate": "Calculer les prix",
+      "calculating": "Calcul…",
+      "pdf": "Enregistrer en PDF",
+      "pdfHint": "Dans la fenêtre d'impression, choisis « Enregistrer au format PDF » comme imprimante.",
+      "channels": {
+        "standard": "Standard",
+        "electronics_battery": "Électronique / batterie",
+        "cosmetics": "Cosmétique",
+        "liquid_perfume": "Liquide / parfum",
+        "magnetic": "Magnétique",
+        "sensitive_other": "Sensible (autre)"
+      },
+      "errors": {
+        "empty": "Remplis au moins un produit : nom, prix et poids.",
+        "markets": "Choisis au moins un pays.",
+        "grid": "Aucune grille de transport active.",
+        "forbidden": "Accès réservé à l'équipe.",
+        "failed": "Le calcul a échoué. Réessaie."
+      },
+      "doc": {
+        "title": "Proposition de prix",
+        "for": "Pour {name}",
+        "country": "Pays",
+        "delivery": "Délai",
+        "units": "{count, plural, one {# unité} other {# unités}}",
+        "days": "{range} jours",
+        "split": "1 unité : produit {product} · transport {shipping} · préparation {handling}",
+        "footer": "Prix par commande livrée au client final, en euros : produit, préparation et transport inclus. Prix calculés le {date} avec les tarifs transport en vigueur ; ils peuvent évoluer avec les tarifs des transporteurs."
+      }
     }
   },
   "support": {

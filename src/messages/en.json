@@ -2616,6 +2616,57 @@
       "days": "{days} d",
       "empty": "No sale and no pending order in the last 60 days for this product.",
       "howto": "Same computation as the Purchasing page: orders not sent yet + daily sales × (lead time + cover) − stock − incoming. Stock and incoming come from ECCANG."
+    },
+    "proposal": {
+      "back": "← Back to the queue",
+      "title": "Price proposal",
+      "lead": "For a prospect without an account yet: add their products, pick the countries, and the app works out the delivered price with today's shipping rates. Save it as a PDF to send it. Nothing is stored in the app.",
+      "linkLabel": "Prospect proposal",
+      "prospect": "Prospect name",
+      "prospectHint": "Name or store",
+      "tier": "Pricing tier",
+      "markets": "Delivery countries ({max} at most)",
+      "products": "Products",
+      "photo": "Photo",
+      "name": "Product name",
+      "price": "Factory price, per unit",
+      "currency": "Currency",
+      "weight": "Weight (g)",
+      "type": "Product type",
+      "remove": "Remove",
+      "add": "+ Add a product",
+      "note": "Note at the bottom of the proposal (optional)",
+      "noteHint": "E.g. minimum quantity, production lead time…",
+      "detail": "Show the price split for 1 unit (product, shipping, handling)",
+      "calculate": "Calculate prices",
+      "calculating": "Calculating…",
+      "pdf": "Save as PDF",
+      "pdfHint": "In the print window, choose “Save as PDF” as the printer.",
+      "channels": {
+        "standard": "Standard",
+        "electronics_battery": "Electronics / battery",
+        "cosmetics": "Cosmetics",
+        "liquid_perfume": "Liquid / perfume",
+        "magnetic": "Magnetic",
+        "sensitive_other": "Sensitive (other)"
+      },
+      "errors": {
+        "empty": "Fill in at least one product: name, price and weight.",
+        "markets": "Pick at least one country.",
+        "grid": "No active shipping grid.",
+        "forbidden": "Team only.",
+        "failed": "The calculation failed. Try again."
+      },
+      "doc": {
+        "title": "Price proposal",
+        "for": "For {name}",
+        "country": "Country",
+        "delivery": "Delivery",
+        "units": "{count, plural, one {# unit} other {# units}}",
+        "days": "{range} days",
+        "split": "1 unit: product {product} · shipping {shipping} · handling {handling}",
+        "footer": "Price per order delivered to the end customer, in euros: product, handling and shipping included. Prices calculated on {date} with the shipping rates in force; they may change with carrier rates."
+      }
     }
   },
   "support": {

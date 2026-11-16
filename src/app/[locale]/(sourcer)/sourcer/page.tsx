@@ -30,6 +30,7 @@ export default async function SourcerPage({
   const { locale } = await params;
   const ctx = await getAuthContext();
   const t = await getTranslations("sourcer.queue");
+  const tProposal = await getTranslations("sourcer.proposal");
   const filters = await searchParams;
 
   if (!ctx) {
@@ -204,6 +205,12 @@ export default async function SourcerPage({
           <span className="rounded-full bg-[var(--card)] px-3 py-1 text-sm ring-1 ring-[var(--line)]">
             {t("openCount", { count: rows.length })}
           </span>
+          <Link
+            href="/sourcer/proposal"
+            className="rounded-[10px] px-4 py-2 text-sm font-semibold ring-1 ring-[var(--line)] hover:bg-[var(--card)]"
+          >
+            {tProposal("linkLabel")}
+          </Link>
           <Link
             href="/sourcer/new"
             className="rounded-[10px] bg-[var(--navy)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-hover)]"
