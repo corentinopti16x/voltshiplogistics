@@ -27,10 +27,10 @@ export type ProposalMarket = {
   /** Delivery time of that line (« 10-14 »): the team's setting first, else the grid's value. */
   delivery: string | null;
   /**
-   * Split of the 1-unit price in two lines, as Voltship quotes it to a prospect: the product
-   * (with the palier's sourcing fee) and the shipping (with the handling).
+   * Split of the 1-unit price, same lines as the client's product page: the product (with the
+   * palier's sourcing fee), the shipping and the handling.
    */
-  unit: { product: number; shipping: number } | null;
+  unit: { product: number; shipping: number; handling: number } | null;
   /** One entry per parcel size, null when no line carries that weight. */
   cells: (ProposalCell | null)[];
 };
@@ -114,7 +114,8 @@ export async function buildProposalAction(input: {
             unit: one
               ? {
                   product: Math.round((one.product + (one.box ?? 0) + one.commission) * 100) / 100,
-                  shipping: Math.round((one.shipping + one.handling) * 100) / 100,
+                  shipping: one.shipping,
+                  handling: one.handling,
                 }
               : null,
             cells: market.cells.map((cell) =>

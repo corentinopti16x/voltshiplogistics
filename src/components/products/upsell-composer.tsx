@@ -128,7 +128,7 @@ export function UpsellComposer({
           <>
             <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-[13px]">
               <dt className="text-[var(--muted)]">{t("products", { units: breakdown.units })}</dt>
-              <dd className="tabular text-right">{formatAmount(breakdown.product, locale)}</dd>
+              <dd className="tabular text-right">{formatAmount(breakdown.product + breakdown.commission, locale)}</dd>
               {breakdown.box > 0 ? (
                 <>
                   <dt className="text-[var(--muted)]">{t("box")}</dt>
@@ -145,7 +145,7 @@ export function UpsellComposer({
               </dt>
               <dd className="tabular text-right">{formatAmount(breakdown.shipping, locale)}</dd>
               <dt className="text-[var(--muted)]">{t("handling")}</dt>
-              <dd className="tabular text-right">{formatAmount(breakdown.handling + breakdown.commission, locale)}</dd>
+              <dd className="tabular text-right">{formatAmount(breakdown.handling, locale)}</dd>
             </dl>
             <div className="mt-2 flex items-baseline justify-between border-t border-[var(--line-soft)] pt-2">
               <span className="text-[14px] font-bold">

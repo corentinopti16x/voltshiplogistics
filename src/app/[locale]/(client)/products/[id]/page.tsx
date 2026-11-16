@@ -119,7 +119,8 @@ export default async function ProductDetailPage({
           detail: null as string | null,
           badge: null as string | null,
           hint: null as string | null,
-          value: Number(product.client_price),
+          // Product price as quoted to the client: negotiated price + Voltship's sourcing fee.
+          value: breakdown.product + breakdown.commission,
         },
         ...(breakdown.box && breakdown.box > 0
           ? [
@@ -184,7 +185,7 @@ export default async function ProductDetailPage({
           detail: null,
           badge: null,
           hint: null,
-          value: breakdown.handling + breakdown.commission,
+          value: breakdown.handling,
         },
       ]
     : [];
