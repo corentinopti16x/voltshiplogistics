@@ -469,7 +469,7 @@
       "billedWeight": "billed weight {weight} g",
       "earlyTitle": "Estimated COGS · to be confirmed by sourcing",
       "earlyBadge": "Estimate",
-      "earlyLead": "Computed on the active grid from your answers: {channel} channel, {weight} g, {cost} per unit ({source}). No Voltship sourcing commission applied. This is not a quote.",
+      "earlyLead": "Computed on the active grid from your answers: {channel} channel, {weight} g, {cost} per unit ({source}). This is not a quote: the final price is confirmed by sourcing.",
       "earlySourceCurrent": "your current cost",
       "earlySourceTarget": "your target price",
       "earlyRoas": "Estimated ROAS — break-even {be} · target {target}",
