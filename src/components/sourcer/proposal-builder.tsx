@@ -359,13 +359,23 @@ export function ProposalBuilder({ countries }: { countries: string[] }) {
                       ))}
                     </div>
                     {detail && market.unit ? (
-                      <p className="mt-3 text-xs text-[#5b6577]">
-                        {t("doc.split", {
-                          product: money(market.unit.product),
-                          shipping: money(market.unit.shipping),
-                          handling: money(market.unit.handling),
-                        })}
-                      </p>
+                      <div className="mt-4 border-t border-[#e3e7ef] pt-3">
+                        <p className="text-xs font-semibold text-[#5b6577]">{t("doc.splitTitle")}</p>
+                        <dl className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                          {(
+                            [
+                              ["product", market.unit.product],
+                              ["shipping", market.unit.shipping],
+                              ["handling", market.unit.handling],
+                            ] as const
+                          ).map(([key, value]) => (
+                            <div key={key} className="flex items-baseline justify-between rounded-lg border border-[#e3e7ef] px-3 py-2">
+                              <dt className="text-[#5b6577]">{t(`doc.parts.${key}`)}</dt>
+                              <dd className="font-semibold tabular-nums">{money(value)}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </div>
                     ) : null}
                   </div>
                 ))}
