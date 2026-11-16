@@ -2660,12 +2660,14 @@
       "doc": {
         "title": "Price proposal",
         "for": "For {name}",
-        "country": "Country",
-        "delivery": "Delivery",
+        "delivery": "Delivered in {delay}",
         "units": "{count, plural, one {# unit} other {# units}}",
         "days": "{range} days",
-        "split": "1 unit: product {product} · shipping {shipping} · handling {handling}",
-        "footer": "Price per order delivered to the end customer, in euros: product, handling and shipping included. Prices calculated on {date} with the shipping rates in force; they may change with carrier rates."
+        "split": "Split for 1 unit: product {product} · shipping {shipping} · handling {handling}",
+        "footer": "Price per order delivered to the end customer, in euros: product, handling and shipping included. Prices calculated on {date} with the shipping rates in force; they may change with carrier rates.",
+        "specs": "{weight} g · {type}",
+        "line": "Shipping: {line}",
+        "perUnit": "{price} / unit"
       }
     }
   },
