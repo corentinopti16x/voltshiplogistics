@@ -743,15 +743,24 @@ export async function syncShopifyProducts(input: {
   await refreshClientEffectiveSkus(input.clientId);
   const skuByVariant = await loadVariantSkuResolver(input.shopId);
 
-  const { data: sales } = await admin
-    .from("sales_cache")
-    .select("sku, units_sold")
-    .eq("client_id", input.clientId)
-    .eq("shop_id", input.shopId)
-    .gte("date", new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10));
+  // Read page by page: a busy store has far more than 1 000 daily sales lines over 90 days,
+  // and a single read stopped at 1 000 (sold products then showed 0 sale).
+  const salesSince = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
   const units = new Map<string, number>();
-  for (const row of sales ?? []) {
-    units.set(row.sku, (units.get(row.sku) ?? 0) + Number(row.units_sold));
+  for (let from = 0; from < 200000; from += 1000) {
+    const { data: sales, error: salesError } = await admin
+      .from("sales_cache")
+      .select("sku, units_sold")
+      .eq("client_id", input.clientId)
+      .eq("shop_id", input.shopId)
+      .gte("date", salesSince)
+      .order("id")
+      .range(from, from + 999);
+    if (salesError) throw salesError;
+    for (const row of sales ?? []) {
+      units.set(row.sku, (units.get(row.sku) ?? 0) + Number(row.units_sold));
+    }
+    if (!sales || sales.length < 1000) break;
   }
   for (const row of rows) {
     const sku = skuByVariant.get(String(row.shopify_variant_id)) ?? (row.sku as string | null);

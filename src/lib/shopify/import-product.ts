@@ -1,4 +1,5 @@
 import "server-only";
+import { DORMANT_GRACE_DAYS, refreshedShopifyPhoto, soldRecently } from "./import-rules";
 import { parseShopMarkets } from "./shop-markets";
 
 import { randomUUID } from "crypto";
@@ -106,7 +107,13 @@ export async function importShopifyVariantGroup(
   return { ok: true, productId: id };
 }
 
-type ReconcileVariant = ShopifyCacheVariant & { status: string | null; imported_product_id: string | null };
+type ReconcileVariant = ShopifyCacheVariant & {
+  status: string | null;
+  imported_product_id: string | null;
+  units_90d?: number | null;
+  /** SKU as typed on Shopify (`sku` is the effective one Voltship uses). */
+  shopify_sku?: string | null;
+};
 
 type ReconcileProduct = {
   id: string;
@@ -118,6 +125,7 @@ type ReconcileProduct = {
   weight_g: number | null;
   shipping_channel: string | null;
   created_at: string;
+  photo_url?: string | null;
 };
 
 async function pageRows<T>(fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>) {
@@ -161,7 +169,9 @@ function isLive(product: Pick<ReconcileProduct, "migration_state" | "lifecycle_s
  *  - a listing whose SKU is unknown becomes a new product ("à compléter");
  *  - duplicates created automatically and still empty are merged into the kept product
  *    (archived, never deleted); products filled by hand are never touched;
- *  - an automatic product left without any listing (re-linked elsewhere) is archived.
+ *  - an automatic product left without any listing (re-linked elsewhere) is archived;
+ *  - a listing without any sale over 90 days gets no product, and an automatic product still
+ *    empty whose listings have not sold for 90 days is archived (« dormant »).
  */
 export async function reconcileClientProducts(input: { clientId: string; limit?: number }) {
   const admin = createAdminClient();
@@ -170,7 +180,7 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
     pageRows<ReconcileVariant>((from, to) =>
       admin
         .from("shopify_products_cache")
-        .select("id, client_id, shop_id, shopify_product_id, title, sku, photo_url, status, imported_product_id")
+        .select("id, client_id, shop_id, shopify_product_id, title, sku, shopify_sku, photo_url, status, imported_product_id, units_90d")
         .eq("client_id", clientId)
         .order("id")
         .range(from, to),
@@ -178,7 +188,7 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
     pageRows<ReconcileProduct>((from, to) =>
       admin
         .from("products_cache")
-        .select("id, sku, airtable_record_id, migration_state, lifecycle_status, client_price, weight_g, shipping_channel, created_at")
+        .select("id, sku, airtable_record_id, migration_state, lifecycle_status, client_price, weight_g, shipping_channel, created_at, photo_url")
         .eq("client_id", clientId)
         .order("id")
         .range(from, to),
@@ -192,6 +202,30 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
         .range(from, to),
     ),
   ]);
+  // Sales of the last 90 days, read from the daily sales themselves: a listing counts as sold
+  // when either its stored figure or the sales say so (never archived on a stale figure).
+  const salesSince = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+  const sales = await pageRows<{ shop_id: string | null; sku: string | null; units_sold: number | null }>((from, to) =>
+    admin
+      .from("sales_cache")
+      .select("shop_id, sku, units_sold")
+      .eq("client_id", clientId)
+      .gte("date", salesSince)
+      .order("id")
+      .range(from, to),
+  );
+  const soldKeys = new Set(
+    sales
+      .filter((row) => row.sku && Number(row.units_sold ?? 0) > 0)
+      .map((row) => `${row.shop_id ?? ""}|${normSku(row.sku as string)}`),
+  );
+  for (const variant of variants) {
+    const sold = [variant.sku, variant.shopify_sku].some(
+      (sku) => sku && soldKeys.has(`${variant.shop_id}|${normSku(sku)}`),
+    );
+    if (sold) variant.units_90d = Math.max(Number(variant.units_90d ?? 0), 1);
+  }
+
   const live = new Map(products.filter(isLive).map((product) => [product.id, product]));
   const liveIds = [...live.keys()];
 
@@ -314,6 +348,9 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
       }
     }
     if (candidates.length === 0) {
+      // A listing that has not sold for 90 days gets no product: the catalogue only holds what
+      // Voltship ships. Its product is created at the first sale (next sync).
+      if (!soldRecently(group)) continue;
       if (created >= (input.limit ?? 150)) continue;
       const result = await importShopifyVariantGroup(group, { auto: true });
       if (result.ok) {
@@ -378,7 +415,40 @@ export async function reconcileClientProducts(input: { clientId: string; limit?:
     await archive(product, null, null);
     merged += 1;
   }
-  return { created, linked, merged };
+
+  // Photos: a product keeps the photo of its listing, even when the client changes it on Shopify.
+  const activeByProduct = new Map<string, ReconcileVariant[]>();
+  for (const variant of active) {
+    const productId = finalLink.get(variant.id);
+    if (productId) activeByProduct.set(productId, [...(activeByProduct.get(productId) ?? []), variant]);
+  }
+  for (const product of live.values()) {
+    if (archived.has(product.id)) continue;
+    const photo = refreshedShopifyPhoto(product.photo_url, activeByProduct.get(product.id) ?? []);
+    if (!photo) continue;
+    await admin.from("products_cache").update({ photo_url: photo }).eq("id", product.id).eq("client_id", clientId);
+  }
+
+  // Dormant products: created automatically, never filled in, used nowhere, and none of their
+  // listings sold for 90 days. Archived (never deleted); a sale creates a fresh product.
+  // Skipped when the client has no sales figures at all (first sync, or a failed read).
+  let dormant = 0;
+  if (soldRecently(variants)) {
+    const linkedVariants = new Map<string, ReconcileVariant[]>();
+    for (const variant of variants) {
+      const productId = finalLink.get(variant.id);
+      if (productId) linkedVariants.set(productId, [...(linkedVariants.get(productId) ?? []), variant]);
+    }
+    const graceLimit = Date.now() - DORMANT_GRACE_DAYS * 86400000;
+    for (const product of live.values()) {
+      if (archived.has(product.id) || !disposable(product)) continue;
+      if (!(Date.parse(product.created_at) < graceLimit)) continue;
+      if (soldRecently(linkedVariants.get(product.id) ?? [])) continue;
+      await archive(product, null, null);
+      dormant += 1;
+    }
+  }
+  return { created, linked, merged, dormant };
 }
 
 /** Kept for the existing call sites (sync, OAuth callback, "Synchroniser"): reconciles the whole client. */
