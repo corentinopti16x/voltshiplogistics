@@ -2,7 +2,9 @@
 
 import { getAuthContext } from "@/lib/auth/context";
 import { EMPTY_CARRIER_RULES } from "@/lib/domain/carrier-rules";
+import { indexLineSettings, lineSettingKey } from "@/lib/domain/line-settings";
 import { PRICING_TIER_PRESETS, parsePricingTier } from "@/lib/domain/pricing-tiers";
+import { loadLineSettings } from "@/lib/pricing/line-settings-server";
 import { calculateProductCogsMatrix } from "@/lib/pricing/server";
 import { readPricingSettings } from "@/lib/pricing/settings";
 import { loadTransportOverview } from "@/lib/pricing/transport-server";
@@ -20,10 +22,15 @@ export type ProposalCell = { quantity: number; total: number; perUnit: number };
 
 export type ProposalMarket = {
   destination: string;
-  /** Delivery time of the line used for 1 unit (« 7-12 »), when the grid gives it. */
+  /** Carrier line used for 1 unit (« YunExpress THPHR-CHC »). */
+  line: string | null;
+  /** Delivery time of that line (« 10-14 »): the team's setting first, else the grid's value. */
   delivery: string | null;
-  /** Split of the 1-unit price: product, shipping, handling (handling includes the service fee). */
-  unit: { product: number; shipping: number; handling: number } | null;
+  /**
+   * Split of the 1-unit price in two lines, as Voltship quotes it to a prospect: the product
+   * (with the palier's sourcing fee) and the shipping (with the handling).
+   */
+  unit: { product: number; shipping: number } | null;
   /** One entry per parcel size, null when no line carries that weight. */
   cells: (ProposalCell | null)[];
 };
@@ -53,10 +60,12 @@ export async function buildProposalAction(input: {
     return { ok: false, error: "forbidden" };
   }
   try {
-    const [settings, overview] = await Promise.all([
+    const [settings, overview, lines] = await Promise.all([
       readPricingSettings(createAdminClient()),
       loadTransportOverview(null, null, { withClientPrices: false }),
+      loadLineSettings().catch(() => ({ ready: false, settings: [] })),
     ]);
+    const lineSettings = indexLineSettings(lines.settings);
     if (!overview.gridVersion) return { ok: false, error: "grid" };
     const markets = cleanProposalMarkets(
       input.markets ?? [],
@@ -95,14 +104,17 @@ export async function buildProposalAction(input: {
         channel: item.channel,
         markets: matrix.markets.map((market) => {
           const one = market.cells.find((cell) => cell.quantity === 1)?.breakdown ?? null;
+          const setting = one
+            ? lineSettings.get(lineSettingKey(market.destination, one.carrier, one.lineName))
+            : null;
           return {
             destination: market.destination,
-            delivery: one?.deliveryRange ?? null,
+            line: one ? (one.lineName ?? one.carrier) : null,
+            delivery: setting?.deliveryDays ?? one?.deliveryRange ?? null,
             unit: one
               ? {
-                  product: one.product + (one.box ?? 0),
-                  shipping: one.shipping,
-                  handling: one.handling + one.commission,
+                  product: Math.round((one.product + (one.box ?? 0) + one.commission) * 100) / 100,
+                  shipping: Math.round((one.shipping + one.handling) * 100) / 100,
                 }
               : null,
             cells: market.cells.map((cell) =>

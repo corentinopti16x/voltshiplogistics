@@ -111,16 +111,44 @@ export function ProposalBuilder({ countries }: { countries: string[] }) {
     });
   }
 
+  // Only the proposal goes to the printer: a copy is placed directly under <body>, the rest of
+  // the page is hidden (no blank page, no app header), and the copy is removed afterwards.
+  function printProposal() {
+    const source = document.getElementById("proposal-doc");
+    if (!source) return;
+    document.getElementById("proposal-print")?.remove();
+    const holder = document.createElement("div");
+    holder.id = "proposal-print";
+    holder.appendChild(source.cloneNode(true));
+    document.body.appendChild(holder);
+    const previousTitle = document.title;
+    document.title = `${t("doc.title")}${prospect.trim() ? ` - ${prospect.trim()}` : ""} - Voltship`;
+    const cleanup = () => {
+      holder.remove();
+      document.title = previousTitle;
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+  }
+
+  const deliveryText = (raw: string) =>
+    /^[\d\s–-]+$/.test(raw) ? t("doc.days", { range: raw.trim() }) : raw;
+
   return (
     <div className="space-y-8">
-      <style>{`@media print {
-        body * { visibility: hidden !important; }
-        #proposal-doc, #proposal-doc * { visibility: visible !important; }
-        #proposal-doc { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; border: 0; box-shadow: none; }
-        #proposal-doc section { break-inside: avoid; }
-        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        @page { margin: 14mm; }
-      }`}</style>
+      <style>{`
+        #proposal-print { display: none; }
+        @media print {
+          html, body { background: #fff !important; height: auto !important; min-height: 0 !important; }
+          body > *:not(#proposal-print) { display: none !important; }
+          #proposal-print { display: block !important; }
+          #proposal-print article { border: 0 !important; border-radius: 0 !important; }
+          #proposal-print section { break-inside: avoid; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          @page { size: A4; margin: 0; }
+        }
+      `}</style>
 
       <div className="rounded-2xl border border-[var(--line)] bg-[var(--card)] p-6">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -258,7 +286,7 @@ export function ProposalBuilder({ countries }: { countries: string[] }) {
             {pending ? t("calculating") : t("calculate")}
           </button>
           {result ? (
-            <button type="button" onClick={() => window.print()} className="rounded-full px-5 py-2 text-sm font-semibold ring-1 ring-[var(--line)]">
+            <button type="button" onClick={printProposal} className="rounded-full px-5 py-2 text-sm font-semibold ring-1 ring-[var(--line)]">
               {t("pdf")}
             </button>
           ) : null}
@@ -268,76 +296,86 @@ export function ProposalBuilder({ countries }: { countries: string[] }) {
       </div>
 
       {result ? (
-        <article id="proposal-doc" className="rounded-2xl border border-[var(--line)] bg-white p-8 text-[#14213d]">
-          <header className="flex items-start justify-between gap-6 border-b border-[#d9dee8] pb-5">
+        <article id="proposal-doc" className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-[#14213d]">
+          <header className="flex items-end justify-between gap-6 bg-[#14213d] px-10 py-8 text-white">
             <div>
-              <p className="text-lg font-extrabold tracking-wide">VOLTSHIP LOGISTICS</p>
-              <h2 className="mt-3 text-2xl font-semibold">{t("doc.title")}</h2>
-              {prospect.trim() ? <p className="mt-1 text-sm">{t("doc.for", { name: prospect.trim() })}</p> : null}
+              <p className="flex items-center gap-2 text-sm font-extrabold tracking-[0.18em]">
+                <span className="grid h-7 w-7 place-items-center rounded-md bg-white/10">
+                  <svg width="14" height="16" viewBox="0 0 20 22" aria-hidden>
+                    <path d="M0 1h4.6l5.1 12.2L14.8 1H19.4L11.6 21H7.8z" fill="#FFFFFF" />
+                    <path d="M15.4 0 9.6 8.2h3L11.2 14.5l5.8-8.3h-3z" fill="#E8B04F" />
+                  </svg>
+                </span>
+                VOLTSHIP LOGISTICS
+              </p>
+              <h2 className="mt-5 text-3xl font-semibold">{t("doc.title")}</h2>
+              {prospect.trim() ? <p className="mt-1 text-base text-white/80">{t("doc.for", { name: prospect.trim() })}</p> : null}
             </div>
-            <p className="text-right text-sm text-[#5b6577]">{result.date}</p>
+            <p className="text-right text-sm text-white/70">{result.date}</p>
           </header>
 
-          {result.products.map((product, index) => (
-            <section key={`${product.name}-${index}`} className="border-b border-[#d9dee8] py-6 last:border-b-0">
-              <div className="flex items-center gap-4">
-                {result.photos[index] ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- local data URL
-                  <img src={result.photos[index] ?? ""} alt="" className="h-24 w-24 rounded-xl border border-[#d9dee8] object-cover" />
-                ) : null}
-                <div>
-                  <h3 className="text-lg font-semibold">{product.name}</h3>
-                  <p className="text-sm text-[#5b6577]">
-                    {product.weightG} g · {t(`channels.${product.channel}`)}
-                  </p>
+          <div className="px-10 pb-8">
+            {result.products.map((product, index) => (
+              <section key={`${product.name}-${index}`} className="border-b border-[#e3e7ef] py-7 last:border-b-0">
+                <div className="flex items-center gap-5">
+                  {result.photos[index] ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- local data URL
+                    <img src={result.photos[index] ?? ""} alt="" className="h-32 w-32 rounded-2xl border border-[#e3e7ef] object-cover" />
+                  ) : null}
+                  <div>
+                    <h3 className="text-2xl font-semibold">{product.name}</h3>
+                    <p className="mt-1 text-sm text-[#5b6577]">
+                      {t("doc.specs", { weight: product.weightG, type: t(`channels.${product.channel}`) })}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <table className="mt-4 w-full border-collapse text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-[#5b6577]">
-                    <th className="py-2 pr-3 font-medium">{t("doc.country")}</th>
-                    <th className="py-2 pr-3 font-medium">{t("doc.delivery")}</th>
-                    {PROPOSAL_QUANTITIES.map((quantity) => (
-                      <th key={quantity} className="py-2 pl-3 text-right font-medium">
-                        {t("doc.units", { count: quantity })}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {product.markets.map((market) => (
-                    <tr key={market.destination} className="border-t border-[#e6e9f0] align-top">
-                      <td className="py-2.5 pr-3">
-                        <span className="font-semibold">{countryName(market.destination)}</span>
-                        {detail && market.unit ? (
-                          <span className="mt-0.5 block text-xs text-[#5b6577]">
-                            {t("doc.split", {
-                              product: money(market.unit.product),
-                              shipping: money(market.unit.shipping),
-                              handling: money(market.unit.handling),
-                            })}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="py-2.5 pr-3 whitespace-nowrap">
-                        {market.delivery ? t("doc.days", { range: market.delivery }) : "—"}
-                      </td>
-                      {market.cells.map((cell, cellIndex) => (
-                        <td key={cellIndex} className={`py-2.5 pl-3 text-right whitespace-nowrap tabular-nums ${cellIndex === 0 ? "font-semibold" : ""}`}>
-                          {cell ? money(cell.total) : "—"}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          ))}
 
-          <footer className="pt-5 text-xs leading-relaxed text-[#5b6577]">
-            <p>{t("doc.footer", { date: result.date })}</p>
-            {note.trim() ? <p className="mt-2 whitespace-pre-line text-[#14213d]">{note.trim()}</p> : null}
-          </footer>
+                {product.markets.map((market) => (
+                  <div key={market.destination} className="mt-5 rounded-2xl border border-[#e3e7ef] p-5" style={{ breakInside: "avoid" }}>
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+                      <p className="text-lg font-semibold">{countryName(market.destination)}</p>
+                      <p className="text-sm text-[#5b6577]">
+                        {market.line ? t("doc.line", { line: market.line }) : null}
+                        {market.line && market.delivery ? " · " : null}
+                        {market.delivery ? (
+                          <span className="font-semibold text-[#14213d]">{t("doc.delivery", { delay: deliveryText(market.delivery) })}</span>
+                        ) : null}
+                      </p>
+                    </div>
+                    <div className="mt-4 grid grid-cols-5 gap-2">
+                      {market.cells.map((cell, cellIndex) => (
+                        <div
+                          key={cellIndex}
+                          className={`rounded-xl px-3 py-3 text-center ${cellIndex === 0 ? "bg-[#14213d] text-white" : "bg-[#f3f5f9]"}`}
+                        >
+                          <p className={`text-xs ${cellIndex === 0 ? "text-white/70" : "text-[#5b6577]"}`}>
+                            {t("doc.units", { count: PROPOSAL_QUANTITIES[cellIndex] })}
+                          </p>
+                          <p className="mt-1 text-lg font-semibold tabular-nums">{cell ? money(cell.total) : "—"}</p>
+                          {cell && cell.quantity > 1 ? (
+                            <p className="text-[11px] text-[#5b6577]">{t("doc.perUnit", { price: money(cell.perUnit) })}</p>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                    {detail && market.unit ? (
+                      <p className="mt-3 text-xs text-[#5b6577]">
+                        {t("doc.split", {
+                          product: money(market.unit.product),
+                          shipping: money(market.unit.shipping),
+                        })}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </section>
+            ))}
+
+            <footer className="pt-5 text-xs leading-relaxed text-[#5b6577]">
+              <p>{t("doc.footer", { date: result.date })}</p>
+              {note.trim() ? <p className="mt-2 whitespace-pre-line text-sm text-[#14213d]">{note.trim()}</p> : null}
+            </footer>
+          </div>
         </article>
       ) : null}
     </div>
