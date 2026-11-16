@@ -2663,11 +2663,16 @@
         "delivery": "Delivered in {delay}",
         "units": "{count, plural, one {# unit} other {# units}}",
         "days": "{range} days",
-        "split": "Split for 1 unit: product {product} · shipping {shipping} · handling {handling}",
         "footer": "Price per order delivered to the end customer, in euros, all included. Prices calculated on {date} with the shipping rates in force; they may change with carrier rates.",
         "specs": "{weight} g · {type}",
         "line": "Shipping: {line}",
-        "perUnit": "{price} / unit"
+        "perUnit": "{price} / unit",
+        "splitTitle": "Price split for 1 unit",
+        "parts": {
+          "product": "Product",
+          "shipping": "Shipping",
+          "handling": "Handling"
+        }
       }
     }
   },

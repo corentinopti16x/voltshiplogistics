@@ -224,11 +224,11 @@ export default async function LandingPage() {
               kicker={t("quote.kicker")}
               productName={t("products.bottle")}
               productLabel={t("quote.product")}
-              productPrice="4,20 €"
+              productPrice="4,90 €"
               shippingLabel={t("quote.shipping")}
               shippingPrice="3,90 €"
               handlingLabel={t("quote.handling")}
-              handlingPrice="1,70 €"
+              handlingPrice="1,00 €"
               totalLabel={t("quote.total")}
               totalPrice="9,80 €"
               badge={t("quote.badge")}
