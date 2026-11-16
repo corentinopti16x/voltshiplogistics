@@ -24,7 +24,7 @@ export type SourcingPreviewCell = {
   product: number;
   box: number;
   shipping: number;
-  /** Préparation + commission, as shown on the product page. */
+  /** Préparation only; the sourcing fee is inside `product`, as on the client's product page. */
   handling: number;
   weightG: number;
   lineName: string | null;
@@ -89,10 +89,10 @@ export async function previewSourcingCogsAction(input: SourcingPreviewInput): Pr
             ? {
                 quantity: cell.quantity,
                 cogs: cell.breakdown.cogs,
-                product: cell.breakdown.product,
+                product: cell.breakdown.product + cell.breakdown.commission,
                 box: cell.breakdown.box ?? 0,
                 shipping: cell.breakdown.shipping,
-                handling: cell.breakdown.handling + cell.breakdown.commission,
+                handling: cell.breakdown.handling,
                 weightG: cell.breakdown.weightG,
                 lineName: cell.breakdown.lineName,
               }

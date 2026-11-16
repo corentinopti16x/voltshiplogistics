@@ -363,6 +363,7 @@ export function ProposalBuilder({ countries }: { countries: string[] }) {
                         {t("doc.split", {
                           product: money(market.unit.product),
                           shipping: money(market.unit.shipping),
+                          handling: money(market.unit.handling),
                         })}
                       </p>
                     ) : null}
