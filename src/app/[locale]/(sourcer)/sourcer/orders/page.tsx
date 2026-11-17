@@ -49,7 +49,7 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
   const alerts = lines.filter((line) => line.stock != null && line.urgent);
   const fresh = lines.filter((line) => !line.productId);
   const skulessOrders = pending.filter(
-    (order) => order.unitsWithoutSku > 0 || order.lines.some((line) => isSkuless(line.sku)),
+    (order) => order.unitsWithoutSku > 0 || order.lines.some((line) => isSkuless(line.sku) && !notGoods(line.title)),
   );
   const td = "px-3 py-2 align-top";
   const th = "px-3 py-2 text-left text-[11px] font-medium text-[var(--muted)]";
