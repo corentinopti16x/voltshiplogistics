@@ -16,6 +16,11 @@ function daysAgo(days: number) {
 }
 
 const isSkuless = (sku: string) => /^shopify-/i.test(sku.trim());
+/** Demo / test tenants never shown to the team. */
+const isFakeClient = (name: string) => /d[ée]mo|^test$|altair|voltship logistics/i.test(name.trim());
+/** Shopify lines that are not physical goods (insurance, free shipping…). */
+const notGoods = (title: string | null | undefined) =>
+  /assurance|insurance|livraison gratuite|free shipping|shipping protection|composants coffret|pourboire|tip\b/i.test(title ?? "");
 
 /** Warehouse / supply-chain view of every open Shopify order: products, variants, SKU gaps, stock alerts. */
 export default async function TeamOrdersPage({ searchParams }: { searchParams: Promise<{ client?: string }> }) {
@@ -35,10 +40,15 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
   const num = (value: number | null | undefined, digits = 0) =>
     value == null ? "—" : formatNumber(value, locale, digits);
 
-  const lines = [...data.buy].sort((a, b) => Number(b.urgent) - Number(a.urgent) || b.backlog - a.backlog);
-  const alerts = lines.filter((line) => line.urgent || (line.runwayDays != null && line.runwayDays < 7));
-  const unlinked = lines.filter((line) => !line.productId || isSkuless(line.sku));
-  const skulessOrders = data.pending.filter(
+  const pending = data.pending.filter((order) => !isFakeClient(order.clientName));
+  const clients = data.clients.filter((client) => !isFakeClient(client.name));
+  const lines = data.buy
+    .filter((line) => !isFakeClient(line.clientName) && !notGoods(line.title) && line.backlog > 0)
+    .sort((a, b) => b.backlog - a.backlog);
+  // Only real alerts: known stock that runs out before restock. Unknown stock is not an alert.
+  const alerts = lines.filter((line) => line.stock != null && line.urgent);
+  const fresh = lines.filter((line) => !line.productId);
+  const skulessOrders = pending.filter(
     (order) => order.unitsWithoutSku > 0 || order.lines.some((line) => isSkuless(line.sku)),
   );
   const td = "px-3 py-2 align-top";
@@ -54,7 +64,7 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
             <Link href="/sourcer/orders" className={`rounded-lg px-3 py-1.5 ring-1 ring-[var(--line)] ${clientId ? "" : "bg-[var(--line)]"}`}>
               {t("allClients")}
             </Link>
-            {data.clients.map((client) => (
+            {clients.map((client) => (
               <Link
                 key={client.id}
                 href={`/sourcer/orders?client=${client.id}`}
@@ -68,9 +78,9 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            [t("kpi.orders"), data.pending.length],
+            [t("kpi.orders"), pending.length],
             [t("kpi.pieces"), lines.reduce((sum, line) => sum + line.backlog, 0)],
-            [t("kpi.alerts"), alerts.length],
+            [t("kpi.new"), fresh.length],
             [t("kpi.noSku"), skulessOrders.length],
           ].map(([label, value]) => (
             <div key={String(label)} className="rounded-xl bg-[var(--card)] p-4 ring-1 ring-[var(--line)]">
@@ -87,7 +97,7 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
             <ul className="divide-y divide-[var(--line)] text-sm">
               {alerts.map((line) => (
                 <li key={`${line.clientId}|${line.sku}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2">
-                  <Badge tone="rust">{line.stock == null ? t("alerts.noStock") : t("alerts.runway", { days: line.runwayDays ?? 0 })}</Badge>
+                  <Badge tone="rust">{t("alerts.runway", { days: line.runwayDays ?? 0 })}</Badge>
                   <span className="font-medium">{line.title ?? line.sku}</span>
                   <span className="text-xs text-[var(--muted)]">{line.clientName} · {line.sku}</span>
                   <span className="ml-auto text-xs tabular-nums">
@@ -99,7 +109,7 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
           </section>
         ) : null}
 
-        {unlinked.length > 0 || skulessOrders.length > 0 ? (
+        {skulessOrders.length > 0 ? (
           <section className="rounded-xl bg-[var(--card)] ring-1 ring-[var(--line)]">
             <h2 className="border-b border-[var(--line)] px-5 py-3 text-sm font-semibold">{t("noSku.title")}</h2>
             <p className="px-5 pt-3 text-xs text-[var(--muted)]">{t("noSku.intro")}</p>
@@ -119,6 +129,24 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
             </ul>
           </section>
         ) : null}
+        {fresh.length > 0 ? (
+          <section className="rounded-xl bg-[var(--card)] ring-1 ring-[var(--line)]">
+            <h2 className="border-b border-[var(--line)] px-5 py-3 text-sm font-semibold">{t("fresh.title")}</h2>
+            <p className="px-5 pt-2 text-xs text-[var(--muted)]">{t("fresh.help")}</p>
+            <ul className="divide-y divide-[var(--line)] text-sm">
+              {fresh.map((line) => (
+                <li key={`${line.clientId}|${line.sku}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2">
+                  <Badge tone="gold">{t("fresh.badge")}</Badge>
+                  <span className="font-medium">{line.title ?? line.sku}</span>
+                  {line.variants.length ? <span className="text-xs">{line.variants.join(" · ")}</span> : null}
+                  <span className="text-xs text-[var(--muted)]">{line.clientName} · {line.sku}</span>
+                  <span className="ml-auto text-xs font-semibold tabular-nums">{t("fresh.toShip", { count: line.backlog })}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         <section className="overflow-x-auto rounded-xl bg-[var(--card)] ring-1 ring-[var(--line)]">
           <h2 className="border-b border-[var(--line)] px-5 py-3 text-sm font-semibold">{t("products.title")}</h2>
           <p className="px-5 pt-2 text-xs text-[var(--muted)]">{t("products.help")}</p>
@@ -130,6 +158,7 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
                 <th className={th}>{t("products.client")}</th>
                 <th className={`${th} text-right`}>{t("products.toShip")}</th>
                 <th className={`${th} text-right`}>{t("products.stock")}</th>
+                <th className={`${th} text-right`}>{t("products.incoming")}</th>
                 <th className={`${th} text-right`}>{t("products.toBuy")}</th>
                 <th className={th}>{t("products.supplier")}</th>
               </tr>
@@ -172,6 +201,7 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
                     {num(line.stock)}
                     <span className="block text-[11px] text-[var(--muted)]">{t("products.sales", { perDay: num(line.perDay, 1) })}</span>
                   </td>
+                  <td className={`${td} text-right tabular-nums`}>{line.incoming > 0 ? num(line.incoming) : "—"}</td>
                   <td className={`${td} text-right font-semibold tabular-nums`}>{line.toBuy > 0 ? num(line.toBuy) : "—"}</td>
                   <td className={`${td} text-xs`}>
                     {line.supplier ?? "—"}
@@ -184,11 +214,11 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
         </section>
 
 
-        <section className="rounded-xl bg-[var(--card)] ring-1 ring-[var(--line)]">
-          <h2 className="border-b border-[var(--line)] px-5 py-3 text-sm font-semibold">{t("list.title")}</h2>
+        <details className="rounded-xl bg-[var(--card)] ring-1 ring-[var(--line)]">
+          <summary className="cursor-pointer px-5 py-3 text-sm font-semibold">{t("list.title")}</summary>
           <p className="px-5 pt-2 text-xs text-[var(--muted)]">{t("list.help")}</p>
           <ul className="divide-y divide-[var(--line)] text-sm">
-            {data.pending.slice(0, 200).map((order) => (
+            {pending.slice(0, 200).map((order) => (
               <li key={`${order.shopId}:${order.orderId}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2">
                 <span className="w-16 font-medium">{order.name ?? order.orderId}</span>
                 <span className="text-xs text-[var(--muted)]">{order.clientName} · {order.shopDomain}</span>
@@ -203,7 +233,7 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
               </li>
             ))}
           </ul>
-        </section>
+        </details>
       </div>
     </SourcerShell>
   );

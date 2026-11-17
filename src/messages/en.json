@@ -2684,7 +2684,8 @@
         "orders": "Orders to ship",
         "pieces": "Pieces to ship",
         "alerts": "Stock alerts",
-        "noSku": "Orders without SKU"
+        "noSku": "Orders without SKU",
+        "new": "New products"
       },
       "alerts": {
         "title": "Stock alerts",
@@ -2708,7 +2709,8 @@
         "noSheet": "No sheet",
         "orders": "{count} orders",
         "help": "What to pick for all waiting orders, and what to buy again.",
-        "sales": "{perDay} sold/d"
+        "sales": "{perDay} sold/d",
+        "incoming": "Incoming"
       },
       "noSku": {
         "title": "Orders without SKU",
@@ -2719,6 +2721,12 @@
         "title": "All orders to ship",
         "age": "{days} d",
         "help": "Order by order, oldest first."
+      },
+      "fresh": {
+        "title": "New products to ship",
+        "help": "Sold on Shopify but not in our catalogue yet: create the sheet and check stock.",
+        "badge": "New",
+        "toShip": "{count} to ship"
       }
     }
   },

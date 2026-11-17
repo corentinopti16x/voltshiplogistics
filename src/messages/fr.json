@@ -2684,7 +2684,8 @@
         "orders": "Commandes à expédier",
         "pieces": "Pièces à expédier",
         "alerts": "Alertes stock",
-        "noSku": "Commandes sans SKU"
+        "noSku": "Commandes sans SKU",
+        "new": "Nouveaux produits"
       },
       "alerts": {
         "title": "Alertes stock",
@@ -2708,7 +2709,8 @@
         "noSheet": "Pas de fiche",
         "orders": "{count} cmd",
         "help": "Ce qu'il faut sortir du stock pour toutes les commandes en attente, et ce qu'il faut racheter.",
-        "sales": "{perDay} vendus/j"
+        "sales": "{perDay} vendus/j",
+        "incoming": "En arrivage"
       },
       "noSku": {
         "title": "Commandes sans SKU",
@@ -2719,6 +2721,12 @@
         "title": "Toutes les commandes à expédier",
         "age": "{days} j",
         "help": "Le détail commande par commande, de la plus ancienne à la plus récente."
+      },
+      "fresh": {
+        "title": "Nouveaux produits à expédier",
+        "help": "Vendus sur Shopify mais pas encore dans notre catalogue : créer la fiche et vérifier le stock.",
+        "badge": "Nouveau",
+        "toShip": "{count} à expédier"
       }
     }
   },

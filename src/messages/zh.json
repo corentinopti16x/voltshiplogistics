@@ -1724,7 +1724,8 @@
         "orders": "待发货订单",
         "pieces": "待发货件数",
         "alerts": "库存预警",
-        "noSku": "无SKU订单"
+        "noSku": "无SKU订单",
+        "new": "新产品"
       },
       "alerts": {
         "title": "库存预警",
@@ -1748,7 +1749,8 @@
         "noSheet": "无产品资料",
         "orders": "{count} 单",
         "help": "所有待发货订单需要出库的数量，以及需要补采购的数量。",
-        "sales": "日销 {perDay}"
+        "sales": "日销 {perDay}",
+        "incoming": "在途"
       },
       "noSku": {
         "title": "无SKU订单",
@@ -1759,6 +1761,12 @@
         "title": "全部待发货订单",
         "age": "{days}天",
         "help": "逐单明细，从最早的订单开始。"
+      },
+      "fresh": {
+        "title": "新产品待发货",
+        "help": "Shopify已售出但我们目录里还没有：请建立产品资料并核对库存。",
+        "badge": "新",
+        "toShip": "待发 {count}"
       }
     }
   },
