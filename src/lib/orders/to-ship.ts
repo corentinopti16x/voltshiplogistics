@@ -140,6 +140,7 @@ export type CatalogEntry = {
   leadDays: number | null;
   factoryPriceRmb: number | null;
   supplier: string | null;
+  photoUrl?: string | null;
   /** Pieces shipped per unit sold (sets). */
   packPieces: number;
 };
@@ -181,6 +182,9 @@ export type BuyLine = {
   factoryPriceRmb: number | null;
   totalRmb: number | null;
   supplier: string | null;
+  photoUrl: string | null;
+  /** Shopify variant names seen in the orders (« Noir / M »). */
+  variants: string[];
 };
 
 type SkuKey = string;
@@ -198,7 +202,7 @@ export function buildBuyList(
   options: BuyOptions = DEFAULT_BUY_OPTIONS,
 ): BuyLine[] {
   const entryOf = (clientId: string, sku: string) => catalog.get(clientId)?.get(sku.trim().toLowerCase()) ?? null;
-  const rows = new Map<SkuKey, { clientId: string; clientName: string; sku: string; title: string | null; backlog: number; orders: Set<string>; sold: number }>();
+  const rows = new Map<SkuKey, { clientId: string; clientName: string; sku: string; title: string | null; backlog: number; orders: Set<string>; sold: number; variants?: Set<string> }>();
   const touch = (clientId: string, clientName: string, sku: string, title: string | null) => {
     const key = skuKey(clientId, sku);
     let row = rows.get(key);
@@ -217,6 +221,7 @@ export function buildBuyList(
       const row = touch(order.clientId, order.clientName, line.sku, line.title ?? null);
       row.backlog += line.quantity * pieces;
       row.orders.add(`${order.shopId}:${order.orderId}`);
+      if (line.variant) (row.variants ??= new Set()).add(line.variant);
     }
   }
   for (const item of sold.values()) {
@@ -257,6 +262,8 @@ export function buildBuyList(
         factoryPriceRmb,
         totalRmb: factoryPriceRmb != null ? Math.round(toBuy * factoryPriceRmb * 100) / 100 : null,
         supplier: entry?.supplier ?? null,
+        photoUrl: entry?.photoUrl ?? null,
+        variants: [...(row.variants ?? [])].slice(0, 6),
       } satisfies BuyLine;
     })
     .filter((line) => line.backlog > 0 || line.perDay > 0)

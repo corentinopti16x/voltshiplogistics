@@ -29,6 +29,9 @@ export async function SourcerShell({
                 <Link href="/sourcer" className="font-medium">
                   {t("queueLink")}
                 </Link>
+                <Link href="/sourcer/orders" className="font-medium">
+                  {t("ordersLink")}
+                </Link>
                 <Link href="/sourcer/products" className="font-medium">
                   {t("catalogLink")}
                 </Link>

@@ -52,6 +52,7 @@ export type ShopifyOrder = {
     title?: string | null;
     name?: string | null;
     price?: string | number | null;
+    variant_title?: string | null;
     requires_shipping?: boolean | null;
   }>;
   /** Only the id is read (hashed into customer_key); never persisted raw. */

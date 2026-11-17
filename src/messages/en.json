@@ -2324,7 +2324,8 @@
       "queueLink": "To quote",
       "staff": "Staff",
       "catalogLink": "All products",
-      "transportLink": "Transport"
+      "transportLink": "Transport",
+      "ordersLink": "Orders"
     },
     "form": {
       "clientFieldsTitle": "Client-safe quote fields",
@@ -2673,6 +2674,47 @@
           "shipping": "Shipping",
           "handling": "Handling"
         }
+      }
+    },
+    "orders": {
+      "title": "Shopify orders",
+      "intro": "Every open client order, product by product, with variants, orders without SKU and stock alerts.",
+      "allClients": "All clients",
+      "kpi": {
+        "orders": "Orders to ship",
+        "pieces": "Pieces to ship",
+        "alerts": "Stock alerts",
+        "noSku": "Orders without SKU"
+      },
+      "alerts": {
+        "title": "Stock alerts",
+        "noStock": "Stock unknown",
+        "runway": "Out in {days} d",
+        "detail": "stock {stock} · {perDay}/d · to buy {toBuy}"
+      },
+      "products": {
+        "title": "Products to prepare",
+        "product": "Product",
+        "variants": "Variants (size / colour)",
+        "client": "Client",
+        "toShip": "To ship",
+        "perDay": "Sales/d",
+        "stock": "Stock",
+        "toBuy": "To buy",
+        "supplier": "Supplier / price",
+        "urgent": "Urgent",
+        "noSku": "No SKU",
+        "noSheet": "No sheet",
+        "orders": "{count} orders"
+      },
+      "noSku": {
+        "title": "Orders without SKU",
+        "intro": "These lines have no SKU in Shopify, so ECCANG cannot process them. Create the product sheet or ask the client for the SKU.",
+        "missing": "{count} piece(s) without SKU"
+      },
+      "list": {
+        "title": "All orders to ship",
+        "age": "{days} d"
       }
     }
   },

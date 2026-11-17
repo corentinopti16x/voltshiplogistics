@@ -263,6 +263,7 @@ async function loadCatalog(clientIds: string[]) {
         leadDays: product.production_lead_days && product.production_lead_days > 0 ? product.production_lead_days : null,
         factoryPriceRmb: factory != null && Number.isFinite(factory) ? factory : null,
         supplier: sourcing?.supplier_name ?? null,
+        photoUrl: product.photo_url ?? null,
         packPieces: packPieces(product.quote_json),
       };
       const current = map.get(sku);
