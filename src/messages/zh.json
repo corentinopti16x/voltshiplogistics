@@ -1420,7 +1420,8 @@
       "queueLink": "待报价",
       "staff": "员工",
       "catalogLink": "全部产品",
-      "transportLink": "运输"
+      "transportLink": "运输",
+      "ordersLink": "订单"
     },
     "form": {
       "clientFieldsTitle": "客户可见报价字段",
@@ -1714,6 +1715,51 @@
       "days": "{days} 天",
       "empty": "该产品最近 60 天没有销量和待发订单。",
       "howto": "和采购页同一算法：未发订单 + 日销量 ×（周期 + 覆盖）− 库存 − 在途。库存和在途来自易仓。"
+    },
+    "orders": {
+      "title": "Shopify 订单",
+      "intro": "客户所有待发货订单，按产品汇总，含规格、无SKU订单和库存预警。",
+      "allClients": "全部客户",
+      "kpi": {
+        "orders": "待发货订单",
+        "pieces": "待发货件数",
+        "alerts": "库存预警",
+        "noSku": "无SKU订单"
+      },
+      "alerts": {
+        "title": "库存预警",
+        "noStock": "库存未知",
+        "runway": "{days}天后断货",
+        "detail": "库存 {stock} · 日销 {perDay} · 需采购 {toBuy}",
+        "help": "优先处理：这些产品在补货到达前会断货。"
+      },
+      "products": {
+        "title": "待备货产品",
+        "product": "产品",
+        "variants": "规格（尺码/颜色）",
+        "client": "客户",
+        "toShip": "待发货",
+        "perDay": "日销量",
+        "stock": "库存",
+        "toBuy": "需采购",
+        "supplier": "供应商/价格",
+        "urgent": "紧急",
+        "noSku": "无SKU",
+        "noSheet": "无产品资料",
+        "orders": "{count} 单",
+        "help": "所有待发货订单需要出库的数量，以及需要补采购的数量。",
+        "sales": "日销 {perDay}"
+      },
+      "noSku": {
+        "title": "无SKU订单",
+        "intro": "这些订单行在Shopify里没有SKU，ECCANG无法处理。请建立产品资料或向客户索取SKU。",
+        "missing": "{count} 件无SKU"
+      },
+      "list": {
+        "title": "全部待发货订单",
+        "age": "{days}天",
+        "help": "逐单明细，从最早的订单开始。"
+      }
     }
   },
   "app": {

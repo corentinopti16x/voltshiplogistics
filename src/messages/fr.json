@@ -2324,7 +2324,8 @@
       "queueLink": "À chiffrer",
       "staff": "Équipe",
       "catalogLink": "Tous les produits",
-      "transportLink": "Transport"
+      "transportLink": "Transport",
+      "ordersLink": "Commandes"
     },
     "form": {
       "clientFieldsTitle": "Champs du devis visibles par le client",
@@ -2673,6 +2674,51 @@
           "shipping": "Transport",
           "handling": "Préparation"
         }
+      }
+    },
+    "orders": {
+      "title": "Commandes Shopify",
+      "intro": "Toutes les commandes à expédier de nos clients, produit par produit, avec variantes, commandes sans SKU et alertes stock.",
+      "allClients": "Tous les clients",
+      "kpi": {
+        "orders": "Commandes à expédier",
+        "pieces": "Pièces à expédier",
+        "alerts": "Alertes stock",
+        "noSku": "Commandes sans SKU"
+      },
+      "alerts": {
+        "title": "Alertes stock",
+        "noStock": "Stock inconnu",
+        "runway": "Rupture dans {days} j",
+        "detail": "stock {stock} · {perDay}/j · à acheter {toBuy}",
+        "help": "À traiter en premier : ces produits seront en rupture avant que le réassort arrive."
+      },
+      "products": {
+        "title": "Produits à préparer",
+        "product": "Produit",
+        "variants": "Variantes (taille / couleur)",
+        "client": "Client",
+        "toShip": "À expédier",
+        "perDay": "Ventes/j",
+        "stock": "Stock",
+        "toBuy": "À acheter",
+        "supplier": "Fournisseur / prix",
+        "urgent": "Urgent",
+        "noSku": "Sans SKU",
+        "noSheet": "Pas de fiche",
+        "orders": "{count} cmd",
+        "help": "Ce qu'il faut sortir du stock pour toutes les commandes en attente, et ce qu'il faut racheter.",
+        "sales": "{perDay} vendus/j"
+      },
+      "noSku": {
+        "title": "Commandes sans SKU",
+        "intro": "Ces lignes n'ont pas de SKU dans Shopify : ECCANG ne peut pas les traiter. Créer la fiche produit ou demander le SKU au client.",
+        "missing": "{count} pièce(s) sans SKU"
+      },
+      "list": {
+        "title": "Toutes les commandes à expédier",
+        "age": "{days} j",
+        "help": "Le détail commande par commande, de la plus ancienne à la plus récente."
       }
     }
   },

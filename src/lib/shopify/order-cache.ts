@@ -1,7 +1,14 @@
 import { lineSku, type SkuResolver } from "./sku";
 import { createHash } from "crypto";
 
-export type OrderLine = { sku: string; quantity: number; title?: string; price?: number };
+export type OrderLine = {
+  sku: string;
+  quantity: number;
+  title?: string;
+  price?: number;
+  /** Shopify variant name (« Noir / M »): size, colour… read by the warehouse team. */
+  variant?: string;
+};
 
 /** Shipping state of an order as Shopify reports it (fulfillment + tracking). */
 export type OrderShipping = {
@@ -114,6 +121,7 @@ export function cacheOrderLines(
     title?: string | null;
     name?: string | null;
     price?: string | number | null;
+    variant_title?: string | null;
   }>,
   resolver?: SkuResolver | null,
 ): OrderLine[] {
@@ -125,6 +133,8 @@ export function cacheOrderLines(
       if (title) out.title = title.slice(0, 200);
       const price = Number(line.price);
       if (line.price != null && Number.isFinite(price)) out.price = price;
+      const variant = (line.variant_title ?? "").trim();
+      if (variant && variant.toLowerCase() !== "default title") out.variant = variant.slice(0, 120);
       return out;
     });
 }
@@ -261,6 +271,7 @@ export function unpackOrderLines(value: unknown): {
       quantity?: unknown;
       title?: unknown;
       price?: unknown;
+      variant?: unknown;
       _order?: {
         fulfilled?: unknown;
         total?: unknown;
@@ -300,6 +311,7 @@ export function unpackOrderLines(value: unknown): {
     const line: OrderLine = { sku: row.sku.trim(), quantity: Number(row.quantity) || 0 };
     if (typeof row.title === "string" && row.title.trim()) line.title = row.title.trim();
     if (row.price != null && Number.isFinite(Number(row.price))) line.price = Number(row.price);
+    if (typeof row.variant === "string" && row.variant.trim()) line.variant = row.variant.trim();
     lines.push(line);
   }
   return { fulfilled, lines, total, currency, units, suspicious, review, name, shipping };
