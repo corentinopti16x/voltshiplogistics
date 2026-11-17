@@ -2690,7 +2690,8 @@
         "title": "Alertes stock",
         "noStock": "Stock inconnu",
         "runway": "Rupture dans {days} j",
-        "detail": "stock {stock} · {perDay}/j · à acheter {toBuy}"
+        "detail": "stock {stock} · {perDay}/j · à acheter {toBuy}",
+        "help": "À traiter en premier : ces produits seront en rupture avant que le réassort arrive."
       },
       "products": {
         "title": "Produits à préparer",
@@ -2705,7 +2706,9 @@
         "urgent": "Urgent",
         "noSku": "Sans SKU",
         "noSheet": "Pas de fiche",
-        "orders": "{count} cmd"
+        "orders": "{count} cmd",
+        "help": "Ce qu'il faut sortir du stock pour toutes les commandes en attente, et ce qu'il faut racheter.",
+        "sales": "{perDay} vendus/j"
       },
       "noSku": {
         "title": "Commandes sans SKU",
@@ -2714,7 +2717,8 @@
       },
       "list": {
         "title": "Toutes les commandes à expédier",
-        "age": "{days} j"
+        "age": "{days} j",
+        "help": "Le détail commande par commande, de la plus ancienne à la plus récente."
       }
     }
   },

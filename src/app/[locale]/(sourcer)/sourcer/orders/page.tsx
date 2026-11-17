@@ -83,6 +83,7 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
         {alerts.length > 0 ? (
           <section className="rounded-xl bg-[var(--card)] ring-1 ring-[var(--line)]">
             <h2 className="border-b border-[var(--line)] px-5 py-3 text-sm font-semibold">{t("alerts.title")}</h2>
+            <p className="px-5 pt-2 text-xs text-[var(--muted)]">{t("alerts.help")}</p>
             <ul className="divide-y divide-[var(--line)] text-sm">
               {alerts.map((line) => (
                 <li key={`${line.clientId}|${line.sku}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2">
@@ -98,8 +99,29 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
           </section>
         ) : null}
 
+        {unlinked.length > 0 || skulessOrders.length > 0 ? (
+          <section className="rounded-xl bg-[var(--card)] ring-1 ring-[var(--line)]">
+            <h2 className="border-b border-[var(--line)] px-5 py-3 text-sm font-semibold">{t("noSku.title")}</h2>
+            <p className="px-5 pt-3 text-xs text-[var(--muted)]">{t("noSku.intro")}</p>
+            <ul className="divide-y divide-[var(--line)] text-sm">
+              {skulessOrders.slice(0, 80).map((order) => (
+                <li key={`${order.shopId}:${order.orderId}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2">
+                  <span className="w-16 font-medium">{order.name ?? order.orderId}</span>
+                  <span className="text-xs text-[var(--muted)]">{order.clientName} · {formatDate(order.date, locale)}</span>
+                  <span className="text-xs">
+                    {order.lines
+                      .map((line) => `${line.quantity} × ${line.title ?? line.sku}${line.variant ? ` (${line.variant})` : ""}`)
+                      .join(" · ")}
+                  </span>
+                  {order.unitsWithoutSku > 0 ? <Badge tone="rust">{t("noSku.missing", { count: order.unitsWithoutSku })}</Badge> : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         <section className="overflow-x-auto rounded-xl bg-[var(--card)] ring-1 ring-[var(--line)]">
           <h2 className="border-b border-[var(--line)] px-5 py-3 text-sm font-semibold">{t("products.title")}</h2>
+          <p className="px-5 pt-2 text-xs text-[var(--muted)]">{t("products.help")}</p>
           <table className="w-full text-sm">
             <thead className="border-b border-[var(--line)]">
               <tr>
@@ -107,7 +129,6 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
                 <th className={th}>{t("products.variants")}</th>
                 <th className={th}>{t("products.client")}</th>
                 <th className={`${th} text-right`}>{t("products.toShip")}</th>
-                <th className={`${th} text-right`}>{t("products.perDay")}</th>
                 <th className={`${th} text-right`}>{t("products.stock")}</th>
                 <th className={`${th} text-right`}>{t("products.toBuy")}</th>
                 <th className={th}>{t("products.supplier")}</th>
@@ -147,8 +168,10 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
                     {num(line.backlog)}
                     <span className="block text-[11px] text-[var(--muted)]">{t("products.orders", { count: line.orders })}</span>
                   </td>
-                  <td className={`${td} text-right tabular-nums`}>{num(line.perDay, 1)}</td>
-                  <td className={`${td} text-right tabular-nums`}>{num(line.stock)}</td>
+                  <td className={`${td} text-right tabular-nums`}>
+                    {num(line.stock)}
+                    <span className="block text-[11px] text-[var(--muted)]">{t("products.sales", { perDay: num(line.perDay, 1) })}</span>
+                  </td>
                   <td className={`${td} text-right font-semibold tabular-nums`}>{line.toBuy > 0 ? num(line.toBuy) : "—"}</td>
                   <td className={`${td} text-xs`}>
                     {line.supplier ?? "—"}
@@ -160,29 +183,10 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
           </table>
         </section>
 
-        {unlinked.length > 0 || skulessOrders.length > 0 ? (
-          <section className="rounded-xl bg-[var(--card)] ring-1 ring-[var(--line)]">
-            <h2 className="border-b border-[var(--line)] px-5 py-3 text-sm font-semibold">{t("noSku.title")}</h2>
-            <p className="px-5 pt-3 text-xs text-[var(--muted)]">{t("noSku.intro")}</p>
-            <ul className="divide-y divide-[var(--line)] text-sm">
-              {skulessOrders.slice(0, 80).map((order) => (
-                <li key={`${order.shopId}:${order.orderId}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2">
-                  <span className="w-16 font-medium">{order.name ?? order.orderId}</span>
-                  <span className="text-xs text-[var(--muted)]">{order.clientName} · {formatDate(order.date, locale)}</span>
-                  <span className="text-xs">
-                    {order.lines
-                      .map((line) => `${line.quantity} × ${line.title ?? line.sku}${line.variant ? ` (${line.variant})` : ""}`)
-                      .join(" · ")}
-                  </span>
-                  {order.unitsWithoutSku > 0 ? <Badge tone="rust">{t("noSku.missing", { count: order.unitsWithoutSku })}</Badge> : null}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
 
         <section className="rounded-xl bg-[var(--card)] ring-1 ring-[var(--line)]">
           <h2 className="border-b border-[var(--line)] px-5 py-3 text-sm font-semibold">{t("list.title")}</h2>
+          <p className="px-5 pt-2 text-xs text-[var(--muted)]">{t("list.help")}</p>
           <ul className="divide-y divide-[var(--line)] text-sm">
             {data.pending.slice(0, 200).map((order) => (
               <li key={`${order.shopId}:${order.orderId}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2">

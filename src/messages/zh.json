@@ -1730,7 +1730,8 @@
         "title": "库存预警",
         "noStock": "库存未知",
         "runway": "{days}天后断货",
-        "detail": "库存 {stock} · 日销 {perDay} · 需采购 {toBuy}"
+        "detail": "库存 {stock} · 日销 {perDay} · 需采购 {toBuy}",
+        "help": "优先处理：这些产品在补货到达前会断货。"
       },
       "products": {
         "title": "待备货产品",
@@ -1745,7 +1746,9 @@
         "urgent": "紧急",
         "noSku": "无SKU",
         "noSheet": "无产品资料",
-        "orders": "{count} 单"
+        "orders": "{count} 单",
+        "help": "所有待发货订单需要出库的数量，以及需要补采购的数量。",
+        "sales": "日销 {perDay}"
       },
       "noSku": {
         "title": "无SKU订单",
@@ -1754,7 +1757,8 @@
       },
       "list": {
         "title": "全部待发货订单",
-        "age": "{days}天"
+        "age": "{days}天",
+        "help": "逐单明细，从最早的订单开始。"
       }
     }
   },

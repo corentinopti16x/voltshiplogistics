@@ -2690,7 +2690,8 @@
         "title": "Stock alerts",
         "noStock": "Stock unknown",
         "runway": "Out in {days} d",
-        "detail": "stock {stock} · {perDay}/d · to buy {toBuy}"
+        "detail": "stock {stock} · {perDay}/d · to buy {toBuy}",
+        "help": "Handle first: these products will run out before restock arrives."
       },
       "products": {
         "title": "Products to prepare",
@@ -2705,7 +2706,9 @@
         "urgent": "Urgent",
         "noSku": "No SKU",
         "noSheet": "No sheet",
-        "orders": "{count} orders"
+        "orders": "{count} orders",
+        "help": "What to pick for all waiting orders, and what to buy again.",
+        "sales": "{perDay} sold/d"
       },
       "noSku": {
         "title": "Orders without SKU",
@@ -2714,7 +2717,8 @@
       },
       "list": {
         "title": "All orders to ship",
-        "age": "{days} d"
+        "age": "{days} d",
+        "help": "Order by order, oldest first."
       }
     }
   },
