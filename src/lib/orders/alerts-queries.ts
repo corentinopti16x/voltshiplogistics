@@ -53,9 +53,17 @@ export async function listOrderAlerts(options: {
   return [...views.filter((row) => row.status === "open"), ...views.filter((row) => row.status !== "open")];
 }
 
+/** Open alerts on orders of the last 7 days: older ones are history, not something to act on. */
+export const OPEN_ALERT_WINDOW_DAYS = 7;
+
 export async function countOpenOrderAlerts(clientId?: string | null) {
   const admin = createAdminClient();
-  let query = admin.from("order_alerts").select("id", { count: "exact", head: true }).eq("status", "open");
+  const since = new Date(Date.now() - OPEN_ALERT_WINDOW_DAYS * 86_400_000).toISOString();
+  let query = admin
+    .from("order_alerts")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "open")
+    .gte("placed_at", since);
   if (clientId) query = query.eq("client_id", clientId);
   const { count, error } = await query;
   return error ? 0 : (count ?? 0);
