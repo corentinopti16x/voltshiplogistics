@@ -112,7 +112,12 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
         {skulessOrders.length > 0 ? (
           <section className="rounded-xl bg-[var(--card)] ring-1 ring-[var(--line)]">
             <h2 className="border-b border-[var(--line)] px-5 py-3 text-sm font-semibold">{t("noSku.title")}</h2>
-            <p className="px-5 pt-3 text-xs text-[var(--muted)]">{t("noSku.intro")}</p>
+            <p className="px-5 pt-3 text-xs text-[var(--muted)]">
+              {t("noSku.intro")}{" "}
+              <Link href="/sourcer/skus" className="font-medium text-[var(--ink)] underline">
+                {t("noSku.fix")}
+              </Link>
+            </p>
             <ul className="divide-y divide-[var(--line)] text-sm">
               {skulessOrders.slice(0, 80).map((order) => (
                 <li key={`${order.shopId}:${order.orderId}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2">

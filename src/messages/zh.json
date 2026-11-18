@@ -1755,7 +1755,8 @@
       "noSku": {
         "title": "无SKU订单",
         "intro": "这些订单行在Shopify里没有SKU，ECCANG无法处理。请建立产品资料或向客户索取SKU。",
-        "missing": "{count} 件无SKU"
+        "missing": "{count} 件无SKU",
+        "fix": "创建SKU（Shopify + ECCANG）"
       },
       "list": {
         "title": "全部待发货订单",
