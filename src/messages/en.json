@@ -2741,7 +2741,8 @@
       },
       "buy": {
         "empty": "No stocked product with sales."
-      }
+      },
+      "search": "Search: order no., SKU, product"
     }
   },
   "support": {
