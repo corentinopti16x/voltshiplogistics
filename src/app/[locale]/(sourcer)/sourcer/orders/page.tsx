@@ -65,7 +65,7 @@ function blockOf(order: PendingOrder): { cause: Cause; detail: string | null } |
 const CAUSE_ORDER: Cause[] = ["sku", "address", "stock", "transport", "draft", "missing", "other"];
 
 /** Team page: one list of blocked orders (supply chain) and one buying list (buyer). */
-export default async function TeamOrdersPage({ searchParams }: { searchParams: Promise<{ client?: string; tab?: string }> }) {
+export default async function TeamOrdersPage({ searchParams }: { searchParams: Promise<{ client?: string; tab?: string; q?: string }> }) {
   const [query, loc, t] = await Promise.all([searchParams, getLocale(), getTranslations("sourcer.orders")]);
   const ctx = await getAuthContext();
   if (!ctx) {
@@ -79,6 +79,10 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
   const locale = loc === "fr" ? "fr" : "en";
   const tab = query.tab === "buy" ? "buy" : "blocked";
   const clientId = query.client?.trim() || null;
+  const search = (query.q ?? "").trim().toLowerCase();
+  /** Order number (#12345 or 12345), SKU, product name or variant. */
+  const matches = (...texts: Array<string | null | undefined>) =>
+    !search || texts.some((text) => (text ?? "").toLowerCase().replace(/^#/, "").includes(search.replace(/^#/, "")));
   const data = await loadAchats({ since: daysAgo(60), clientId, coverDays: 14 });
   const num = (value: number | null | undefined, digits = 0) => (value == null ? "—" : formatNumber(value, locale, digits));
   const href = (next: { tab?: string; client?: string | null }) => {
@@ -87,6 +91,7 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
     const nextClient = next.client === undefined ? clientId : next.client;
     if (nextTab === "buy") params.set("tab", "buy");
     if (nextClient) params.set("client", nextClient);
+    if (search) params.set("q", search);
     const text = params.toString();
     return text ? `/sourcer/orders?${text}` : "/sourcer/orders";
   };
@@ -96,7 +101,8 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
   const blocked: Array<{ order: PendingOrder; cause: Cause; detail: string | null }> = [];
   for (const order of pending) {
     const block = blockOf(order);
-    if (block) blocked.push({ order, ...block });
+    const hit = matches(order.name, order.orderId, ...order.lines.flatMap((line) => [line.sku, line.title, line.variant]));
+    if (block && hit) blocked.push({ order, ...block });
   }
   blocked.sort((a, b) => CAUSE_ORDER.indexOf(a.cause) - CAUSE_ORDER.indexOf(b.cause) || b.order.ageDays - a.order.ageDays);
   const byCause = new Map<Cause, number>();
@@ -106,6 +112,7 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
   // Products to reorder first, then by days of stock left.
   const buy = data.buy
     .filter((line) => !isFakeClient(line.clientName) && !notGoods(line.title))
+    .filter((line) => matches(line.sku, line.title, ...line.variants))
     .filter((line) => line.stock != null && (line.perDay > 0 || line.backlog > 0))
     .sort(
       (a, b) =>
@@ -130,6 +137,16 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
           <Link href={href({ tab: "buy" })} className={tabClass(tab === "buy")}>
             {t("tabs.buy", { count: toReorder })}
           </Link>
+          <form action={`/${loc}/sourcer/orders`} className="flex items-center gap-1">
+            {tab === "buy" ? <input type="hidden" name="tab" value="buy" /> : null}
+            {clientId ? <input type="hidden" name="client" value={clientId} /> : null}
+            <input
+              name="q"
+              defaultValue={query.q ?? ""}
+              placeholder={t("search")}
+              className="w-56 rounded-lg px-3 py-1.5 text-sm ring-1 ring-[var(--line)]"
+            />
+          </form>
           <span className="mx-2 h-5 w-px bg-[var(--line)]" />
           <Link href={href({ client: null })} className={`rounded-lg px-3 py-1.5 text-xs ${clientId ? "" : "bg-[var(--line)]"}`}>
             {t("allClients")}

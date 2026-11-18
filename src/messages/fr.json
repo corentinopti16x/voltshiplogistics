@@ -2741,7 +2741,8 @@
       },
       "buy": {
         "empty": "Aucun produit en stock avec des ventes."
-      }
+      },
+      "search": "Rechercher : n° de commande, SKU, produit"
     }
   },
   "support": {
