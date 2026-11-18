@@ -21,22 +21,16 @@ export async function SourcerShell({
       <header className="relative border-b border-[var(--line)] bg-[var(--card)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-6">
-            <BrandMark href={isAdmin ? "/admin" : "/sourcer"} />
+            <BrandMark href={isAdmin ? "/admin" : "/sourcer/orders"} />
             {isAdmin ? (
               <AdminNavLinks />
             ) : (
               <nav className="flex items-center gap-4 text-sm">
-                <Link href="/sourcer" className="font-medium">
-                  {t("queueLink")}
-                </Link>
                 <Link href="/sourcer/orders" className="font-medium">
                   {t("ordersLink")}
                 </Link>
                 <Link href="/sourcer/products" className="font-medium">
                   {t("catalogLink")}
-                </Link>
-                <Link href="/sourcer/transport" className="font-medium">
-                  {t("transportLink")}
                 </Link>
               </nav>
             )}

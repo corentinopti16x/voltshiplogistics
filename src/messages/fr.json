@@ -2728,6 +2728,17 @@
         "help": "Vendus sur Shopify mais pas encore dans notre catalogue : créer la fiche et vérifier le stock.",
         "badge": "Nouveau",
         "toShip": "{count} à expédier"
+      },
+      "tabs": {
+        "blocked": "Bloqué ({count})",
+        "buy": "À acheter ({count})"
+      },
+      "blocked": {
+        "empty": "Aucune commande bloquée.",
+        "age": "{days} j"
+      },
+      "buy": {
+        "empty": "Rien à acheter."
       }
     }
   },

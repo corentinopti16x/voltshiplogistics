@@ -51,6 +51,7 @@ type OrderRow = {
 };
 
 type EccangRow = {
+  error?: string | null;
   client_id: string;
   shop_id: string | null;
   shopify_order_id: string | null;
@@ -105,21 +106,22 @@ export async function loadAchats(input: { since: string; clientId?: string | nul
   const eccangRows = await allRows<EccangRow>((from, to) => {
     let query = admin
       .from("eccang_orders")
-      .select("client_id, shop_id, shopify_order_id, external_ref, status, eccang_order_code, tracking_no")
+      .select("client_id, shop_id, shopify_order_id, external_ref, status, eccang_order_code, tracking_no, error")
       .gte("created_at", `${input.since}T00:00:00Z`);
     if (input.clientId) query = query.eq("client_id", input.clientId);
     return query.order("id").range(from, to);
   }).catch(() => [] as EccangRow[]);
-  const eccangByKey = new Map<string, { state: EccangState; tracking: string | null }>();
-  const remember = (key: string, state: EccangState, tracking: string | null) => {
+  const eccangByKey = new Map<string, { state: EccangState; tracking: string | null; status: string | null; error: string | null }>();
+  const remember = (key: string, state: EccangState, tracking: string | null, status: string | null, error: string | null) => {
     const current = eccangByKey.get(key);
-    if (!current || RANK[state] > RANK[current.state]) eccangByKey.set(key, { state, tracking });
+    if (!current || RANK[state] > RANK[current.state]) eccangByKey.set(key, { state, tracking, status, error });
   };
   for (const row of eccangRows) {
     const state = eccangStateOf(row.status, row.eccang_order_code);
-    if (row.shop_id && row.shopify_order_id) remember(`order:${row.shop_id}:${row.shopify_order_id}`, state, row.tracking_no);
+    const extra = [row.status ?? null, row.error ?? null] as const;
+    if (row.shop_id && row.shopify_order_id) remember(`order:${row.shop_id}:${row.shopify_order_id}`, state, row.tracking_no, ...extra);
     const ref = orderRefKey(row.external_ref);
-    if (ref) remember(`ref:${row.client_id}:${ref}`, state, row.tracking_no);
+    if (ref) remember(`ref:${row.client_id}:${ref}`, state, row.tracking_no, ...extra);
   }
 
   // Open « Commandes à vérifier » alerts (promo abuse, extra free gift…): to look at before sending.
@@ -175,6 +177,8 @@ export async function loadAchats(input: { since: string; clientId?: string | nul
         (unpacked.suspicious && unpacked.review !== "legit") || openAlerts.has(`${order.shop_id}:${order.shopify_order_id}`),
       eccang: eccang?.state ?? "none",
       eccangTracking: eccang?.tracking ?? null,
+      eccangStatus: eccang?.status ?? null,
+      eccangError: eccang?.error ?? null,
     });
   }
   pending.sort((a, b) => b.ageDays - a.ageDays || a.clientName.localeCompare(b.clientName));

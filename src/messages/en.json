@@ -2728,6 +2728,17 @@
         "help": "Sold on Shopify but not in our catalogue yet: create the sheet and check stock.",
         "badge": "New",
         "toShip": "{count} to ship"
+      },
+      "tabs": {
+        "blocked": "Blocked ({count})",
+        "buy": "To buy ({count})"
+      },
+      "blocked": {
+        "empty": "No blocked order.",
+        "age": "{days} d"
+      },
+      "buy": {
+        "empty": "Nothing to buy."
       }
     }
   },
