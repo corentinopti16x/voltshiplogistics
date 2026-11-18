@@ -2715,7 +2715,8 @@
       "noSku": {
         "title": "Commandes sans SKU",
         "intro": "Ces lignes n'ont pas de SKU dans Shopify : ECCANG ne peut pas les traiter. Créer la fiche produit ou demander le SKU au client.",
-        "missing": "{count} pièce(s) sans SKU"
+        "missing": "{count} pièce(s) sans SKU",
+        "fix": "Créer les SKU (Shopify + ECCANG)"
       },
       "list": {
         "title": "Toutes les commandes à expédier",
