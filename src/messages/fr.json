@@ -2710,7 +2710,9 @@
         "orders": "{count} cmd",
         "help": "Ce qu'il faut sortir du stock pour toutes les commandes en attente, et ce qu'il faut racheter.",
         "sales": "{perDay} vendus/j",
-        "incoming": "En arrivage"
+        "incoming": "En arrivage",
+        "days": "Jours de stock",
+        "daysValue": "{days} j"
       },
       "noSku": {
         "title": "Commandes sans SKU",
@@ -2731,14 +2733,14 @@
       },
       "tabs": {
         "blocked": "Bloqué ({count})",
-        "buy": "À acheter ({count})"
+        "buy": "À commander ({count})"
       },
       "blocked": {
         "empty": "Aucune commande bloquée.",
         "age": "{days} j"
       },
       "buy": {
-        "empty": "Rien à acheter."
+        "empty": "Aucun produit en stock avec des ventes."
       }
     }
   },

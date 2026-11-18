@@ -1750,7 +1750,9 @@
         "orders": "{count} 单",
         "help": "所有待发货订单需要出库的数量，以及需要补采购的数量。",
         "sales": "日销 {perDay}",
-        "incoming": "在途"
+        "incoming": "在途",
+        "days": "库存天数",
+        "daysValue": "{days}天"
       },
       "noSku": {
         "title": "无SKU订单",
@@ -1771,14 +1773,14 @@
       },
       "tabs": {
         "blocked": "异常 ({count})",
-        "buy": "采购 ({count})"
+        "buy": "需采购 ({count})"
       },
       "blocked": {
         "empty": "没有异常订单。",
         "age": "{days}天"
       },
       "buy": {
-        "empty": "没有需要采购的。"
+        "empty": "没有有库存且有销量的产品。"
       }
     }
   },

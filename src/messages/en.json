@@ -2710,7 +2710,9 @@
         "orders": "{count} orders",
         "help": "What to pick for all waiting orders, and what to buy again.",
         "sales": "{perDay} sold/d",
-        "incoming": "Incoming"
+        "incoming": "Incoming",
+        "days": "Days of stock",
+        "daysValue": "{days} d"
       },
       "noSku": {
         "title": "Orders without SKU",
@@ -2731,14 +2733,14 @@
       },
       "tabs": {
         "blocked": "Blocked ({count})",
-        "buy": "To buy ({count})"
+        "buy": "To order ({count})"
       },
       "blocked": {
         "empty": "No blocked order.",
         "age": "{days} d"
       },
       "buy": {
-        "empty": "Nothing to buy."
+        "empty": "No stocked product with sales."
       }
     }
   },
