@@ -55,6 +55,8 @@ export function eccangEndpoint(host: string) {
   const trimmed = host.trim().replace(/\/+$/, "");
   const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
   const url = new URL(withScheme);
+  // Full endpoint given (OMS 2.0: /bmp/open-api/default/svc/web-service): use it as is.
+  if (/\/svc\/web-service$/.test(url.pathname)) return `${url.protocol}//${url.host}${url.pathname}`;
   return `${url.protocol}//${url.host}${ECCANG_SERVICE_PATH}`;
 }
 

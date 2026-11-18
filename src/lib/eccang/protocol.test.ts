@@ -34,6 +34,11 @@ describe("buildEnvelope", () => {
 });
 
 describe("eccangEndpoint", () => {
+  it("keeps a full OMS 2.0 endpoint", () => {
+    expect(eccangEndpoint("https://voltship.oms.ecwms.com/bmp/open-api/default/svc/web-service")).toBe(
+      "https://voltship.oms.ecwms.com/bmp/open-api/default/svc/web-service",
+    );
+  });
   it("normalises bare hosts and URLs", () => {
     expect(eccangEndpoint("wms.example.com")).toBe("http://wms.example.com/default/svc/web-service");
     expect(eccangEndpoint("https://wms.example.com/")).toBe("https://wms.example.com/default/svc/web-service");
