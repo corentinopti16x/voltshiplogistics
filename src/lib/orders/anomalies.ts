@@ -38,7 +38,7 @@ export const ORDER_ALERT_LABELS: Record<OrderAlertReason, { title: string; help:
   },
   discount_abuse: {
     title: "Grosse remise",
-    help: "Au moins 60 % de remise sur les produits : code promo partagé ou mal réglé ?",
+    help: "Code promo qui donne au moins 60 % de remise sur les produits : code partagé ou mal réglé ?",
   },
   quantity_spike: {
     title: "Quantité inhabituelle",
@@ -99,7 +99,8 @@ export function detectOrderAnomalies(input: OrderAnomalyInput): {
   const reasons: OrderAlertReason[] = [];
   if (units > 0 && isSuspiciousOrder(total, units)) reasons.push("price_anomaly");
   else if (units > 0 && total === 0) reasons.push("zero_total");
-  if (discountPct != null && discountPct >= DISCOUNT_ABUSE_SHARE * 100 && !reasons.includes("zero_total")) {
+  // Only a discount CODE can be abused: automatic shop offers (Buy 1 Get 1, bundles) are the store's own pricing.
+  if (codes.length > 0 && discountPct != null && discountPct >= DISCOUNT_ABUSE_SHARE * 100 && !reasons.includes("zero_total")) {
     reasons.push("discount_abuse");
   }
   if (units >= QUANTITY_SPIKE_UNITS) reasons.push("quantity_spike");

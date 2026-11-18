@@ -26,9 +26,20 @@ describe("detectOrderAnomalies", () => {
   });
 
   it("flags heavy discounts", () => {
-    const result = detectOrderAnomalies({ total: "12.00", gross: "40.00", discounts: "28.00", units: 2 });
+    const result = detectOrderAnomalies({
+      total: "12.00",
+      gross: "40.00",
+      discounts: "28.00",
+      units: 2,
+      discountCodes: [{ code: "FRIENDS70" }],
+    });
     expect(result.reasons).toEqual(["discount_abuse"]);
     expect(result.details.discount_pct).toBe(70);
+  });
+
+  it("ignores the store's automatic offers (no discount code)", () => {
+    const result = detectOrderAnomalies({ total: "12.00", gross: "40.00", discounts: "28.00", units: 2 });
+    expect(result.reasons).toEqual([]);
   });
 
   it("flags big quantities that are paid normally", () => {

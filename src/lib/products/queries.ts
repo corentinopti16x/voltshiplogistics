@@ -26,7 +26,10 @@ export async function listTenantProducts(clientId: string, shopId?: string | nul
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  const products = (data ?? []).map((row) => serializeClientProduct(row));
+  // Internal sheets (« interne – ne pas publier », e.g. coffret components) never reach the client.
+  const products = (data ?? [])
+    .map((row) => serializeClientProduct(row))
+    .filter((product) => !/interne|ne pas publier|internal/i.test(product.title ?? ""));
   if (!shopId) return products;
   // One store selected: only the products imported from (or mapped to) that store.
   const [{ data: imported }, { data: mapped }] = await Promise.all([
