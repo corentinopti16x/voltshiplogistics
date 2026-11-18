@@ -1755,7 +1755,8 @@
       "noSku": {
         "title": "无SKU订单",
         "intro": "这些订单行在Shopify里没有SKU，ECCANG无法处理。请建立产品资料或向客户索取SKU。",
-        "missing": "{count} 件无SKU"
+        "missing": "{count} 件无SKU",
+        "fix": "创建SKU（Shopify + ECCANG）"
       },
       "list": {
         "title": "全部待发货订单",
@@ -1767,6 +1768,17 @@
         "help": "Shopify已售出但我们目录里还没有：请建立产品资料并核对库存。",
         "badge": "新",
         "toShip": "待发 {count}"
+      },
+      "tabs": {
+        "blocked": "异常 ({count})",
+        "buy": "采购 ({count})"
+      },
+      "blocked": {
+        "empty": "没有异常订单。",
+        "age": "{days}天"
+      },
+      "buy": {
+        "empty": "没有需要采购的。"
       }
     }
   },

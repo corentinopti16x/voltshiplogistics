@@ -7,11 +7,14 @@ import { applySkuFixes } from "@/lib/shopify/sku-fix";
 
 /**
  * « Corriger les SKU » → « Écrire dans Shopify »: writes the ticked SKUs on the client stores.
- * Admin only (never while impersonating a client).
+ * Admin and team (never while impersonating a client). Also pushes the product to ECCANG.
  */
 export async function applySkuFixAction(formData: FormData): Promise<void> {
   const ctx = await getAuthContext();
-  if (!ctx || ctx.role !== "voltship_admin" || ctx.impersonating) throw new Error("Admin access required.");
+  if (!ctx || (ctx.role !== "voltship_admin" && ctx.role !== "sourcer") || ctx.impersonating) {
+    throw new Error("Staff access required.");
+  }
+  const back = formData.get("back") === "/sourcer/skus" ? "/sourcer/skus" : "/admin/skus";
   const locale = ["fr", "en", "zh"].includes(String(formData.get("locale"))) ? String(formData.get("locale")) : "fr";
   const picks = formData
     .getAll("pick")
@@ -23,10 +26,12 @@ export async function applySkuFixAction(formData: FormData): Promise<void> {
   revalidatePath("/[locale]/admin/skus", "page");
   revalidatePath("/[locale]/admin/todo", "page");
   revalidatePath("/[locale]/sourcer", "page");
+  revalidatePath("/[locale]/sourcer/skus", "page");
+  revalidatePath("/[locale]/sourcer/orders", "page");
   const params = new URLSearchParams({ done: String(result.written), failed: String(result.failed.length) });
   const client = String(formData.get("client") ?? "");
   if (client) params.set("client", client);
   if (formData.get("all") === "1") params.set("all", "1");
   if (result.failed.length) params.set("errors", result.failed.slice(0, 5).map((f) => `${f.title} : ${f.error}`).join(" | ").slice(0, 900));
-  redirect(`/${locale}/admin/skus?${params.toString()}`);
+  redirect(`/${locale}${back}?${params.toString()}`);
 }

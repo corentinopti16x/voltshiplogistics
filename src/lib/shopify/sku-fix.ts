@@ -7,6 +7,8 @@ import { isServiceLine, itemTitleKey, proposeSkus, skuError, type SkuFixKind, ty
 import { parseShopMarkets } from "./shop-markets";
 import { refreshClientEffectiveSkus } from "./sku-resolve";
 import { accessTokenForConnectedShop } from "./sync";
+import { pushProductIfEnabled } from "@/lib/eccang/sync";
+import type { ProductRow } from "@/lib/products/types";
 
 type ShopRow = {
   id: string;
@@ -326,6 +328,7 @@ export async function applySkuFixes(picks: Array<{ key: string; sku: string }>):
     byProduct.set(key, [...(byProduct.get(key) ?? []), row]);
   }
   const touchedClients = new Set<string>();
+  const touchedProducts = new Map<string, string>();
   for (const [key, group] of byProduct) {
     const [shopId, productId] = key.split("|");
     const shop = shops.get(shopId);
@@ -356,6 +359,7 @@ export async function applySkuFixes(picks: Array<{ key: string; sku: string }>):
               { onConflict: "client_id,shop_id,shopify_sku" },
             );
           }
+          if (product) touchedProducts.set(product.id, row.client_id);
           if (product && (!product.sku || product.sku === row.sku)) {
             await admin.from("products_cache").update({ sku }).eq("id", product.id);
           }
@@ -369,5 +373,10 @@ export async function applySkuFixes(picks: Array<{ key: string; sku: string }>):
     }
   }
   for (const clientId of touchedClients) await refreshClientEffectiveSkus(clientId);
+  // Same SKU in the warehouse: create / update the product in ECCANG (no-op when not connected).
+  for (const [productId, clientId] of touchedProducts) {
+    const { data: product } = await admin.from("products_cache").select("*").eq("id", productId).maybeSingle();
+    if (product) await pushProductIfEnabled(clientId, product as ProductRow);
+  }
   return result;
 }

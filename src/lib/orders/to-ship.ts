@@ -30,6 +30,9 @@ export type PendingOrder = {
   flagged: boolean;
   eccang: EccangState;
   eccangTracking: string | null;
+  /** Raw ECCANG status letter (C review, N abnormal, P problem…) and its reason. */
+  eccangStatus?: string | null;
+  eccangError?: string | null;
 };
 
 export type AgeBucket = "d0_2" | "d3_7" | "d8_30" | "d31";
