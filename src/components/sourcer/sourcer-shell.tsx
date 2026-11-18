@@ -21,7 +21,7 @@ export async function SourcerShell({
       <header className="relative border-b border-[var(--line)] bg-[var(--card)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-6">
-            <BrandMark href={isAdmin ? "/admin" : "/sourcer/orders"} />
+            <BrandMark href={isAdmin ? "/admin" : "/sourcer"} />
             {isAdmin ? (
               <AdminNavLinks />
             ) : (
