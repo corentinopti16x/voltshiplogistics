@@ -46,7 +46,7 @@ function causeOfError(error: string): Cause {
 
 /** Why this order does not leave the warehouse, or null when nothing blocks it.
  * « Pas dans ECCANG » only for 2-6 day old orders: the ECCANG sync reads the last 7 days. */
-function blockOf(order: PendingOrder, clientsOnEccang: Set<string>): { cause: Cause; detail: string | null } | null {
+function blockOf(order: PendingOrder): { cause: Cause; detail: string | null } | null {
   const skuLines = order.lines.filter((line) => isSkuless(line.sku) && !notGoods(line.title));
   if (skuLines.length > 0 || order.unitsWithoutSku > 0) {
     return { cause: "sku", detail: skuLines.map((line) => line.title ?? line.sku).join(" · ") || null };
@@ -57,9 +57,8 @@ function blockOf(order: PendingOrder, clientsOnEccang: Set<string>): { cause: Ca
     return { cause: causeOfError(error), detail: error || null };
   }
   if (status === "C" && order.ageDays >= 1) return { cause: "draft", detail: null };
-  if (order.eccang === "none" && order.ageDays >= 2 && order.ageDays <= 6 && clientsOnEccang.has(order.clientId)) {
-    return { cause: "missing", detail: null };
-  }
+  // « Pas dans ECCANG » is not shown: the link Shopify order ↔ ECCANG order is not reliable yet
+  // (orders imported by ECCANG itself carry another reference), it flagged hundreds of good orders.
   return null;
 }
 
@@ -94,10 +93,9 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
 
   const pending = data.pending.filter((order) => !isFakeClient(order.clientName));
   const clients = data.clients.filter((client) => !isFakeClient(client.name));
-  const clientsOnEccang = new Set(pending.filter((order) => order.eccang !== "none").map((order) => order.clientId));
   const blocked: Array<{ order: PendingOrder; cause: Cause; detail: string | null }> = [];
   for (const order of pending) {
-    const block = blockOf(order, clientsOnEccang);
+    const block = blockOf(order);
     if (block) blocked.push({ order, ...block });
   }
   blocked.sort((a, b) => CAUSE_ORDER.indexOf(a.cause) - CAUSE_ORDER.indexOf(b.cause) || b.order.ageDays - a.order.ageDays);
