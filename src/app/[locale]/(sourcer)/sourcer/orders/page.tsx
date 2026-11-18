@@ -44,7 +44,8 @@ function causeOfError(error: string): Cause {
   return "other";
 }
 
-/** Why this order does not leave the warehouse, or null when nothing blocks it. */
+/** Why this order does not leave the warehouse, or null when nothing blocks it.
+ * « Pas dans ECCANG » only for 2-6 day old orders: the ECCANG sync reads the last 7 days. */
 function blockOf(order: PendingOrder, clientsOnEccang: Set<string>): { cause: Cause; detail: string | null } | null {
   const skuLines = order.lines.filter((line) => isSkuless(line.sku) && !notGoods(line.title));
   if (skuLines.length > 0 || order.unitsWithoutSku > 0) {
@@ -56,7 +57,7 @@ function blockOf(order: PendingOrder, clientsOnEccang: Set<string>): { cause: Ca
     return { cause: causeOfError(error), detail: error || null };
   }
   if (status === "C" && order.ageDays >= 1) return { cause: "draft", detail: null };
-  if (order.eccang === "none" && order.ageDays >= 2 && clientsOnEccang.has(order.clientId)) {
+  if (order.eccang === "none" && order.ageDays >= 2 && order.ageDays <= 6 && clientsOnEccang.has(order.clientId)) {
     return { cause: "missing", detail: null };
   }
   return null;
