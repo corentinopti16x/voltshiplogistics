@@ -102,9 +102,17 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
   const byCause = new Map<Cause, number>();
   for (const row of blocked) byCause.set(row.cause, (byCause.get(row.cause) ?? 0) + 1);
 
+  // Only products the warehouse really holds (stock known from ECCANG) that move (sales or orders waiting).
+  // Products to reorder first, then by days of stock left.
   const buy = data.buy
-    .filter((line) => !isFakeClient(line.clientName) && !notGoods(line.title) && (line.toBuy > 0 || !line.productId))
-    .sort((a, b) => Number(b.urgent) - Number(a.urgent) || b.toBuy - a.toBuy);
+    .filter((line) => !isFakeClient(line.clientName) && !notGoods(line.title))
+    .filter((line) => line.stock != null && (line.perDay > 0 || line.backlog > 0))
+    .sort(
+      (a, b) =>
+        Number(b.toBuy > 0) - Number(a.toBuy > 0) ||
+        (a.runwayDays ?? Number.POSITIVE_INFINITY) - (b.runwayDays ?? Number.POSITIVE_INFINITY),
+    );
+  const toReorder = buy.filter((line) => line.toBuy > 0).length;
 
   const td = "px-3 py-2 align-top";
   const th = "px-3 py-2 text-left text-[11px] font-medium text-[var(--muted)]";
@@ -120,7 +128,7 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
             {t("tabs.blocked", { count: blocked.length })}
           </Link>
           <Link href={href({ tab: "buy" })} className={tabClass(tab === "buy")}>
-            {t("tabs.buy", { count: buy.length })}
+            {t("tabs.buy", { count: toReorder })}
           </Link>
           <span className="mx-2 h-5 w-px bg-[var(--line)]" />
           <Link href={href({ client: null })} className={`rounded-lg px-3 py-1.5 text-xs ${clientId ? "" : "bg-[var(--line)]"}`}>
@@ -194,6 +202,7 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
                     <th className={th}>{t("products.variants")}</th>
                     <th className={`${th} text-right`}>{t("products.toShip")}</th>
                     <th className={`${th} text-right`}>{t("products.stock")}</th>
+                    <th className={`${th} text-right`}>{t("products.days")}</th>
                     <th className={`${th} text-right`}>{t("products.incoming")}</th>
                     <th className={`${th} text-right`}>{t("products.toBuy")}</th>
                     <th className={th}>{t("products.supplier")}</th>
@@ -201,7 +210,7 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
                 </thead>
                 <tbody>
                   {buy.map((line) => (
-                    <tr key={`${line.clientId}|${line.sku}`} className="border-b border-[var(--line)] last:border-0">
+                    <tr key={`${line.clientId}|${line.sku}`} className={`border-b border-[var(--line)] last:border-0 ${line.toBuy > 0 ? "bg-[var(--rust-soft,#fdf1ec)]" : ""}`}>
                       <td className={td}>
                         <div className="flex items-start gap-3">
                           {line.photoUrl ? (
@@ -236,6 +245,9 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
                       <td className={`${td} text-right tabular-nums`}>
                         {num(line.stock)}
                         <span className="block text-[11px] text-[var(--muted)]">{t("products.sales", { perDay: num(line.perDay, 1) })}</span>
+                      </td>
+                      <td className={`${td} text-right tabular-nums ${line.toBuy > 0 ? "font-semibold text-[var(--rust-ink)]" : ""}`}>
+                        {line.runwayDays == null ? "—" : t("products.daysValue", { days: Math.floor(line.runwayDays) })}
                       </td>
                       <td className={`${td} text-right tabular-nums`}>{line.incoming > 0 ? num(line.incoming) : "—"}</td>
                       <td className={`${td} text-right font-semibold tabular-nums`}>{line.toBuy > 0 ? num(line.toBuy) : "—"}</td>
