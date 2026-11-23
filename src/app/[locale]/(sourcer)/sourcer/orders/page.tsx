@@ -250,6 +250,11 @@ export default async function TeamOrdersPage({ searchParams }: { searchParams: P
                             <div className="mt-1 flex flex-wrap gap-1">
                               {line.urgent ? <Badge tone="rust">{t("products.urgent")}</Badge> : null}
                               {!line.productId ? <Badge tone="gold">{t("fresh.badge")}</Badge> : null}
+                              {line.setCheck && line.productId ? (
+                                <Link href={`/sourcer/${line.productId}`} title={t("products.setCheckHint")}>
+                                  <Badge tone="rust">{t("products.setCheck")}</Badge>
+                                </Link>
+                              ) : null}
                             </div>
                           </div>
                         </div>

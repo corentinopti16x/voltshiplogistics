@@ -2569,7 +2569,7 @@
           "limit": "Borderline · {share}",
           "bad": "Too expensive · {share}"
         },
-        "rule": "Fix the number of pieces if the app got it wrong: the landed cost is recalculated. Selling price in the shop's currency."
+        "rule": "Purchase price and weight of the product = for 1 piece. Each variant is priced for its number of pieces (set of 4 = 4 × one piece). The pieces are read in the name or the SKU (-4): confirm them if the app got it wrong. Selling price in the shop's currency."
       },
       "decision": {
         "title": "Decision aid",
@@ -2712,7 +2712,9 @@
         "sales": "{perDay} sold/d",
         "incoming": "Incoming",
         "days": "Days of stock",
-        "daysValue": "{days} d"
+        "daysValue": "{days} d",
+        "setCheck": "Set to confirm 套装待确认",
+        "setCheckHint": "Sold in several quantities: confirm the pieces of each variant on the product page."
       },
       "noSku": {
         "title": "Orders without SKU",

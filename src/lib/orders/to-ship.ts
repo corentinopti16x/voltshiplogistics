@@ -144,8 +144,10 @@ export type CatalogEntry = {
   factoryPriceRmb: number | null;
   supplier: string | null;
   photoUrl?: string | null;
-  /** Pieces shipped per unit sold (sets). */
+  /** Pieces shipped per unit sold (sets): the variant's own number when the product is sold in several quantities. */
   packPieces: number;
+  /** Sold in several quantities and nobody confirmed the pieces of each variant. */
+  setCheck?: boolean;
 };
 
 export type BuyOptions = {
@@ -188,6 +190,8 @@ export type BuyLine = {
   photoUrl: string | null;
   /** Shopify variant names seen in the orders (« Noir / M »). */
   variants: string[];
+  /** Sold in several quantities, pieces per variant not confirmed: the COGS may be wrong. */
+  setCheck: boolean;
 };
 
 type SkuKey = string;
@@ -267,6 +271,7 @@ export function buildBuyList(
         supplier: entry?.supplier ?? null,
         photoUrl: entry?.photoUrl ?? null,
         variants: [...(row.variants ?? [])].slice(0, 6),
+        setCheck: entry?.setCheck ?? false,
       } satisfies BuyLine;
     })
     .filter((line) => line.backlog > 0 || line.perDay > 0)

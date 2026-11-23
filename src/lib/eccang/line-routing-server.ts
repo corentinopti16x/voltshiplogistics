@@ -1,3 +1,4 @@
+import { loadSkuPieces } from "@/lib/products/variant-pieces-server";
 import "server-only";
 
 import { createHash } from "node:crypto";
@@ -260,6 +261,7 @@ export async function loadRoutingContext(options: { fresh?: boolean } = {}): Pro
 }
 
 type ProductLookupRow = {
+  id: string;
   sku: string | null;
   weight_g: number | null;
   shipping_channel: string | null;
@@ -272,7 +274,7 @@ async function buildParcelProducts(clientId: string): Promise<Map<string, Parcel
   for (let from = 0; from < 50_000; from += 1000) {
     const { data, error } = await admin
       .from("products_cache")
-      .select("sku, weight_g, shipping_channel, quote_json")
+      .select("id, sku, weight_g, shipping_channel, quote_json")
       .eq("client_id", clientId)
       .not("sku", "is", null)
       .order("id")
@@ -282,6 +284,7 @@ async function buildParcelProducts(clientId: string): Promise<Map<string, Parcel
     if (!data || data.length < 1000) break;
   }
   const products = new Map<string, ParcelProduct>();
+  const byId = new Map<string, ParcelProduct>();
   const put = (sku: string, product: ParcelProduct) => {
     for (const key of new Set([sku, sku.toUpperCase()])) {
       const known = products.get(key);
@@ -292,7 +295,7 @@ async function buildParcelProducts(clientId: string): Promise<Map<string, Parcel
   for (const row of rows) {
     const sku = row.sku?.trim();
     if (!sku) continue;
-    put(sku, {
+    const parcel: ParcelProduct = {
       weightG: row.weight_g,
       pieces: packPieces(row.quote_json),
       channel: row.shipping_channel,
@@ -301,7 +304,18 @@ async function buildParcelProducts(clientId: string): Promise<Map<string, Parcel
       packagingWeightG: productPackagingG(row.quote_json),
       dimensionsCm: parseParcelDimensions(row.quote_json),
       carrierPrefs: parseCarrierPreferences(row.quote_json),
-    });
+    };
+    put(sku, parcel);
+    byId.set(row.id, parcel);
+  }
+  // Products sold in sets: each variant SKU (LNG-WSTRAW-4) ships its own number of pieces.
+  const variantPieces = await loadSkuPieces([clientId]).catch(() => new Map());
+  for (const [key, info] of variantPieces) {
+    const product = byId.get(info.productId);
+    const sku = key.slice(key.indexOf("|") + 1);
+    if (!product || !sku) continue;
+    const variant = { ...product, pieces: info.pieces };
+    for (const k of new Set([sku, sku.toUpperCase()])) products.set(k, variant);
   }
   // ECCANG lines carry the warehouse SKU (sku_maps.eccang_sku) when Voltship set one.
   const maps: Array<{ shopify_sku: string | null; eccang_sku: string | null }> = [];

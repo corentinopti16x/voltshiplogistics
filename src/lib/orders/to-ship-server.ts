@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { unpackOrderLines } from "@/lib/shopify/order-cache";
 import { loadProductSkus } from "@/lib/products/skus";
 import { packPieces } from "@/lib/products/extras";
+import { loadSkuPieces, skuPiecesKey } from "@/lib/products/variant-pieces-server";
 import { parseUpsellIds } from "@/lib/products/upsells";
 import { CLIENT_PRODUCT_SELECT, serializeClientProduct } from "@/lib/products/visibility";
 import {
@@ -206,7 +207,7 @@ async function loadCatalog(clientIds: string[]) {
   ).map((row) => serializeClientProduct(row));
   const productIds = products.map((product) => product.id);
 
-  const [skus, stockRows, poRows, workRows] = await Promise.all([
+  const [skus, stockRows, poRows, workRows, variantPieces] = await Promise.all([
     loadProductSkus(products),
     allRows<{ client_id: string; sku: string; qty_available: number | null; inbound_qty: number | null }>((from, to) =>
       admin
@@ -236,6 +237,7 @@ async function loadCatalog(clientIds: string[]) {
       }
       return rows;
     })(),
+    loadSkuPieces(clientIds).catch(() => new Map()),
   ]);
 
   const stock = new Map(
@@ -268,7 +270,8 @@ async function loadCatalog(clientIds: string[]) {
         factoryPriceRmb: factory != null && Number.isFinite(factory) ? factory : null,
         supplier: sourcing?.supplier_name ?? null,
         photoUrl: product.photo_url ?? null,
-        packPieces: packPieces(product.quote_json),
+        packPieces: variantPieces.get(skuPiecesKey(product.client_id, sku))?.pieces ?? packPieces(product.quote_json),
+        setCheck: variantPieces.get(skuPiecesKey(product.client_id, sku))?.needsCheck ?? false,
       };
       const current = map.get(sku);
       // Same SKU on several products (one per shop): keep the one with sourcing data.

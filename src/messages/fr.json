@@ -2569,7 +2569,7 @@
           "limit": "Limite · {share}",
           "bad": "Trop cher · {share}"
         },
-        "rule": "Corrige le nombre de pièces si l’app s’est trompée : le prix de revient se recalcule. Prix de vente dans la devise de la boutique."
+        "rule": "Prix d’achat et poids de la fiche = pour 1 pièce. Chaque variante est chiffrée pour son nombre de pièces (set de 4 = 4 × le prix d’une pièce). Le nombre de pièces est lu dans le nom ou le SKU (-4) : confirme-le si l’app s’est trompée. Prix de vente dans la devise de la boutique."
       },
       "decision": {
         "title": "Aide à la décision",
@@ -2712,7 +2712,9 @@
         "sales": "{perDay} vendus/j",
         "incoming": "En arrivage",
         "days": "Jours de stock",
-        "daysValue": "{days} j"
+        "daysValue": "{days} j",
+        "setCheck": "Set à confirmer 套装待确认",
+        "setCheckHint": "Ce produit se vend en plusieurs quantités : confirme le nombre de pièces de chaque variante sur sa fiche."
       },
       "noSku": {
         "title": "Commandes sans SKU",

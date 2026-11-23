@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateProductCogsMatrix } from "@/lib/pricing/server";
 import type { ProductRow } from "@/lib/products/types";
 import { sourcingDecision, type SourcingDecision } from "@/lib/products/decision";
+import { suffixPieces } from "@/lib/products/variant-pieces";
 import { variantUnits } from "@/lib/products/variant-units";
 
 export type VariantPriceRow = {
@@ -32,13 +33,14 @@ const MAX_LINES = 12;
 export async function loadVariantPrices(product: ProductRow): Promise<VariantPriceMarket[] | null> {
   const { data, error } = await createAdminClient()
     .from("shopify_products_cache")
-    .select("id, variant_title, price, pack_units")
+    .select("id, sku, variant_title, price, pack_units")
     .eq("imported_product_id", product.id)
     .order("price", { ascending: true });
   if (error || !data || data.length === 0) return null;
 
   type CacheRow = {
     id: string;
+    sku: string | null;
     variant_title: string | null;
     price: number | string | null;
     pack_units: number | null;
@@ -49,9 +51,13 @@ export async function loadVariantPrices(product: ProductRow): Promise<VariantPri
   const synced = all.filter((row) => row.price != null || row.variant_title);
   const live = synced.length > 0 ? synced : all;
 
+  // « LNG-WSTRAW-1 / -2 / -4 »: the SKU says the pieces when the name does not.
+  const bySuffix = suffixPieces(live.map((row) => (row.sku ?? "").trim()).filter(Boolean));
   const groups = new Map<string, Omit<VariantPriceRow, "cogs" | "shipping" | "weightG" | "decision">>();
   for (const row of live) {
-    const { units, guessed } = variantUnits(row);
+    const named = variantUnits(row);
+    const suffix = row.sku ? bySuffix.get(row.sku.trim()) : undefined;
+    const { units, guessed } = named.guessed && named.units === 1 && suffix ? { units: suffix, guessed: true } : named;
     const price = row.price == null ? null : Number(row.price);
     const key = `${units}|${price ?? ""}`;
     const group = groups.get(key) ?? { ids: [], labels: [], units, guessed: false, price };

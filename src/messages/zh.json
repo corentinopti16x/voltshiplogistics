@@ -1667,7 +1667,7 @@
           "limit": "偏高 · {share}",
           "bad": "太贵 · {share}"
         },
-        "rule": "如果件数不对，请直接修改，到手成本会自动重算。售价为店铺币种。"
+        "rule": "产品的采购价和重量 = 1件的价格和重量。每个规格按件数计算（4件套 = 4 × 单件价格）。件数从名称或SKU（-4）读取，如有错误请确认修改。售价为店铺货币。"
       },
       "decision": {
         "title": "决策参考",
@@ -1752,7 +1752,9 @@
         "sales": "日销 {perDay}",
         "incoming": "在途",
         "days": "库存天数",
-        "daysValue": "{days}天"
+        "daysValue": "{days}天",
+        "setCheck": "套装待确认 Set à confirmer",
+        "setCheckHint": "该产品按不同数量销售：请在产品页确认每个规格的件数。"
       },
       "noSku": {
         "title": "无SKU订单",
