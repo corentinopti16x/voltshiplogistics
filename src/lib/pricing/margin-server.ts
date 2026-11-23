@@ -54,7 +54,7 @@ import {
 } from "@/lib/domain/carrier-rules";
 import { handlingLadderFrom, readPricingSettings, type PricingSettings } from "@/lib/pricing/settings";
 import { CLIENT_PRODUCT_SELECT, serializeClientProduct } from "@/lib/products/visibility";
-import { parcelExtras, productBox } from "@/lib/products/extras";
+import { packPieces, parcelExtras, productBox } from "@/lib/products/extras";
 import { GRAM_COLUMNS, isMissingGramColumns, parseGramArray } from "@/lib/pricing/gram-columns";
 import type { ProductRow } from "@/lib/products/types";
 import { unpackOrderLines, type OrderShipping } from "@/lib/shopify/order-cache";
@@ -486,9 +486,21 @@ function orderShippingOf(order: EccangOrderLite): OrderMargin["shipping"] {
  * the ECCANG billed weight when known (else every shipped line's weight + packaging). The carrier cost is real when the ECCANG fee
  * details carry a shipping line, otherwise estimated from the grid cell.
  */
+/**
+ * Quantity in product units for the COGS. Pieces are counted ONCE when the order arrives
+ * (line.pieces); a product sheet is 1 piece, so units = pieces. Legacy sheets still priced for a
+ * whole set (« pieces per set » > 1) are converted back: pieces ÷ set size. Old lines without
+ * `pieces` keep their sold quantity.
+ */
+function productUnits(line: { quantity: number; pieces?: number }, product: ProductRow | undefined): number {
+  if (line.pieces == null || !Number.isFinite(line.pieces)) return line.quantity;
+  const perSet = product ? packPieces(product.quote_json) : 1;
+  return line.pieces / Math.max(1, perSet);
+}
+
 function marginForOrder(
   order: EccangOrderLite,
-  lines: Array<{ sku: string; quantity: number }>,
+  lines: Array<{ sku: string; quantity: number; pieces?: number }>,
   productsBySku: Map<string, ProductRow>,
   factoryPrices: Map<string, number | null>,
   profile: ClientPricingProfile,
@@ -498,6 +510,7 @@ function marginForOrder(
 ): OrderMargin {
   const matched = lines.map((line) => ({
     ...line,
+    quantity: productUnits(line, productsBySku.get(line.sku)),
     product: productsBySku.get(line.sku) ?? null,
   }));
   const priced = matched.filter(

@@ -1,4 +1,5 @@
 import type { OrderLine, OrderReview, OrderShipping } from "@/lib/shopify/order-cache";
+import { linePieces } from "../products/variant-pieces";
 
 /**
  * « Achats » page: what to buy (sales pace, orders still to send, stock, supplier orders on
@@ -33,6 +34,10 @@ export type PendingOrder = {
   /** Raw ECCANG status letter (C review, N abnormal, P problem…) and its reason. */
   eccangStatus?: string | null;
   eccangError?: string | null;
+  /** Pieces ordered (sum of line.pieces, counted once at arrival); null for old lines. */
+  piecesOrdered?: number | null;
+  /** Pieces in the ECCANG order; null when unknown. */
+  piecesEccang?: number | null;
 };
 
 export type AgeBucket = "d0_2" | "d3_7" | "d8_30" | "d31";
@@ -200,7 +205,7 @@ const skuKey = (clientId: string, sku: string): SkuKey => `${clientId}|${sku.tri
  */
 export function buildBuyList(
   pending: PendingOrder[],
-  sold: Map<string, { clientId: string; clientName: string; sku: string; title: string | null; units: number }>,
+  sold: Map<string, { clientId: string; clientName: string; sku: string; title: string | null; units: number; pieces?: number; legacyUnits?: number }>,
   catalog: Map<string, Map<string, CatalogEntry>>,
   options: BuyOptions = DEFAULT_BUY_OPTIONS,
 ): BuyLine[] {
@@ -220,16 +225,18 @@ export function buildBuyList(
     if (order.eccang === "shipped") continue;
     for (const line of order.lines) {
       if (!line.sku.trim() || line.quantity <= 0) continue;
-      const pieces = Math.max(1, entryOf(order.clientId, line.sku)?.packPieces ?? 1);
       const row = touch(order.clientId, order.clientName, line.sku, line.title ?? null);
-      row.backlog += line.quantity * pieces;
+      row.backlog += linePieces(line, entryOf(order.clientId, line.sku)?.packPieces ?? 1);
       row.orders.add(`${order.shopId}:${order.orderId}`);
       if (line.variant) (row.variants ??= new Set()).add(line.variant);
     }
   }
   for (const item of sold.values()) {
-    const pieces = Math.max(1, entryOf(item.clientId, item.sku)?.packPieces ?? 1);
-    touch(item.clientId, item.clientName, item.sku, item.title).sold += item.units * pieces;
+    const legacy = Math.max(1, entryOf(item.clientId, item.sku)?.packPieces ?? 1);
+    const pieces = item.pieces != null || item.legacyUnits != null
+      ? (item.pieces ?? 0) + (item.legacyUnits ?? 0) * legacy
+      : item.units * legacy;
+    touch(item.clientId, item.clientName, item.sku, item.title).sold += pieces;
   }
   const window = Math.max(1, options.salesWindowDays);
   return [...rows.values()]

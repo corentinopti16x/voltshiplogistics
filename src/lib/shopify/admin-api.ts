@@ -1,3 +1,4 @@
+import { loadShopPieces } from "@/lib/products/variant-pieces-server";
 import { variantLabel } from "@/lib/products/variant-units";
 import "server-only";
 import { effectiveSku, lineSku } from "@/lib/shopify/sku";
@@ -582,6 +583,8 @@ export async function backfillShopifyOrders(input: {
   const reviews = await loadOrderReviews(createAdminClient(), input.shopId);
   // Same SKU per variant as the catalogue (shared SKUs of different items are split there).
   const resolver = await loadVariantSkuResolver(input.shopId);
+  // Sets → pieces, once, here: every reader uses line.pieces.
+  const pieces = await loadShopPieces(input.shopId).catch(() => null);
   do {
     const response = await shopifyRequest<{ orders: ShopifyOrder[] }>(
       input.shop,
@@ -590,7 +593,7 @@ export async function backfillShopifyOrders(input: {
     );
     for (const order of response.data.orders) {
       const date = order.created_at.slice(0, 10);
-      const normalizedLines = cacheOrderLines(order.line_items, resolver);
+      const normalizedLines = cacheOrderLines(order.line_items, resolver, pieces);
       const review = reviews.get(String(order.id)) ?? null;
       const anomalies = detectShopifyOrder(order);
       if (anomalies.reasons.length > 0) {

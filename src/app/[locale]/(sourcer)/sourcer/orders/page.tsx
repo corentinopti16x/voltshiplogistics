@@ -23,7 +23,7 @@ const isFakeClient = (name: string) => /d[ée]mo|^test$|altair|voltship logistic
 const notGoods = (title: string | null | undefined) =>
   /assurance|insurance|livraison gratuite|free shipping|shipping protection|composants coffret|pourboire|tip\b/i.test(title ?? "");
 
-type Cause = "sku" | "address" | "stock" | "transport" | "draft" | "missing" | "other";
+type Cause = "sku" | "address" | "stock" | "transport" | "draft" | "pieces" | "missing" | "other";
 
 /** Reason shown in both languages, whatever the page language (team rule). */
 const CAUSE: Record<Cause, { label: string; action: string }> = {
@@ -32,6 +32,7 @@ const CAUSE: Record<Cause, { label: string; action: string }> = {
   stock: { label: "缺货 · Rupture", action: "去采购 · Voir « À acheter »" },
   transport: { label: "物流失败 · Transport refusé", action: "换渠道或重试 · Changer de ligne ou retenter dans ECCANG" },
   draft: { label: "草稿待提交 · Brouillon à soumettre", action: "核对后提交 · Vérifier puis soumettre dans ECCANG" },
+  pieces: { label: "件数不符 · Écart pièces", action: "核对套装件数 · Vérifier les pièces du set dans ECCANG" },
   missing: { label: "未进ECCANG · Pas dans ECCANG", action: "检查导入 · Vérifier l'import Shopify → ECCANG" },
   other: { label: "ECCANG异常 · Anomalie ECCANG", action: "查看原因 · Lire la raison dans ECCANG" },
 };
@@ -57,12 +58,22 @@ function blockOf(order: PendingOrder): { cause: Cause; detail: string | null } |
     return { cause: causeOfError(error), detail: error || null };
   }
   if (status === "C" && order.ageDays >= 1) return { cause: "draft", detail: null };
+  // Pieces ordered (counted once when the order arrived) vs pieces in the ECCANG order.
+  // Off until checked on real set orders: PIECES_CHECK=1 on Vercel turns it on.
+  if (
+    process.env.PIECES_CHECK === "1" &&
+    order.piecesOrdered != null &&
+    order.piecesEccang != null &&
+    order.piecesOrdered !== order.piecesEccang
+  ) {
+    return { cause: "pieces", detail: `${order.piecesOrdered} 件订购 / ${order.piecesEccang} 件ECCANG · ${order.piecesOrdered} commandées / ${order.piecesEccang} dans ECCANG` };
+  }
   // « Pas dans ECCANG » is not shown: the link Shopify order ↔ ECCANG order is not reliable yet
   // (orders imported by ECCANG itself carry another reference), it flagged hundreds of good orders.
   return null;
 }
 
-const CAUSE_ORDER: Cause[] = ["sku", "address", "stock", "transport", "draft", "missing", "other"];
+const CAUSE_ORDER: Cause[] = ["sku", "address", "stock", "transport", "draft", "pieces", "missing", "other"];
 
 /** Team page: one list of blocked orders (supply chain) and one buying list (buyer). */
 export default async function TeamOrdersPage({ searchParams }: { searchParams: Promise<{ client?: string; tab?: string; q?: string }> }) {
