@@ -8,7 +8,16 @@ export type OrderLine = {
   price?: number;
   /** Shopify variant name (« Noir / M »): size, colour… read by the warehouse team. */
   variant?: string;
+  /**
+   * Pieces to ship for this line = quantity × pieces of the variant (set of 4 → 4 per unit).
+   * Computed ONCE when the order arrives; everything else (COGS, stock, invoice) reads it and
+   * never multiplies again. Missing on lines cached before 23/11/2026 → see linePieces().
+   */
+  pieces?: number;
 };
+
+/** Pieces per sold unit of a variant (by Shopify variant id, then by SKU, lowercase). */
+export type PiecesLookup = { byVariant: Map<string, number>; bySku: Map<string, number> };
 
 /** Shipping state of an order as Shopify reports it (fulfillment + tracking). */
 export type OrderShipping = {
@@ -124,12 +133,20 @@ export function cacheOrderLines(
     variant_title?: string | null;
   }>,
   resolver?: SkuResolver | null,
+  pieces?: PiecesLookup | null,
 ): OrderLine[] {
   return lines
     .filter((line) => lineSku(line, resolver))
     .map((line) => {
       const title = (line.title ?? line.name ?? "").trim();
       const out: OrderLine = { sku: lineSku(line, resolver)!, quantity: line.quantity };
+      if (pieces) {
+        const perUnit =
+          (line.variant_id != null ? pieces.byVariant.get(String(line.variant_id)) : undefined) ??
+          pieces.bySku.get(out.sku.trim().toLowerCase()) ??
+          1;
+        out.pieces = Math.max(0, line.quantity) * perUnit;
+      }
       if (title) out.title = title.slice(0, 200);
       const price = Number(line.price);
       if (line.price != null && Number.isFinite(price)) out.price = price;
@@ -272,6 +289,7 @@ export function unpackOrderLines(value: unknown): {
       title?: unknown;
       price?: unknown;
       variant?: unknown;
+      pieces?: unknown;
       _order?: {
         fulfilled?: unknown;
         total?: unknown;
@@ -312,6 +330,7 @@ export function unpackOrderLines(value: unknown): {
     if (typeof row.title === "string" && row.title.trim()) line.title = row.title.trim();
     if (row.price != null && Number.isFinite(Number(row.price))) line.price = Number(row.price);
     if (typeof row.variant === "string" && row.variant.trim()) line.variant = row.variant.trim();
+    if (row.pieces != null && Number.isFinite(Number(row.pieces))) line.pieces = Number(row.pieces);
     lines.push(line);
   }
   return { fulfilled, lines, total, currency, units, suspicious, review, name, shipping };

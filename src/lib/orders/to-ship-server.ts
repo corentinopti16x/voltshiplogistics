@@ -50,6 +50,18 @@ type OrderRow = {
   line_items_json: unknown;
 };
 
+/** Pieces in an ECCANG order (its lines are already in warehouse pieces). Null when unknown. */
+function eccangPieces(items: unknown): number | null {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  let total = 0;
+  for (const item of items as Array<Record<string, unknown>>) {
+    const qty = Number(item?.quantity ?? item?.qty);
+    if (!Number.isFinite(qty)) return null;
+    total += qty;
+  }
+  return total;
+}
+
 type EccangRow = {
   error?: string | null;
   client_id: string;
@@ -59,6 +71,7 @@ type EccangRow = {
   status: string | null;
   eccang_order_code: string | null;
   tracking_no: string | null;
+  items_json?: unknown;
 };
 
 const RANK: Record<EccangState, number> = { none: 0, pending: 1, shipped: 2 };
@@ -106,19 +119,19 @@ export async function loadAchats(input: { since: string; clientId?: string | nul
   const eccangRows = await allRows<EccangRow>((from, to) => {
     let query = admin
       .from("eccang_orders")
-      .select("client_id, shop_id, shopify_order_id, external_ref, status, eccang_order_code, tracking_no, error")
+      .select("client_id, shop_id, shopify_order_id, external_ref, status, eccang_order_code, tracking_no, error, items_json")
       .gte("created_at", `${input.since}T00:00:00Z`);
     if (input.clientId) query = query.eq("client_id", input.clientId);
     return query.order("id").range(from, to);
   }).catch(() => [] as EccangRow[]);
-  const eccangByKey = new Map<string, { state: EccangState; tracking: string | null; status: string | null; error: string | null }>();
-  const remember = (key: string, state: EccangState, tracking: string | null, status: string | null, error: string | null) => {
+  const eccangByKey = new Map<string, { state: EccangState; tracking: string | null; status: string | null; error: string | null; pieces: number | null }>();
+  const remember = (key: string, state: EccangState, tracking: string | null, status: string | null, error: string | null, pieces: number | null) => {
     const current = eccangByKey.get(key);
-    if (!current || RANK[state] > RANK[current.state]) eccangByKey.set(key, { state, tracking, status, error });
+    if (!current || RANK[state] > RANK[current.state]) eccangByKey.set(key, { state, tracking, status, error, pieces });
   };
   for (const row of eccangRows) {
     const state = eccangStateOf(row.status, row.eccang_order_code);
-    const extra = [row.status ?? null, row.error ?? null] as const;
+    const extra = [row.status ?? null, row.error ?? null, eccangPieces(row.items_json)] as const;
     if (row.shop_id && row.shopify_order_id) remember(`order:${row.shop_id}:${row.shopify_order_id}`, state, row.tracking_no, ...extra);
     const ref = orderRefKey(row.external_ref);
     if (ref) remember(`ref:${row.client_id}:${ref}`, state, row.tracking_no, ...extra);
@@ -137,7 +150,7 @@ export async function loadAchats(input: { since: string; clientId?: string | nul
   const openAlerts = new Set(alertRows.map((row) => `${row.shop_id}:${row.shopify_order_id}`));
 
   const pending: PendingOrder[] = [];
-  const sold = new Map<string, { clientId: string; clientName: string; sku: string; title: string | null; units: number }>();
+  const sold = new Map<string, { clientId: string; clientName: string; sku: string; title: string | null; units: number; pieces: number; legacyUnits: number }>();
   for (const order of orders) {
     const unpacked = unpackOrderLines(order.line_items_json);
     const name = clientName.get(order.client_id) ?? "?";
@@ -145,8 +158,11 @@ export async function loadAchats(input: { since: string; clientId?: string | nul
       for (const line of unpacked.lines) {
         if (line.quantity <= 0) continue;
         const key = `${order.client_id}|${line.sku.toLowerCase()}`;
-        const entry = sold.get(key) ?? { clientId: order.client_id, clientName: name, sku: line.sku, title: line.title ?? null, units: 0 };
+        const entry = sold.get(key) ?? { clientId: order.client_id, clientName: name, sku: line.sku, title: line.title ?? null, units: 0, pieces: 0, legacyUnits: 0 };
         entry.units += line.quantity;
+        // Pieces were counted once when the order arrived; old lines are converted in buildBuyList.
+        if (line.pieces != null) entry.pieces += line.pieces;
+        else entry.legacyUnits += line.quantity;
         sold.set(key, entry);
       }
     }
@@ -179,6 +195,10 @@ export async function loadAchats(input: { since: string; clientId?: string | nul
       eccangTracking: eccang?.tracking ?? null,
       eccangStatus: eccang?.status ?? null,
       eccangError: eccang?.error ?? null,
+      piecesOrdered: unpacked.lines.every((line) => line.pieces != null)
+        ? unpacked.lines.reduce((sum, line) => sum + (line.pieces ?? 0), 0)
+        : null,
+      piecesEccang: eccang?.pieces ?? null,
     });
   }
   pending.sort((a, b) => b.ageDays - a.ageDays || a.clientName.localeCompare(b.clientName));
